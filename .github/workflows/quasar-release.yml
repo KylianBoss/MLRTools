@@ -6,9 +6,9 @@ on:
       - main
       - master
     paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
+      - "**.md"
+      - "docs/**"
+      - ".gitignore"
 
 permissions:
   contents: write
@@ -28,8 +28,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
 
       - name: Get Package Version
         id: package_version
@@ -78,15 +78,16 @@ jobs:
           Write-Host "Available directories:"
           Get-ChildItem -Path "dist/electron" -Directory
 
-          # Find the actual directory name
-          $appDir = Get-ChildItem -Path "dist/electron" -Directory | Where-Object { $_.Name -like "*win32*" } | Select-Object -First 1
+          # Use the Packaged directory
+          $sourcePath = Join-Path "dist" "electron" "Packaged"
 
-          if ($appDir) {
-            Write-Host "Found app directory: $($appDir.FullName)"
+          if (Test-Path $sourcePath) {
+            Write-Host "Found app directory: $sourcePath"
             $zipPath = Join-Path "dist" "electron" "MLRTools-v${{ steps.package_version.outputs.version }}.zip"
-            Compress-Archive -Path "$($appDir.FullName)\*" -DestinationPath $zipPath -Force
+            Compress-Archive -Path "$sourcePath\*" -DestinationPath $zipPath -Force
           } else {
-            Write-Error "Could not find win32 directory in dist/electron"
+            Write-Error "Could not find Packaged directory in dist/electron"
+            Get-ChildItem "dist/electron" -Recurse
             exit 1
           }
 
