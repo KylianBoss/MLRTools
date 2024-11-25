@@ -1,9 +1,13 @@
 import { Sequelize, DataTypes } from "sequelize";
 import path from "path";
 import { app } from "electron";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const storagePath = app.isPackaged
-  ? path.join(path.dirname(app.getPath("exe")), "storage")
+  // ? path.join(path.dirname(app.getPath("exe")), "storage")
+  ? process.env.DB_PATH
   : path.join(__dirname, "storage");
 const db = new Sequelize({
   dialect: "sqlite",

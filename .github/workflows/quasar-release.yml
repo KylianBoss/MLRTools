@@ -24,6 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0 # This allows access to commit history for release notes
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,6 +37,28 @@ jobs:
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
         shell: bash
 
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          $commits = git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 2>$null || git rev-list --max-parents=0 HEAD)..HEAD
+          $releaseNotes = @"
+          ## What's New in v${{ steps.package_version.outputs.version }}
+
+          $commits
+
+          ## Installation
+          1. Download the ZIP file
+          2. Extract to your desired location
+          3. Run MLR Tools.exe
+          "@
+
+          $releaseNotes | Out-File -FilePath release_notes.txt -Encoding UTF8
+
+          # Escape multiline output for GitHub Actions
+          $releaseNotes = $releaseNotes -replace '%', '%25' -replace "`n", '%0A' -replace "`r", '%0D'
+          echo "notes=$releaseNotes" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
       - name: Install Dependencies
         run: |
           npm ci
@@ -47,14 +70,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
-      - name: List Output Directory
-        shell: pwsh
-        run: |
-          Write-Host "Listing dist directory:"
-          Get-ChildItem "dist" -Recurse
-          Write-Host "Current Directory:"
-          Get-Location
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -63,31 +78,22 @@ jobs:
         with:
           tag_name: v${{ steps.package_version.outputs.version }}
           release_name: Release v${{ steps.package_version.outputs.version }}
-          body: |
-            Release v${{ steps.package_version.outputs.version }}
-
-            Changes in this Release:
-            - Automated release from master branch
+          body: ${{ steps.release_notes.outputs.notes }}
           draft: false
           prerelease: false
 
       - name: Create ZIP Archive
         shell: pwsh
         run: |
-          # List all directories to debug
-          Write-Host "Available directories:"
-          Get-ChildItem -Path "dist/electron" -Directory
-
-          # Use the Packaged directory
           $sourcePath = Join-Path "dist" "electron" "Packaged"
+          $zipPath = Join-Path "dist" "electron" "MLRTools-v${{ steps.package_version.outputs.version }}.zip"
 
           if (Test-Path $sourcePath) {
-            Write-Host "Found app directory: $sourcePath"
-            $zipPath = Join-Path "dist" "electron" "MLRTools-v${{ steps.package_version.outputs.version }}.zip"
+            Write-Host "Creating ZIP archive from: $sourcePath"
             Compress-Archive -Path "$sourcePath\*" -DestinationPath $zipPath -Force
+            Write-Host "ZIP created at: $zipPath"
           } else {
             Write-Error "Could not find Packaged directory in dist/electron"
-            Get-ChildItem "dist/electron" -Recurse
             exit 1
           }
 
@@ -132,3 +138,10 @@ jobs:
           asset_path: ./dist/electron/latest.yml
           asset_name: latest.yml
           asset_content_type: application/yaml
+
+      - name: Cleanup Artifacts
+        if: always()
+        run: |
+          Remove-Item -Path "dist" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "release_notes.txt" -Force -ErrorAction SilentlyContinue
+        shell: pwsh
