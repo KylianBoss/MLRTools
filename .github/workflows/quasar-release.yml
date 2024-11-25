@@ -47,6 +47,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
+      - name: List Output Directory
+        shell: pwsh
+        run: |
+          Write-Host "Listing dist directory:"
+          Get-ChildItem "dist" -Recurse
+          Write-Host "Current Directory:"
+          Get-Location
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -66,13 +74,19 @@ jobs:
       - name: Create ZIP Archive
         shell: pwsh
         run: |
-          $sourcePath = Join-Path "dist" "electron" "MLR Tools-win32-x64"
-          $destPath = Join-Path "dist" "electron" "MLRTools-v${{ steps.package_version.outputs.version }}.zip"
-          if (Test-Path $sourcePath) {
-            Compress-Archive -Path "$sourcePath\*" -DestinationPath $destPath -Force
+          # List all directories to debug
+          Write-Host "Available directories:"
+          Get-ChildItem -Path "dist/electron" -Directory
+
+          # Find the actual directory name
+          $appDir = Get-ChildItem -Path "dist/electron" -Directory | Where-Object { $_.Name -like "*win32*" } | Select-Object -First 1
+
+          if ($appDir) {
+            Write-Host "Found app directory: $($appDir.FullName)"
+            $zipPath = Join-Path "dist" "electron" "MLRTools-v${{ steps.package_version.outputs.version }}.zip"
+            Compress-Archive -Path "$($appDir.FullName)\*" -DestinationPath $zipPath -Force
           } else {
-            Write-Error "Source path not found: $sourcePath"
-            Get-ChildItem "dist\electron" -Recurse
+            Write-Error "Could not find win32 directory in dist/electron"
             exit 1
           }
 
