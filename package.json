@@ -5,6 +5,10 @@
   "productName": "MLR Tools",
   "author": "Kylian Boss <kylian.boss@bossconcepts.ch>",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KylianBoss/MLRTools"
+  },
   "scripts": {
     "lint": "eslint --ext .js,.vue ./",
     "format": "prettier --write \"**/*.{js,vue,scss,html,md,json}\" --ignore-path .gitignore",
@@ -20,6 +24,7 @@
     "apexcharts": "^4.0.0",
     "axios": "^1.2.1",
     "dayjs": "^1.11.13",
+    "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "pdfkit": "^0.15.1",
     "pdfkit-table": "^0.1.99",
@@ -42,6 +47,7 @@
     "@vue/devtools": "^7.4.5",
     "autoprefixer": "^10.4.2",
     "electron": "^32.1.2",
+    "electron-builder": "^24.13.3",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^8.1.0",
     "eslint-plugin-vue": "^9.0.0",

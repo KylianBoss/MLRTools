@@ -189,20 +189,38 @@ module.exports = configure(function (/* ctx */) {
       bundler: "packager", // 'packager' or 'builder'
 
       packager: {
-        // https://github.com/electron-userland/electron-packager/blob/master/docs/api.md#options
-        // OS X / Mac App Store
-        // appBundleId: '',
-        // appCategoryType: '',
-        // osxSign: '',
-        // protocol: 'myapp://path',
-        // Windows only
-        // win32metadata: { ... }
+        // Packager options
+        platform: "win32",
+        arch: "x64",
+        asar: true,
+        executableName: "MLR Tools",
+        icon: "src-electron/icons/icon.ico",
+        overwrite: true,
+        out: "dist/electron",
+        ignore: [
+          "^/src-electron",
+          "^/src",
+          "^/public",
+          "/node_modules/sqlite3", // Ignore problematic modules
+        ],
       },
 
       builder: {
         // https://www.electron.build/configuration/configuration
 
         appId: "mlr-tool",
+        productName: "MLR Tools",
+        artifactName: "mlr-tools-${version}.${ext}",
+        win: {
+          target: "dir",
+        },
+        nsis: false,
+        msi: false,
+        asar: true,
+        extraResources: ["./ressources/**"],
+        directories: {
+          output: "dist/electron",
+        },
       },
     },
 

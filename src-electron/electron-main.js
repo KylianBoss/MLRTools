@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog } from "electron";
+import { updateElectronApp } from "update-electron-app";
 import path from "path";
 import express from "express";
 import { setupServer } from "./server";
@@ -7,9 +8,19 @@ import os from "os";
 import fs from "fs";
 import fsPromises from "fs/promises";
 import readline from "readline";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
+
+// Auto-updates
+if (process.env.NODE_ENV === "production") {
+  updateElectronApp({
+    repo: "KylianBoss/MLRTools",
+  });
+}
 
 let mainWindow;
 let printWindow;
