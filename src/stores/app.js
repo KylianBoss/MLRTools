@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { Notify } from "quasar";
 
 export const useAppStore = defineStore("App", {
   state: () => ({
@@ -65,85 +66,14 @@ export const useAppStore = defineStore("App", {
         reader.readAsText(file[0]);
       });
     },
+    feedBackNotification(message, type) {
+      Notify.create({
+        message: message,
+        type: type,
+        position: "top",
+        timeout: 3000,
+      });
+    },
   },
   persist: false,
 });
-
-class ProgressTracker {
-  constructor() {
-    this.startTime = dayjs();
-    this.lastUpdateTime = this.startTime;
-    this.importedLines = 0;
-    this.totalLines = 0;
-    this.timePerLineEMA = null;
-    this.alpha = 0.1; // EMA smoothing factor (0.1 = more stable, 0.3 = more reactive)
-    this.updateCount = 0;
-  }
-
-  initialize(totalLines) {
-    this.totalLines = totalLines;
-    this.startTime = dayjs();
-    this.lastUpdateTime = this.startTime;
-    this.importedLines = 0;
-    this.timePerLineEMA = null;
-    this.updateCount = 0;
-
-    return this.getProgress();
-  }
-
-  update(currentLines) {
-    this.updateCount++;
-    const currentTime = dayjs();
-    const deltaLines = currentLines - this.importedLines;
-    const deltaTime = currentTime.diff(this.lastUpdateTime, "milliseconds");
-
-    // Only update estimates if we have processed some lines
-    if (deltaLines > 0 || deltaTime > 0) {
-      const currentTimePerLine = deltaTime / deltaLines;
-
-      // Initialize EMA on first update
-      if (this.timePerLineEMA === null) {
-        this.timePerLineEMA = currentTimePerLine;
-      } else {
-        // Update EMA
-        this.timePerLineEMA =
-          currentTimePerLine * this.alpha +
-          this.timePerLineEMA * (1 - this.alpha);
-      }
-    }
-
-    this.importedLines = currentLines;
-    this.lastUpdateTime = currentTime;
-
-    return this.getProgress();
-  }
-
-  getProgress() {
-    const currentTime = dayjs();
-    const elapsedTime = currentTime.diff(this.startTime, "seconds");
-    const percentComplete = (this.importedLines / this.totalLines) * 100;
-
-    let estimatedTimeLeft = null;
-    let speed = null;
-
-    if (this.timePerLineEMA !== null) {
-      estimatedTimeLeft =
-        ((this.totalLines - this.importedLines) * this.timePerLineEMA) / 1000; // seconds
-      speed = 1 / this.timePerLineEMA; // lines per second
-    }
-
-    return {
-      elapsedTime: dayjs.duration(elapsedTime, "seconds").format("HH:mm:ss"),
-      estimatedTimeLeft: estimatedTimeLeft
-        ? dayjs.duration(estimatedTimeLeft, "seconds").format("HH:mm:ss")
-        : "--:--:--",
-      percentComplete: percentComplete.toFixed(2),
-      linesProcessed: this.importedLines,
-      totalLines: this.totalLines,
-      speed: speed
-        ? `${(speed * 60).toFixed(0)} lines/minute`
-        : "calculating...",
-      isComplete: this.importedLines >= this.totalLines,
-    };
-  }
-}

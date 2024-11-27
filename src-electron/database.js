@@ -150,7 +150,8 @@ function initDB(config) {
             "charts",
             "importMessages",
             "excludedAlarms",
-            "suspiciousPlaces"
+            "suspiciousPlaces",
+            "admin"
           ),
         },
       },

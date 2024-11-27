@@ -16,11 +16,9 @@ dotenv.config();
 const platform = process.platform || os.platform();
 
 // Auto-updates
-if (process.env.NODE_ENV === "production") {
-  updateElectronApp({
-    repo: "KylianBoss/MLRTools",
-  });
-}
+updateElectronApp({
+  repo: "KylianBoss/MLRTools",
+});
 
 let mainWindow;
 let printWindow;

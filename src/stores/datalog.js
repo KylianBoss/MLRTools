@@ -15,7 +15,7 @@ const monthNames = [
   "jun",
   "jul",
   "aug",
-  "sep",
+  "sept.",
   "oct",
   "nov",
   "dec",
@@ -319,19 +319,26 @@ export const useDataLogStore = defineStore("datalog", {
         .map((line) => {
           const rawData = line.replaceAll('"', "").split(";");
           if (rawData.length < 11) return null;
+          if (!!!rawData[0].match(/\d/)) return null;
           const parseTimeRegex =
-            /(\d{1,2}) ([a-z]{3})[a-z]*\. (\d{4}) à (\d{2}:\d{2}:\d{2})/g;
-          const startDate = rawData[1].match(parseTimeRegex);
-          const endDate = rawData[2].match(parseTimeRegex);
+            /(\d{1,2})\s+(\w+\.)\s+(\d{4})\s+à\s+(\d{2}:\d{2}:\d{2})/gi;
+          const start = [...rawData[1].matchAll(parseTimeRegex)];
+          const end = [...rawData[2].matchAll(parseTimeRegex)];
+          const startDate = `${start[0][3]}-${
+            monthNames.indexOf(start[0][2]) + 1
+          }-${start[0][1]} ${start[0][4]}`;
+          const endDate = `${end[0][3]}-${monthNames.indexOf(end[0][2]) + 1}-${
+            end[0][1]
+          } ${end[0][4]}`;
           if (!startDate || !endDate) return null;
           if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid())
             return null;
           return {
             dbId: rawData[0],
-            timeOfOccurence: dayjs(startDate[0]).format("YYYY-MM-DD HH:mm:ss"),
-            timeOfAcknowledge: dayjs(endDate[0]).format("YYYY-MM-DD HH:mm:ss"),
+            timeOfOccurence: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
+            timeOfAcknowledge: dayjs(endDate).format("YYYY-MM-DD HH:mm:ss"),
             duration: dayjs
-              .duration(dayjs(endDate[0]).diff(dayjs(startDate[0])))
+              .duration(dayjs(endDate).diff(dayjs(startDate)))
               .asSeconds(),
             dataSource: rawData[5],
             alarmArea: rawData[6],

@@ -11,6 +11,7 @@ const __dirname = path.resolve();
 let db = null;
 
 export function setupServer(app) {
+  // CONFIG
   app.get("/config", async (req, res) => {
     // Try to find the config file in the user's home directory
     const configPath = path.join(__dirname, "/storage/mlrtools-config.json");
@@ -75,6 +76,45 @@ export function setupServer(app) {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // DATABASE
+  app.post("/db/sync-models", async (req, res) => {
+    const { user } = req.body;
+    if (!user) {
+      res.status(400).json({ error: "No user provided" });
+      return;
+    }
+    try {
+      // Get the user
+      const user_ = await db.models.Users.findOne({
+        where: {
+          username: user,
+        },
+        include: {
+          model: db.models.UserAccess,
+          attributes: ["menuId"],
+        },
+      });
+      if (!user_) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      // Control if the user has access to the admin menu
+      const hasAccess = user_.UserAccesses.find((a) => a.menuId === "admin");
+      if (!hasAccess) {
+        res.status(403).json({ error: "User not authorized" });
+        return;
+      }
+
+      await db.sync({ alter: true });
+      res.sendStatus(201);
+    } catch (error) {
+      console.error("Error syncing models:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/alarms", async (req, res) => {
     try {
       const alarm = await db.models.Datalog.upsert(req.body);

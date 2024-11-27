@@ -117,6 +117,25 @@
               <q-item-section>Lieux suspects</q-item-section>
             </q-item>
           </q-expansion-item>
+          <q-expansion-item
+            expand-separator
+            icon="mdi-shield-account-outline"
+            label="Administration"
+            v-model="drawers[99]"
+            v-if="App.user.UserAccesses.includes('admin')"
+          >
+            <q-item
+              clickable
+              v-ripple
+              :to="{ name: 'admin-db' }"
+              :active="$route.name == 'admin-db'"
+            >
+              <q-item-section avatar>
+                <q-icon name="mdi-database-settings-outline" />
+              </q-item-section>
+              <q-item-section>Database</q-item-section>
+            </q-item>
+          </q-expansion-item>
         </q-list>
       </q-scroll-area>
     </q-drawer>
