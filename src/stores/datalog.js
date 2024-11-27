@@ -293,6 +293,8 @@ export const useDataLogStore = defineStore("datalog", {
           const endDate = `${end[0][3]}-${monthNames.indexOf(end[0][2]) + 1}-${
             end[0][1]
           } ${end[0][4]}`;
+          if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid())
+            return null;
           return {
             dbId: rawData[0],
             timeOfOccurence: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
@@ -322,6 +324,8 @@ export const useDataLogStore = defineStore("datalog", {
           const startDate = rawData[1].match(parseTimeRegex);
           const endDate = rawData[2].match(parseTimeRegex);
           if (!startDate || !endDate) return null;
+          if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid())
+            return null;
           return {
             dbId: rawData[0],
             timeOfOccurence: dayjs(startDate[0]).format("YYYY-MM-DD HH:mm:ss"),
