@@ -7,17 +7,17 @@ dayjs.extend(duration);
 dayjs.extend(customParseFormat);
 
 const monthNames = [
-  "jan",
-  "feb",
-  "mar",
-  "apr",
-  "may",
-  "jun",
-  "jul",
-  "aug",
+  "janv.",
+  "févr.",
+  "mars",
+  "avr.",
+  "mai",
+  "juin",
+  "juil.",
+  "août",
   "sept.",
-  "oct",
-  "nov",
+  "oct.",
+  "nov.",
   "dec",
 ];
 
@@ -321,7 +321,7 @@ export const useDataLogStore = defineStore("datalog", {
           if (rawData.length < 11) return null;
           if (!!!rawData[0].match(/\d/)) return null;
           const parseTimeRegex =
-            /(\d{1,2})\s+(\w+\.)\s+(\d{4})\s+à\s+(\d{2}:\d{2}:\d{2})/gi;
+            /(\d{1,2})\s+([\wéû]+\.?)\s+(\d{4})\s+à\s+(\d{2}:\d{2}:\d{2})/gi;
           const start = [...rawData[1].matchAll(parseTimeRegex)];
           const end = [...rawData[2].matchAll(parseTimeRegex)];
           const startDate = `${start[0][3]}-${
