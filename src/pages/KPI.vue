@@ -395,7 +395,7 @@ const getData = (filter) => {
 onMounted(async () => {
   showLoading();
   dataLogStore.initialize();
-  await getData(toDisplay.value);
+  // await getData(toDisplay.value);
   sectionKPITop3.value = true;
   $q.loading.hide();
 });

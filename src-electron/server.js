@@ -1,22 +1,84 @@
-import {
-  db,
-  Datalog,
-  Alarms,
-  ExcludedAlarms,
-  AlarmTranslations,
-} from "./database";
+import { initDB } from "./database";
 import { QueryTypes, Op } from "sequelize";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import PDFdocument from "pdfkit-table";
+import fs from "fs/promises";
+import path from "path";
 
 dayjs.extend(duration);
+const __dirname = path.resolve();
+let db = null;
 
 export function setupServer(app) {
+  app.get("/config", async (req, res) => {
+    // Try to find the config file in the user's home directory
+    const configPath = path.join(__dirname, "/storage/mlrtools-config.json");
+    try {
+      const config = await fs.readFile(configPath, "utf-8");
+      db = await initDB(JSON.parse(config));
+      const user = await db.models.Users.findOne({
+        where: {
+          username: process.env.username,
+        },
+        include: {
+          model: db.models.UserAccess,
+          attributes: ["menuId"],
+        },
+      });
+      res.json({
+        config: true,
+        user: user.toJSON(),
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(404).json(false);
+    }
+  });
+  app.post("/config", async (req, res) => {
+    // You'll recieve a file in json format
+    const configPath = path.join(__dirname, "/storage/mlrtools-config.json");
+    try {
+      await fs.mkdir(path.join(__dirname, "/storage"), { recursive: true });
+      await fs.writeFile(configPath, JSON.stringify(req.body));
+      db = await initDB(req.body);
+      let user = await db.models.Users.findOne({
+        where: {
+          username: process.env.username,
+        },
+        include: {
+          model: db.models.UserAccess,
+          attributes: ["menuId"],
+        },
+      });
+      if (!user) {
+        await db.models.Users.create({
+          username: process.env.username,
+        });
+        await db.models.UserAccess.create({
+          userId: user.id,
+          menuId: "kpi",
+        });
+        user = await db.models.Users.findOne({
+          where: {
+            username: process.env.username,
+          },
+          include: {
+            model: db.models.UserAccess,
+            attributes: ["menuId"],
+          },
+        });
+      }
+      res.status(201).json({ config: true, user: user.toJSON() });
+    } catch (error) {
+      console.error("Error writing config file:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
   app.post("/alarms", async (req, res) => {
     try {
-      const alarm = await Datalog.upsert(req.body);
-      await Alarms.upsert({
+      const alarm = await db.models.Datalog.upsert(req.body);
+      await db.models.Alarms.upsert({
         alarmId: req.body.alarmId,
         dataSource: req.body.dataSource,
         alarmArea: req.body.alarmArea,
@@ -36,41 +98,33 @@ export function setupServer(app) {
       if (sum) {
         let query = `
           SELECT
-            "alarmId",
-            MAX("dataSource") as "dataSource",
-            MAX("alarmArea") as "alarmArea",
-            MAX("alarmCode") as "alarmCode",
-            MAX("alarmText") as "alarmText",
-            MAX("severity") as "severity",
-            MAX("classification") as "classification",
-            COUNT(*) as "count"
+            alarmId,
+            MAX(dataSource) as dataSource",
+            MAX(alarmArea) as alarmArea",
+            MAX(alarmCode) as alarmCode",
+            MAX(alarmText) as alarmText",
+            MAX(severity) as severity",
+            MAX(classification) as classification,
+            COUNT(*) as count
           FROM
             Datalogs
           WHERE
-            "timeOfOccurence" BETWEEN :from AND :to
+            timeOfOccurence BETWEEN :from AND :to
         `;
         if (!!!filter.excluded) {
           query += `
-            AND "alarmId" NOT IN (SELECT "alarmId" FROM "ExcludedAlarms")
+            AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
           `;
         }
         query += `
           GROUP BY
-            "alarmId"
+            alarmId
           ORDER BY
             :order
           LIMIT :count
           OFFSET :startRow
         `;
 
-        console.log(req.body)
-        console.log({
-          from: filter.date.from,
-          to: filter.date.to,
-          order: `${sortBy} ${descending ? "DESC" : "ASC"}`,
-          count,
-          startRow,
-        })
         const result = await db.query(query, {
           replacements: {
             from: filter.date.from,
@@ -82,7 +136,7 @@ export function setupServer(app) {
           type: QueryTypes.SELECT,
         });
 
-        const translations = await AlarmTranslations.findAll();
+        const translations = await db.models.AlarmTranslations.findAll();
         res.json(
           result.map((r) => {
             const translation = translations.find(
@@ -142,7 +196,7 @@ export function setupServer(app) {
         order: [[sortBy, descending ? "DESC" : "ASC"]],
         where,
       });
-      const translations = await AlarmTranslations.findAll();
+      const translations = await db.models.AlarmTranslations.findAll();
       const translatedMessages = alarms.map((m) => {
         const translation = translations.find((t) => t.alarmId === m.alarmId);
         return {
@@ -200,7 +254,7 @@ export function setupServer(app) {
         };
       }
 
-      const count = await Datalog.count({
+      const count = await db.models.Datalog.count({
         where,
       });
 
@@ -228,7 +282,7 @@ export function setupServer(app) {
 
   app.get("/alarms/day/:date", async (req, res) => {
     try {
-      const alarms = await Datalog.findAll({
+      const alarms = await db.models.Datalog.findAll({
         where: {
           timeOfOccurence: {
             [Op.between]: [
@@ -247,7 +301,7 @@ export function setupServer(app) {
 
   app.post("/alarms/exclude", async (req, res) => {
     try {
-      const excludedAlarm = await ExcludedAlarms.upsert({
+      const excludedAlarm = await db.models.ExcludedAlarms.upsert({
         alarmId: req.body,
       });
       res.sendStatus(201);
@@ -259,7 +313,7 @@ export function setupServer(app) {
 
   app.get("/alarms/exclude", async (req, res) => {
     try {
-      const excludedAlarms = await ExcludedAlarms.findAll();
+      const excludedAlarms = await db.models.ExcludedAlarms.findAll();
       res.json(excludedAlarms.map((a) => a.alarmId));
     } catch (error) {
       console.error("Error fetching excluded alarms:", error);
@@ -269,7 +323,7 @@ export function setupServer(app) {
 
   app.post("/alarms/include", async (req, res) => {
     try {
-      const excludedAlarm = await ExcludedAlarms.destroy({
+      const excludedAlarm = await db.models.ExcludedAlarms.destroy({
         where: {
           alarmId: req.body,
         },
@@ -290,7 +344,7 @@ export function setupServer(app) {
           [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
         };
       }
-      const alarms = await Alarms.findAll({
+      const alarms = await db.models.Alarms.findAll({
         attributes: [
           "alarmId",
           "dataSource",
@@ -301,7 +355,7 @@ export function setupServer(app) {
         group: ["alarmId", "dataSource", "alarmArea", "alarmCode", "alarmText"],
         where,
       });
-      const translations = await AlarmTranslations.findAll();
+      const translations = await db.models.AlarmTranslations.findAll();
       res.json(
         alarms.map((a) => {
           const translation = translations.find((t) => t.alarmId === a.alarmId);
@@ -334,7 +388,7 @@ export function setupServer(app) {
         where,
       });
 
-      const translations = await AlarmTranslations.findAll();
+      const translations = await db.models.AlarmTranslations.findAll();
       const translatedMessages = messages.map((m) => {
         const translation = translations.find((t) => t.alarmId === m.alarmId);
         return {
@@ -354,7 +408,7 @@ export function setupServer(app) {
     const { alarmId, translation } = req.body;
 
     try {
-      const alarm = await AlarmTranslations.upsert({
+      const alarm = await db.models.AlarmTranslations.upsert({
         alarmId,
         translation,
       });
@@ -373,38 +427,38 @@ export function setupServer(app) {
       if (!!!includesExcluded) {
         query = `
           SELECT
-            "alarmId",
-            MAX("alarmText") as "alarmText",
-            MAX("alarmArea") as "alarmArea",
-            MAX("alarmCode") as "alarmCode",
-            MAX("dataSource") as "dataSource",
-            COUNT(*) as "count"
+            alarmId,
+            MAX(alarmText) as alarmText,
+            MAX(alarmArea) as alarmArea,
+            MAX(alarmCode) as alarmCode,
+            MAX(dataSource) as "dataSource",
+            COUNT(*) as count
           FROM
             Datalogs
           WHERE
-            "timeOfOccurence" BETWEEN :from AND :to
-            AND "alarmId" NOT IN (SELECT "alarmId" FROM "ExcludedAlarms")
+            timeOfOccurence BETWEEN :from AND :to
+            AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
           GROUP BY
-            "alarmId"
+            alarmId
           ORDER BY
-            "count" DESC
+            count DESC
           LIMIT 3
         `;
       } else {
         query = `
           SELECT
-            "alarmId",
-            MAX("alarmText") as "alarmText",
-            MAX("dataSource") as "dataSource",
-            COUNT(*) as "count"
+            alarmId,
+            MAX(alarmText) as alarmText,
+            MAX(dataSource) as dataSource,
+            COUNT(*) as count
           FROM
             Datalogs
           WHERE
-            "timeOfOccurence" BETWEEN :from AND :to
+            timeOfOccurence BETWEEN :from AND :to
           GROUP BY
-            "alarmId"
+            alarmId
           ORDER BY
-            "count" DESC
+            count DESC
           LIMIT 3
         `;
       }
@@ -413,7 +467,7 @@ export function setupServer(app) {
         type: QueryTypes.SELECT,
       });
 
-      const translations = await AlarmTranslations.findAll();
+      const translations = await db.models.AlarmTranslations.findAll();
 
       res.json(
         result.map((r) => {
@@ -439,40 +493,40 @@ export function setupServer(app) {
       if (!!!includesExcluded) {
         query = `
           SELECT
-            "alarmId",
-            MAX("alarmText") as "alarmText",
-            MAX("alarmArea") as "alarmArea",
-            MAX("alarmCode") as "alarmCode",
-            MAX("dataSource") as "dataSource",
-            COUNT(*) as "count"
+            alarmId,
+            MAX(alarmText) as alarmText,
+            MAX(alarmArea) as alarmArea,
+            MAX(alarmCode) as alarmCode,
+            MAX(dataSource) as dataSource,
+            COUNT(*) as count
           FROM
             Datalogs
           WHERE
-            "timeOfOccurence" BETWEEN :from AND :to
-            AND "alarmId" NOT IN (SELECT "alarmId" FROM "ExcludedAlarms")
-            AND "dataSource" = :dataSource
+            timeOfOccurence BETWEEN :from AND :to
+            AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
+            AND dataSource = :dataSource
           GROUP BY
-            "alarmId"
+            alarmId
           ORDER BY
-            "count" DESC
+            count DESC
           LIMIT 3
         `;
       } else {
         query = `
           SELECT
-            "alarmId",
-            MAX("alarmText") as "alarmText",
-            MAX("dataSource") as "dataSource",
-            COUNT(*) as "count"
+            alarmId,
+            MAX(alarmText) as alarmText,
+            MAX(dataSource) as dataSource,
+            COUNT(*) as count
           FROM
             Datalogs
           WHERE
-            "timeOfOccurence" BETWEEN :from AND :to
-            AND "dataSource" = :dataSource
+            timeOfOccurence BETWEEN :from AND :to
+            AND dataSource = :dataSource
           GROUP BY
-            "alarmId"
+            alarmId
           ORDER BY
-            "count" DESC
+            count DESC
           LIMIT 3
         `;
       }
@@ -481,7 +535,7 @@ export function setupServer(app) {
         type: QueryTypes.SELECT,
       });
 
-      const translations = await AlarmTranslations.findAll();
+      const translations = await db.models.AlarmTranslations.findAll();
       res.json(
         result.map((r) => {
           const translation = translations.find((t) => t.alarmId === r.alarmId);
@@ -505,38 +559,38 @@ export function setupServer(app) {
       if (!!!includesExcluded) {
         query = `
           SELECT
-            "alarmId",
-            MAX("alarmText") as "alarmText",
-            MAX("alarmArea") as "alarmArea",
-            MAX("alarmCode") as "alarmCode",
-            MAX("dataSource") as "dataSource",
-            SUM("duration") as "duration"
+            alarmId,
+            MAX(alarmText) as alarmText,
+            MAX(alarmArea) as alarmArea,
+            MAX(alarmCode) as alarmCode,
+            MAX(dataSource) as dataSource,
+            SUM(duration) as duration
           FROM
             Datalogs
           WHERE
-            "timeOfOccurence" BETWEEN :from AND :to
-            AND "alarmId" NOT IN (SELECT "alarmId" FROM "ExcludedAlarms")
+            timeOfOccurence BETWEEN :from AND :to
+            AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
           GROUP BY
-            "alarmId"
+            alarmId
           ORDER BY
-            "duration" DESC
+            duration DESC
           LIMIT 3
         `;
       } else {
         query = `
           SELECT
-            "alarmId",
-            MAX("alarmText") as "alarmText",
-            MAX("dataSource") as "dataSource",
-            SUM("duration") as "duration"
+            alarmId,
+            MAX(alarmText) as alarmText,
+            MAX(dataSource) as dataSource,
+            SUM(duration) as duration
           FROM
             Datalogs
           WHERE
-            "timeOfOccurence" BETWEEN :from AND :to
+            timeOfOccurence BETWEEN :from AND :to
           GROUP BY
-            "alarmId"
+            alarmId
           ORDER BY
-            "duration" DESC
+            duration DESC
           LIMIT 3
         `;
       }
@@ -545,7 +599,7 @@ export function setupServer(app) {
         type: QueryTypes.SELECT,
       });
 
-      const translations = await AlarmTranslations.findAll();
+      const translations = await db.models.AlarmTranslations.findAll();
 
       res.json(
         result.map((r) => {
@@ -579,7 +633,7 @@ export function setupServer(app) {
         };
       }
 
-      const rawData = await Datalog.findAll({
+      const rawData = await db.models.Datalog.findAll({
         where,
         order: [["timeOfOccurence", "ASC"]],
         attributes: [
@@ -645,7 +699,7 @@ export function setupServer(app) {
 
   app.get("/alarms/:alarmId", async (req, res) => {
     try {
-      const alarm = await Alarms.findOne({
+      const alarm = await db.models.Alarms.findOne({
         where: {
           alarmId: req.params.alarmId,
         },
@@ -728,14 +782,14 @@ export function setupServer(app) {
       const result = await db.query(
         `
         SELECT
-          DATE("timeOfOccurence") as date,
-          COUNT(*) FILTER (WHERE "severity" = 'Warning') as warning,
-          COUNT(*) FILTER (WHERE "severity" = 'Error') as error,
+          DATE(timeOfOccurence) as date,
+          SUM(CASE WHEN severity = 'Warning' THEN 1 ELSE 0 END) as warning,
+          SUM(CASE WHEN severity = 'Error' THEN 1 ELSE 0 END) as error,
           COUNT(*) as total
         FROM
           Datalogs
         WHERE
-          "timeOfOccurence" BETWEEN :startDate AND :endDate
+          timeOfOccurence BETWEEN :startDate AND :endDate
         GROUP BY
           date
         ORDER BY
@@ -759,14 +813,14 @@ export function setupServer(app) {
       const result = await db.query(
         `
         SELECT
-          "dataSource",
-          COUNT(*) FILTER (WHERE "severity" = 'Error') as count
+          dataSource,
+          SUM(CASE WHEN severity = 'Error' THEN 1 ELSE 0 END) as count
         FROM
           Datalogs
         WHERE
-          "timeOfOccurence" BETWEEN :startDate AND :endDate
+          timeOfOccurence BETWEEN :startDate AND :endDate
         GROUP BY
-          "dataSource"
+          dataSource
         ORDER BY
           count DESC
       `,

@@ -1,124 +1,171 @@
 import { Sequelize, DataTypes } from "sequelize";
-import path from "path";
-import { app } from "electron";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const storagePath = app.isPackaged
-  // ? path.join(path.dirname(app.getPath("exe")), "storage")
-  ? process.env.DB_PATH
-  : path.join(__dirname, "storage");
-const db = new Sequelize({
-  dialect: "sqlite",
-  storage: path.join(storagePath, "database.sqlite"),
-  logging: false,
-});
+function initDB(config) {
+  return new Promise((resolve, reject) => {
+    const db = new Sequelize({
+      dialect: "mariadb",
+      host: config.db_host,
+      port: config.db_port,
+      username: config.db_user,
+      password: config.db_password,
+      database: config.db_name,
+      logging: false,
+    });
 
-const Datalog = db.define(
-  "Datalog",
-  {
-    dbId: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-    },
-    timeOfOccurence: {
-      type: DataTypes.DATE,
-    },
-    timeOfAcknowledge: {
-      type: DataTypes.DATE,
-    },
-    duration: {
-      type: DataTypes.INTEGER,
-    },
-    dataSource: {
-      type: DataTypes.STRING,
-    },
-    alarmArea: {
-      type: DataTypes.STRING,
-    },
-    alarmCode: {
-      type: DataTypes.STRING,
-    },
-    alarmText: {
-      type: DataTypes.STRING,
-    },
-    severity: {
-      type: DataTypes.STRING,
-    },
-    classification: {
-      type: DataTypes.STRING,
-    },
-    alarmId: {
-      type: DataTypes.STRING,
-    },
-  },
-  {
-    timestamps: false,
-  }
-);
+    const Datalog = db.define(
+      "Datalog",
+      {
+        dbId: {
+          type: DataTypes.INTEGER,
+          primaryKey: true,
+        },
+        timeOfOccurence: {
+          type: DataTypes.DATE,
+        },
+        timeOfAcknowledge: {
+          type: DataTypes.DATE,
+        },
+        duration: {
+          type: DataTypes.INTEGER,
+        },
+        dataSource: {
+          type: DataTypes.STRING,
+        },
+        alarmArea: {
+          type: DataTypes.STRING,
+        },
+        alarmCode: {
+          type: DataTypes.STRING,
+        },
+        alarmText: {
+          type: DataTypes.STRING,
+        },
+        severity: {
+          type: DataTypes.STRING,
+        },
+        classification: {
+          type: DataTypes.STRING,
+        },
+        alarmId: {
+          type: DataTypes.STRING,
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
 
-const Alarms = db.define(
-  "Alarms",
-  {
-    alarmId: {
-      type: DataTypes.STRING,
-      primaryKey: true,
-    },
-    dataSource: {
-      type: DataTypes.STRING,
-    },
-    alarmArea: {
-      type: DataTypes.STRING,
-    },
-    alarmCode: {
-      type: DataTypes.STRING,
-    },
-    alarmText: {
-      type: DataTypes.STRING,
-    },
-  },
-  {
-    timestamps: false,
-  }
-);
+    const Alarms = db.define(
+      "Alarms",
+      {
+        alarmId: {
+          type: DataTypes.STRING,
+          primaryKey: true,
+        },
+        dataSource: {
+          type: DataTypes.STRING,
+        },
+        alarmArea: {
+          type: DataTypes.STRING,
+        },
+        alarmCode: {
+          type: DataTypes.STRING,
+        },
+        alarmText: {
+          type: DataTypes.STRING,
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
 
-const ExcludedAlarms = db.define(
-  "ExcludedAlarms",
-  {
-    alarmId: {
-      type: DataTypes.STRING,
-      primaryKey: true,
-    },
-  },
-  {
-    timestamps: false,
-  }
-);
+    const ExcludedAlarms = db.define(
+      "ExcludedAlarms",
+      {
+        alarmId: {
+          type: DataTypes.STRING,
+          primaryKey: true,
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
 
-const AlarmTranslations = db.define(
-  "AlarmTranslations",
-  {
-    alarmId: {
-      type: DataTypes.STRING,
-      primaryKey: true,
-    },
-    translation: {
-      type: DataTypes.STRING,
-    },
-  },
-  {
-    timestamps: false,
-  }
-);
+    const AlarmTranslations = db.define(
+      "AlarmTranslations",
+      {
+        alarmId: {
+          type: DataTypes.STRING,
+          primaryKey: true,
+        },
+        translation: {
+          type: DataTypes.STRING,
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
 
-async function syncDatabase() {
-  try {
-    await db.sync();
-    console.log("Database synchronized");
-  } catch (error) {
-    console.error("Error synchronizing database:", error);
-  }
+    const Users = db.define(
+      "Users",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        username: {
+          type: DataTypes.STRING,
+        },
+        fullname: {
+          type: DataTypes.STRING,
+          defaultValue: "Unknown",
+        },
+        autorised: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
+    const UserAccess = db.define(
+      "UserAccess",
+      {
+        userId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+        },
+        menuId: {
+          type: DataTypes.ENUM(
+            "kpi",
+            "searchMessages",
+            "charts",
+            "importMessages",
+            "excludedAlarms",
+            "suspiciousPlaces"
+          ),
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
+    Users.hasMany(UserAccess, {
+      foreignKey: "userId",
+    });
+
+    console.log("Database initialized");
+    resolve(db);
+  });
 }
 
-export { db, Datalog, Alarms, ExcludedAlarms, AlarmTranslations, syncDatabase };
+export { initDB };

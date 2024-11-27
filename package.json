@@ -1,6 +1,6 @@
 {
   "name": "mlr-tool",
-  "version": "1.2.10",
+  "version": "1.2.11",
   "description": "Tools for MLR",
   "productName": "MLR Tools",
   "author": "Kylian Boss <kylian.boss@bossconcepts.ch>",
@@ -26,6 +26,7 @@
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "mariadb": "^3.4.0",
     "pdfkit": "^0.15.1",
     "pdfkit-table": "^0.1.99",
     "pinia": "^2.0.11",

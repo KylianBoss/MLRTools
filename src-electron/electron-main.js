@@ -3,7 +3,7 @@ import { updateElectronApp } from "update-electron-app";
 import path from "path";
 import express from "express";
 import { setupServer } from "./server";
-import { syncDatabase } from "./database";
+// import { syncDatabase } from "./database";
 import os from "os";
 import fs from "fs";
 import fsPromises from "fs/promises";
@@ -83,7 +83,7 @@ async function setupStorage() {
 
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=4096");
 app.whenReady().then(async () => {
-  await syncDatabase();
+  // await syncDatabase();
   await setupStorage();
   createWindow();
 
