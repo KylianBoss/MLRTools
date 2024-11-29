@@ -41,7 +41,9 @@ jobs:
         id: release_notes
         run: |
           $commits = git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 2>$null || git rev-list --max-parents=0 HEAD)..HEAD
-          $releaseNotes = @"That's the new v${{ steps.package_version.outputs.version }} of the app"@
+          $releaseNotes = @"
+          That's the new v${{ steps.package_version.outputs.version }} of the app
+          "@
 
           $releaseNotes | Out-File -FilePath release_notes.txt -Encoding UTF8
 
