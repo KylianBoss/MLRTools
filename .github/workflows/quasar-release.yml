@@ -41,16 +41,7 @@ jobs:
         id: release_notes
         run: |
           $commits = git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 2>$null || git rev-list --max-parents=0 HEAD)..HEAD
-          $releaseNotes = @"
-          ## What's New in v${{ steps.package_version.outputs.version }}
-
-          $commits
-
-          ## Installation
-          1. Download the ZIP file
-          2. Extract to your desired location
-          3. Run MLR Tools.exe
-          "@
+          $releaseNotes = @"That's the new v${{ steps.package_version.outputs.version }} of the app"@
 
           $releaseNotes | Out-File -FilePath release_notes.txt -Encoding UTF8
 

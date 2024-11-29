@@ -221,7 +221,7 @@ const importFile = async () => {
 
 const excludeAlarm = async (alarmId) => {
   await dataLogStore.excludeAlarm(alarmId);
-  dataLogStore.initialize();
+  // dataLogStore.initialize();
 };
 
 const translateAlarm = async (alarmId) => {
@@ -236,7 +236,7 @@ const translateAlarm = async (alarmId) => {
     persistent: true,
   }).onOk(async (data) => {
     await dataLogStore.translateAlarm(alarmId, data);
-    dataLogStore.initialize();
+    // dataLogStore.initialize();
   });
 };
 
