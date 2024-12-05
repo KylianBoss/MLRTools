@@ -2,16 +2,18 @@
   <div class="update-container">
     <q-banner v-if="updateAvailable" class="bg-info text-white">
       <template #avatar>
-        <q-icon name="system_update" />
+        <q-icon name="mdi-update" />
       </template>
-      <span class="text-h6">New Update Available!</span>
-      <span class="q-ml-sm">Version {{ latestVersion }} is now available.</span>
+      <div class="text-h6">Nouvelle mise à jour !</div>
+      <div>
+        La version {{ latestVersion }} est maintenant disponible.
+      </div>
       <template #action>
         <q-btn
           :loading="updating"
           flat
           color="white"
-          label="Update Now"
+          label="Mettre à jour"
           @click="handleUpdate"
         />
       </template>

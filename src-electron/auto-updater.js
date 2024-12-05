@@ -11,9 +11,20 @@ export class AutoUpdater {
     this.mainWindow = mainWindow;
     this.githubOwner = githubOwner;
     this.githubRepo = githubRepo;
-    this.currentVersion = app.getVersion();
+
+    let version;
+    try {
+      const packageJson = require("../package.json");
+      version = packageJson.version;
+    } catch (error) {
+      // Fallback to app.getVersion() if package.json is not available (in production)
+      version = app.getVersion();
+    }
+    console.log("App version:", version); // Debug log
+    this.currentVersion = version;
     this.setupIPC();
     this.setupCron();
+    console.log("AutoUpdater initialized");
   }
 
   setupCron() {
@@ -59,14 +70,26 @@ export class AutoUpdater {
         `https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/releases/latest`
       );
 
-      const latestVersion = response.data.tag_name.replace("v", "");
-      const updateAvailable = semver.gt(latestVersion, this.currentVersion);
+      // Clean up version strings
+      const latestVersion = response.data.tag_name.replace(/^v/i, "").trim();
+      const currentVersion = this.currentVersion.trim();
+
+      console.log("Version comparison:", {
+        current: currentVersion,
+        latest: latestVersion,
+        updateAvailable: semver.gt(latestVersion, currentVersion),
+      });
+
+      const updateAvailable = semver.gt(latestVersion, currentVersion);
+      const windowsAsset = response.data.assets.find((asset) =>
+        asset.name.endsWith(".zip")
+      );
 
       return {
         currentVersion: this.currentVersion,
         latestVersion,
         updateAvailable,
-        downloadUrl: updateAvailable ? response.data.zipball_url : null,
+        downloadUrl: updateAvailable && windowsAsset ? windowsAsset.browser_download_url : null,
       };
     } catch (error) {
       console.error("Error checking for updates:", error);
@@ -81,6 +104,8 @@ export class AutoUpdater {
         throw new Error("No update available");
       }
 
+      console.log("Downloading update from:", downloadUrl);
+
       const response = await axios({
         method: "get",
         url: downloadUrl,
@@ -93,6 +118,8 @@ export class AutoUpdater {
       const downloadPath = path.join(app.getPath("temp"), "update.zip");
       fs.writeFileSync(downloadPath, response.data);
 
+      console.log("Update downloaded to:", downloadPath);
+
       return { success: true, downloadPath };
     } catch (error) {
       console.error("Error downloading update:", error);
@@ -102,17 +129,20 @@ export class AutoUpdater {
 
   async installUpdate() {
     try {
-      const downloadPath = path.join(app.getPath("temp"), "update.zip");
+      const downloadPath = path.join(app.getPath('temp'), 'update.zip');
       const zip = new AdmZip(downloadPath);
-      const appPath = path.dirname(app.getPath("exe"));
+      const appPath = path.dirname(app.getPath('exe'));
 
       // Extract update to temporary directory
-      const tempExtractPath = path.join(app.getPath("temp"), "update-extract");
+      const tempExtractPath = path.join(app.getPath('temp'), 'update-extract');
       zip.extractAllTo(tempExtractPath, true);
 
-      // Get the extracted directory (GitHub creates a subdirectory)
-      const extractedDir = fs.readdirSync(tempExtractPath)[0];
-      const updateSource = path.join(tempExtractPath, extractedDir);
+      // Navigate to the correct directory structure
+      const updateSource = path.join(tempExtractPath, 'MLR Tools-win32-x64');
+
+      if (!fs.existsSync(updateSource)) {
+        throw new Error('Update package structure is invalid');
+      }
 
       // Copy new files to app directory
       this.copyRecursive(updateSource, appPath);
@@ -123,8 +153,8 @@ export class AutoUpdater {
 
       return { success: true };
     } catch (error) {
-      console.error("Error installing update:", error);
-      throw new Error("Failed to install update");
+      console.error('Error installing update:', error);
+      throw new Error('Failed to install update');
     }
   }
 

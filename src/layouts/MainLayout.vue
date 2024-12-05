@@ -10,6 +10,7 @@
           {{ pack.version }}
         </span>
       </q-toolbar>
+      <update-checker v-if="loaded" />
     </q-header>
 
     <q-drawer
@@ -180,7 +181,6 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <update-checker v-if="loaded" />
   </q-layout>
 </template>
 
