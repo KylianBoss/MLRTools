@@ -66,6 +66,53 @@ export const useAppStore = defineStore("App", {
         reader.readAsText(file[0]);
       });
     },
+    getUsers() {
+      return new Promise((resolve, reject) => {
+        window.electron
+          .serverRequest("GET", "/users", null)
+          .then((response) => {
+            resolve(response.data);
+          })
+          .catch((error) => {
+            console.error("Error getting users:", error);
+            reject(error);
+          });
+      });
+    },
+    editUser(user) {
+      return new Promise((resolve, reject) => {
+        window.electron
+          .serverRequest("PUT", "/users", user)
+          .then((response) => {
+            resolve(response);
+          })
+          .catch((error) => {
+            console.error("Error editing user:", error);
+            reject(error);
+          });
+      });
+    },
+    authorizeUser(username) {
+      return new Promise((resolve, reject) => {
+        window.electron
+          .serverRequest("POST", "/users/authorize", { username: username })
+          .then((response) => {
+            if (response.statusCode === 200) {
+              this.user = response.data.user;
+              this.user.UserAccesses = this.user.UserAccesses.map(
+                (access) => access.menuId
+              );
+              resolve(true);
+            } else {
+              resolve(false);
+            }
+          })
+          .catch((error) => {
+            console.error("Error authorizing user:", error);
+            reject(error);
+          });
+      });
+    },
     feedBackNotification(message, type) {
       Notify.create({
         message: message,

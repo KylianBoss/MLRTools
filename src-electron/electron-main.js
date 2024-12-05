@@ -1,24 +1,19 @@
 import { app, BrowserWindow, ipcMain, dialog } from "electron";
-import { updateElectronApp } from "update-electron-app";
 import path from "path";
 import express from "express";
 import { setupServer } from "./server";
-// import { syncDatabase } from "./database";
 import os from "os";
 import fs from "fs";
 import fsPromises from "fs/promises";
 import readline from "readline";
 import dotenv from "dotenv";
+import { AutoUpdater } from "./auto-updater.js";
 
 dotenv.config();
+const __dirname = path.resolve();
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
-
-// Auto-updates
-updateElectronApp({
-  repo: "KylianBoss/MLRTools",
-});
 
 let mainWindow;
 let printWindow;
@@ -30,10 +25,11 @@ function createWindow() {
    */
   mainWindow = new BrowserWindow({
     icon: path.resolve(__dirname, "icons/icon.png"), // tray icon
-    width: 1000,
-    height: 600,
+    width: 1200,
+    height: 800,
     useContentSize: true,
     webPreferences: {
+      nodeIntegration: true,
       contextIsolation: true,
       // More info: https://v2.quasar.dev/quasar-cli-vite/developing-electron-apps/electron-preload-script
       preload: path.resolve(__dirname, process.env.QUASAR_ELECTRON_PRELOAD),
@@ -46,6 +42,9 @@ function createWindow() {
       contextIsolation: true,
     },
   });
+
+  // Initialize auto-updater
+  const autoUpdater = new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
 
   mainWindow.loadURL(process.env.APP_URL);
 

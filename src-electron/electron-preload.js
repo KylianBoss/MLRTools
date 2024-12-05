@@ -47,5 +47,15 @@ contextBridge.exposeInMainWorld("electron", {
   },
   serverRequest: (method, path, body) =>
     ipcRenderer.invoke("server-request", { method, path, body }),
-  printPDF: (pdfBuffer) => ipcRenderer.invoke('print-pdf', pdfBuffer)
+  printPDF: (pdfBuffer) => ipcRenderer.invoke("print-pdf", pdfBuffer),
+  checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
+  downloadUpdate: () => ipcRenderer.invoke("download-update"),
+  installUpdate: () => ipcRenderer.invoke("install-update"),
+  restartApp: () => ipcRenderer.invoke("restart-app"),
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on("update-available", (_event, value) => callback(value));
+  },
+  removeUpdateListener: () => {
+    ipcRenderer.removeAllListeners("update-available");
+  },
 });

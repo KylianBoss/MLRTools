@@ -180,6 +180,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <update-checker v-if="loaded" />
   </q-layout>
 </template>
 
@@ -188,6 +189,7 @@ import { ref, watch, onMounted } from "vue";
 import pack from "../../package.json";
 import { useAppStore } from "stores/app";
 import { useQuasar, QSpinnerFacebook } from "quasar";
+import UpdateChecker from "components/UpdateChecker.vue";
 
 const App = useAppStore();
 const $q = useQuasar();
