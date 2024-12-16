@@ -147,7 +147,7 @@ export function setupServer(app) {
             MAX(classification) as classification,
             COUNT(*) as count
           FROM
-            Datalogs
+            datalogs
           WHERE
             timeOfOccurence BETWEEN :from AND :to
         `;
@@ -230,7 +230,7 @@ export function setupServer(app) {
         };
       }
 
-      const alarms = await Datalog.findAll({
+      const alarms = await db.models.Datalog.findAll({
         limit: count,
         offset: startRow,
         order: [[sortBy, descending ? "DESC" : "ASC"]],

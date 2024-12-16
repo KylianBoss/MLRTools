@@ -122,16 +122,16 @@ module.exports = configure(function (/* ctx */) {
     animations: [],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#property-sourcefiles
-    // sourceFiles: {
-    //   rootComponent: 'src/App.vue',
-    //   router: 'src/router/index',
-    //   store: 'src/store/index',
-    //   registerServiceWorker: 'src-pwa/register-service-worker',
-    //   serviceWorker: 'src-pwa/custom-service-worker',
-    //   pwaManifestFile: 'src-pwa/manifest.json',
-    //   electronMain: 'src-electron/electron-main',
-    //   electronPreload: 'src-electron/electron-preload'
-    // },
+    sourceFiles: {
+      //   rootComponent: 'src/App.vue',
+      //   router: 'src/router/index',
+      //   store: 'src/store/index',
+      //   registerServiceWorker: 'src-pwa/register-service-worker',
+      //   serviceWorker: 'src-pwa/custom-service-worker',
+      //   pwaManifestFile: 'src-pwa/manifest.json',
+      //   electronMain: 'src-electron/electron-main',
+      electronPreload: "src-electron/electron-preload",
+    },
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-ssr/configuring-ssr
     ssr: {
@@ -192,16 +192,18 @@ module.exports = configure(function (/* ctx */) {
         // Packager options
         platform: "win32",
         arch: "x64",
-        asar: true,
+        asar: {
+          unpack: "**/electron-preload.js", // This tells packager to keep preload script outside asar
+        },
         executableName: "MLR Tools",
         icon: "src-electron/icons/icon.ico",
         overwrite: true,
         out: "dist/electron",
-        ignore: [
-          "^/src-electron",
-          "^/src",
-          "^/public",
-          "/node_modules/sqlite3", // Ignore problematic modules
+        extraResources: [
+          {
+            from: "src-electron/electron-preload.js",
+            to: "electron-preload.js",
+          },
         ],
       },
 

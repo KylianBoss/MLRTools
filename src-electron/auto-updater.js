@@ -74,12 +74,6 @@ export class AutoUpdater {
       const latestVersion = response.data.tag_name.replace(/^v/i, "").trim();
       const currentVersion = this.currentVersion.trim();
 
-      console.log("Version comparison:", {
-        current: currentVersion,
-        latest: latestVersion,
-        updateAvailable: semver.gt(latestVersion, currentVersion),
-      });
-
       const updateAvailable = semver.gt(latestVersion, currentVersion);
       const windowsAsset = response.data.assets.find((asset) =>
         asset.name.endsWith(".zip")
@@ -104,8 +98,6 @@ export class AutoUpdater {
         throw new Error("No update available");
       }
 
-      console.log("Downloading update from:", downloadUrl);
-
       const response = await axios({
         method: "get",
         url: downloadUrl,
@@ -117,8 +109,6 @@ export class AutoUpdater {
 
       const downloadPath = path.join(app.getPath("temp"), "update.zip");
       fs.writeFileSync(downloadPath, response.data);
-
-      console.log("Update downloaded to:", downloadPath);
 
       return { success: true, downloadPath };
     } catch (error) {

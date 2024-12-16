@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog } from "electron";
+import { initialize, enable } from "@electron/remote/main";
 import path from "path";
 import express from "express";
 import { setupServer } from "./server";
@@ -15,9 +16,13 @@ const __dirname = path.resolve();
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
 
+initialize();
 let mainWindow;
 let printWindow;
 let expressApp;
+const preloadPath = app.isPackaged
+  ? path.join(process.resourcesPath, "app.asar.unpacked", "electron-preload.js")
+  : path.resolve(__dirname, process.env.QUASAR_ELECTRON_PRELOAD);
 
 function createWindow() {
   /**
@@ -32,7 +37,7 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: true,
       // More info: https://v2.quasar.dev/quasar-cli-vite/developing-electron-apps/electron-preload-script
-      preload: path.resolve(__dirname, process.env.QUASAR_ELECTRON_PRELOAD),
+      preload: preloadPath,
     },
   });
 
@@ -42,9 +47,6 @@ function createWindow() {
       contextIsolation: true,
     },
   });
-
-  // Initialize auto-updater
-  const autoUpdater = new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
 
   mainWindow.loadURL(process.env.APP_URL);
 
@@ -57,6 +59,8 @@ function createWindow() {
     //   mainWindow.webContents.closeDevTools()
     // })
   }
+
+  enable(mainWindow.webContents);
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -80,6 +84,9 @@ async function setupStorage() {
 
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=4096");
 app.whenReady().then(async () => {
+  // Initialize auto-updater
+  const autoUpdater = new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
+
   // await syncDatabase();
   await setupStorage();
   createWindow();
