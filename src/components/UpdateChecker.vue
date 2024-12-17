@@ -5,9 +5,7 @@
         <q-icon name="mdi-update" />
       </template>
       <div class="text-h6">Nouvelle mise à jour !</div>
-      <div>
-        La version {{ latestVersion }} est maintenant disponible.
-      </div>
+      <div>La version {{ latestVersion }} est maintenant disponible.</div>
       <template #action>
         <q-btn
           :loading="updating"
@@ -51,21 +49,19 @@ const handleUpdate = async () => {
     await window.electron.downloadUpdate();
 
     // Confirm with user before installing
-    const response = await $q.dialog({
+    $q.dialog({
       title: "Install Update",
       message:
         "The update has been downloaded. Would you like to install it now? The application will restart.",
       ok: "Install",
       cancel: "Later",
-    });
-
-    if (response) {
+    }).onOk(async () => {
       // Install the update
       await window.electron.installUpdate();
 
       // Restart the app
       window.electron.restartApp();
-    }
+    });
   } catch (error) {
     $q.notify({
       type: "negative",

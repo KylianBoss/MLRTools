@@ -83,9 +83,17 @@
               <q-item
                 clickable
                 v-close-popup
-                @click="excludeAlarm(props.row.alarmId)"
+                @click="dataLogStore.excludeAlarmId(props.row.alarmId)"
               >
                 <q-item-section>Exclure cette alarme</q-item-section>
+              </q-item>
+              <q-item
+                clickable
+                v-close-popup
+                @click="dataLogStore.excludeAlarmCode(props.row.alarmCode)"
+                v-if="props.row.alarmCode"
+              >
+                <q-item-section>Exclure ce code d'alarme</q-item-section>
               </q-item>
               <q-item
                 clickable
@@ -219,10 +227,10 @@ const importFile = async () => {
   }
 };
 
-const excludeAlarm = async (alarmId) => {
-  await dataLogStore.excludeAlarm(alarmId);
-  // dataLogStore.initialize();
-};
+// const excludeAlarm = async (alarmId) => {
+//   await dataLogStore.excludeAlarm(alarmId);
+//   // dataLogStore.initialize();
+// };
 
 const translateAlarm = async (alarmId) => {
   $q.dialog({

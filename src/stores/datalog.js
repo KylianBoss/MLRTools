@@ -118,7 +118,8 @@ export const useDataLogStore = defineStore("datalog", {
         align: "left",
       },
     ],
-    excludedAlarms: [],
+    excludedAlarmIds: [],
+    excludedAlarmCodes: [],
     alarms: [],
     dates: [],
     lastObjectTreated: null,
@@ -232,9 +233,14 @@ export const useDataLogStore = defineStore("datalog", {
               this.alarms = data.data;
             });
           window.electron
-            .serverRequest("GET", "/alarms/exclude")
+            .serverRequest("GET", "/alarms/exclude/id")
             .then((data) => {
-              this.excludedAlarms = data.data;
+              this.excludedAlarmIds = data.data;
+            });
+          window.electron
+            .serverRequest("GET", "/alarms/exclude/code")
+            .then((data) => {
+              this.excludedAlarmCodes = data.data;
             });
           resolve();
         } catch (error) {
@@ -357,12 +363,20 @@ export const useDataLogStore = defineStore("datalog", {
     clearDataLog() {
       this.dataLog = [];
     },
-    async excludeAlarm(alarmId) {
+    async excludeAlarmId(alarmId) {
       window.electron
-        .serverRequest("POST", "/alarms/exclude", alarmId)
+        .serverRequest("POST", "/alarms/exclude/id", alarmId)
         .then(() => {
-          this.excludedAlarms.push(alarmId);
+          this.excludedAlarmIds.push(alarmId);
           this.alarms = this.alarms.filter((a) => a.alarmId !== alarmId);
+        });
+    },
+    async excludeAlarmCode(alarmCode) {
+      window.electron
+        .serverRequest("POST", "/alarms/exclude/code", alarmCode)
+        .then(() => {
+          this.excludedAlarmCodes.push(alarmCode);
+          this.alarms = this.alarms.filter((a) => a.alarmCode !== alarmCode);
         });
     },
     async includeAlarm(alarmId) {

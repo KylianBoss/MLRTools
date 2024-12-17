@@ -96,6 +96,19 @@ function initDB(config) {
       }
     );
 
+    const ExcludedAlarmCodes = db.define(
+      "ExcludedAlarmCodes",
+      {
+        alarmCode: {
+          type: DataTypes.STRING,
+          primaryKey: true,
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
     const AlarmTranslations = db.define(
       "AlarmTranslations",
       {

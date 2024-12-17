@@ -181,6 +181,7 @@ export function setupServer(app) {
     }
   });
 
+  // INSERT ALARM MESSAGES
   app.post("/alarms", async (req, res) => {
     try {
       const alarm = await db.models.Datalog.upsert(req.body);
@@ -198,6 +199,7 @@ export function setupServer(app) {
     }
   });
 
+  // ALARMS
   app.get("/alarms", async (req, res) => {
     const { startRow, count, filter, sortBy, descending, sum } = req.body;
     try {
@@ -267,6 +269,11 @@ export function setupServer(app) {
           [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
         };
       }
+      if (!!!filter.excludedCode) {
+        where.alarmCode = {
+          [Op.notIn]: db.literal(`(SELECT alarmCode FROM ExcludedAlarmCodes)`),
+        };
+      }
       if (filter.like) {
         const terms = filter.like.split(" ");
         where = {
@@ -329,6 +336,11 @@ export function setupServer(app) {
       if (!!!excluded) {
         where.alarmId = {
           [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
+        };
+      }
+      if (!!!filter.excludedCode) {
+        where.alarmCode = {
+          [Op.notIn]: db.literal(`(SELECT alarmCode FROM ExcludedAlarmCodes)`),
         };
       }
       if (like) {
@@ -405,7 +417,8 @@ export function setupServer(app) {
     }
   });
 
-  app.post("/alarms/exclude", async (req, res) => {
+  // EXCLUDE ALARM ID
+  app.post("/alarms/exclude/id", async (req, res) => {
     try {
       const excludedAlarm = await db.models.ExcludedAlarms.upsert({
         alarmId: req.body,
@@ -416,11 +429,32 @@ export function setupServer(app) {
       res.status(500).json({ error: error.message });
     }
   });
-
-  app.get("/alarms/exclude", async (req, res) => {
+  app.get("/alarms/exclude/id", async (req, res) => {
     try {
       const excludedAlarms = await db.models.ExcludedAlarms.findAll();
       res.json(excludedAlarms.map((a) => a.alarmId));
+    } catch (error) {
+      console.error("Error fetching excluded alarms:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // EXCLUDE ALARM CODE
+  app.post("/alarms/exclude/code", async (req, res) => {
+    try {
+      const excludedAlarm = await db.models.ExcludedAlarmCodes.upsert({
+        alarmCode: req.body,
+      });
+      res.sendStatus(201);
+    } catch (error) {
+      console.error("Error excluding alarm:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app.get("/alarms/exclude/code", async (req, res) => {
+    try {
+      const excludedAlarms = await db.models.ExcludedAlarmCodes.findAll();
+      res.json(excludedAlarms.map((a) => a.alarmCode));
     } catch (error) {
       console.error("Error fetching excluded alarms:", error);
       res.status(500).json({ error: error.message });
@@ -448,6 +482,9 @@ export function setupServer(app) {
       if (exclude) {
         where.alarmId = {
           [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
+        };
+        where.alarmCode = {
+          [Op.notIn]: db.literal(`(SELECT alarmCode FROM ExcludedAlarmCodes)`),
         };
       }
       const alarms = await db.models.Alarms.findAll({
@@ -544,6 +581,7 @@ export function setupServer(app) {
           WHERE
             timeOfOccurence BETWEEN :from AND :to
             AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
+            AND alarmCode NOT IN (SELECT alarmCode FROM ExcludedAlarmCodes)
           GROUP BY
             alarmId
           ORDER BY
@@ -610,6 +648,7 @@ export function setupServer(app) {
           WHERE
             timeOfOccurence BETWEEN :from AND :to
             AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
+            AND alarmCode NOT IN (SELECT alarmCode FROM ExcludedAlarmCodes)
             AND dataSource = :dataSource
           GROUP BY
             alarmId
@@ -676,6 +715,7 @@ export function setupServer(app) {
           WHERE
             timeOfOccurence BETWEEN :from AND :to
             AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
+            AND alarmCode NOT IN (SELECT alarmCode FROM ExcludedAlarmCodes)
           GROUP BY
             alarmId
           ORDER BY
@@ -736,6 +776,11 @@ export function setupServer(app) {
       if (!!!includesExcluded) {
         where.alarmId = {
           [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
+        };
+      }
+      if (!!!filter.excludedCode) {
+        where.alarmCode = {
+          [Op.notIn]: db.literal(`(SELECT alarmCode FROM ExcludedAlarmCodes)`),
         };
       }
 
