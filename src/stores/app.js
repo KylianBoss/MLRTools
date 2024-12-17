@@ -5,6 +5,7 @@ export const useAppStore = defineStore("App", {
   state: () => ({
     notConfigured: true,
     user: null,
+    users: [],
   }),
   getters: {},
   actions: {
@@ -71,10 +72,24 @@ export const useAppStore = defineStore("App", {
         window.electron
           .serverRequest("GET", "/users", null)
           .then((response) => {
+            this.users = response.data;
             resolve(response.data);
           })
           .catch((error) => {
             console.error("Error getting users:", error);
+            reject(error);
+          });
+      });
+    },
+    updateUser(user) {
+      return new Promise((resolve, reject) => {
+        window.electron
+          .serverRequest("PUT", "/users", JSON.parse(JSON.stringify(user)))
+          .then((response) => {
+            resolve(response);
+          })
+          .catch((error) => {
+            console.error("Error updating user:", error);
             reject(error);
           });
       });
@@ -124,3 +139,12 @@ export const useAppStore = defineStore("App", {
   },
   persist: false,
 });
+
+class User {
+  constructor(data) {
+    this.fullname = data.fullname;
+    this.username = data.username;
+    this.id = data.id;
+    this.authorised = data.authorised;
+  }
+}

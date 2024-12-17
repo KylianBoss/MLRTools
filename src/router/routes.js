@@ -51,6 +51,11 @@ const routes = [
             name: "admin-db",
             component: () => import("src/pages/admin/DatabaseSettings.vue"),
           },
+          {
+            path: "users",
+            name: "admin-users",
+            component: () => import("src/pages/admin/UsersSettings.vue"),
+          },
         ],
       },
     ],

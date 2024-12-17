@@ -130,11 +130,24 @@
               v-ripple
               :to="{ name: 'admin-db' }"
               :active="$route.name == 'admin-db'"
+              v-if="App.user.UserAccesses.includes('admin-db') || true"
             >
               <q-item-section avatar>
                 <q-icon name="mdi-database-settings-outline" />
               </q-item-section>
               <q-item-section>Database</q-item-section>
+            </q-item>
+            <q-item
+              clickable
+              v-ripple
+              :to="{ name: 'admin-users' }"
+              :active="$route.name == 'admin-users'"
+              v-if="App.user.UserAccesses.includes('admin-users')"
+            >
+              <q-item-section avatar>
+                <q-icon name="mdi-account-group-outline" />
+              </q-item-section>
+              <q-item-section>Users</q-item-section>
             </q-item>
           </q-expansion-item>
         </q-list>

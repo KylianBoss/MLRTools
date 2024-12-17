@@ -85,7 +85,7 @@ async function setupStorage() {
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=4096");
 app.whenReady().then(async () => {
   // Initialize auto-updater
-  const autoUpdater = new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
+  if (app.isPackaged) new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
 
   // await syncDatabase();
   await setupStorage();

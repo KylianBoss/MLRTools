@@ -151,7 +151,9 @@ function initDB(config) {
             "importMessages",
             "excludedAlarms",
             "suspiciousPlaces",
-            "admin"
+            "admin",
+            "admin-db",
+            "admin-users"
           ),
         },
       },
