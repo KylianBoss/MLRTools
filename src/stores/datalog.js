@@ -2,9 +2,11 @@ import { defineStore } from "pinia";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import "dayjs/locale/fr";
 
 dayjs.extend(duration);
 dayjs.extend(customParseFormat);
+dayjs.locale("fr");
 
 const monthNames = [
   "janv.",
@@ -326,26 +328,25 @@ export const useDataLogStore = defineStore("datalog", {
           const rawData = line.replaceAll('"', "").split(";");
           if (rawData.length < 11) return null;
           if (!!!rawData[0].match(/\d/)) return null;
-          const parseTimeRegex =
-            /(\d{1,2})\s+([\wéû]+\.?)\s+(\d{4})\s+à\s+(\d{2}:\d{2}:\d{2})/gi;
-          const start = [...rawData[1].matchAll(parseTimeRegex)];
-          const end = [...rawData[2].matchAll(parseTimeRegex)];
-          const startDate = `${start[0][3]}-${
-            monthNames.indexOf(start[0][2]) + 1
-          }-${start[0][1]} ${start[0][4]}`;
-          const endDate = `${end[0][3]}-${monthNames.indexOf(end[0][2]) + 1}-${
-            end[0][1]
-          } ${end[0][4]}`;
-          if (!startDate || !endDate) return null;
-          if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid())
-            return null;
+          // const parseTimeRegex =
+          //   /(\d{1,2})\s+([\wéû]+\.?)\s+(\d{4})\s+à\s+(\d{2}:\d{2}:\d{2})/gi;
+          // const start = [...rawData[1].matchAll(parseTimeRegex)];
+          // const end = [...rawData[2].matchAll(parseTimeRegex)];
+          const startDate = dayjs(rawData[1], "D MMM YYYY à HH:mm:ss", "fr");
+          const endDate = dayjs(rawData[2], "D MMM YYYY à HH:mm:ss", "fr");
+          // const startDate = `${start[0][3]}-${
+          //   monthNames.indexOf(start[0][2])
+          // }-${start[0][1]} ${start[0][4]}`;
+          // const endDate = `${end[0][3]}-${monthNames.indexOf(end[0][2]) + 1}-${
+          //   end[0][1]
+          // } ${end[0][4]}`;
+          // if (!startDate || !endDate) return null;
+          if (!startDate.isValid() || !endDate.isValid()) return null;
           return {
             dbId: rawData[0],
-            timeOfOccurence: dayjs(startDate).format("YYYY-MM-DD HH:mm:ss"),
-            timeOfAcknowledge: dayjs(endDate).format("YYYY-MM-DD HH:mm:ss"),
-            duration: dayjs
-              .duration(dayjs(endDate).diff(dayjs(startDate)))
-              .asSeconds(),
+            timeOfOccurence: startDate.format("YYYY-MM-DD HH:mm:ss"),
+            timeOfAcknowledge: endDate.format("YYYY-MM-DD HH:mm:ss"),
+            duration: dayjs.duration(endDate.diff(startDate)).asSeconds(),
             dataSource: rawData[5],
             alarmArea: rawData[6],
             alarmCode: rawData[7],
