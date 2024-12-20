@@ -18,7 +18,7 @@ const monthNames = [
   "sept.",
   "oct.",
   "nov.",
-  "dec",
+  "déc",
 ];
 
 export const useDataLogStore = defineStore("datalog", {
