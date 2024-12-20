@@ -767,81 +767,86 @@ export function setupServer(app) {
     const { dataSource } = req.params;
 
     try {
-      const where = {
-        timeOfOccurence: {
-          [Op.between]: [from, to],
-        },
-        dataSource,
-      };
-      if (!!!includesExcluded) {
-        where.alarmId = {
-          [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
-        };
-      }
-      if (!!!filter.excludedCode) {
-        where.alarmCode = {
-          [Op.notIn]: db.literal(`(SELECT alarmCode FROM ExcludedAlarmCodes)`),
-        };
-      }
+      // const where = {
+      //   timeOfOccurence: {
+      //     [Op.between]: [from, to],
+      //   },
+      //   dataSource,
+      // };
+      // if (!!!includesExcluded) {
+      //   where.alarmId = {
+      //     [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
+      //   };
+      // }
+      // if (!!!filter.excludedCode) {
+      //   where.alarmCode = {
+      //     [Op.notIn]: db.literal(`(SELECT alarmCode FROM ExcludedAlarmCodes)`),
+      //   };
+      // }
 
-      const rawData = await db.models.Datalog.findAll({
-        where,
-        order: [["timeOfOccurence", "ASC"]],
-        attributes: [
-          "dbId",
-          "timeOfOccurence",
-          "timeOfAcknowledge",
-          "duration",
-          "dataSource",
-          "alarmArea",
-          "alarmText",
-        ],
+      // const rawData = await db.models.Datalog.findAll({
+      //   where,
+      //   order: [["timeOfOccurence", "ASC"]],
+      //   attributes: [
+      //     "dbId",
+      //     "timeOfOccurence",
+      //     "timeOfAcknowledge",
+      //     "duration",
+      //     "dataSource",
+      //     "alarmArea",
+      //     "alarmText",
+      //   ],
+      // });
+
+      // const result = [];
+      // const totalMinutes = 1440;
+      // let lastEndTime = dayjs(rawData[0].timeOfAcknowledge);
+      // const endOfDay = dayjs(rawData[0].lastEndTime).add(1, "day");
+
+      // rawData.forEach((event) => {
+      //   const startTime = dayjs(event.timeOfOccurence);
+      //   const endTime = dayjs(event.timeOfAcknowledge);
+
+      //   if (startTime.isAfter(lastEndTime)) {
+      //     const runningDuration = dayjs
+      //       .duration(startTime.diff(lastEndTime))
+      //       .asMinutes();
+      //     result.push({
+      //       time: (runningDuration / totalMinutes).toFixed(8),
+      //       state: "running",
+      //       message: null,
+      //     });
+      //   }
+
+      //   const errorDuration = dayjs
+      //     .duration(endTime.diff(startTime))
+      //     .asMinutes();
+      //   result.push({
+      //     time: (errorDuration / totalMinutes).toFixed(8),
+      //     state: "error",
+      //     message: event.alarmText,
+      //   });
+
+      //   lastEndTime = endTime;
+      // });
+
+      // if (lastEndTime.isBefore(endOfDay)) {
+      //   const runningDuration = dayjs
+      //     .duration(endOfDay.diff(lastEndTime))
+      //     .asMinutes();
+      //   result.push({
+      //     time: (runningDuration / totalMinutes).toFixed(8),
+      //     state: "running",
+      //     message: null,
+      //   });
+      // }
+
+      // res.json(result);
+      db.query("CALL getGroupedAlarms(:fromDateTime, :toDateTime, :zone)", {
+        replacements: { fromDateTime: from, toDateTime: to, zone: dataSource }
+      }).then((result) => {
+        res.json(result);
       });
-
-      const result = [];
-      const totalMinutes = 1440;
-      let lastEndTime = dayjs(rawData[0].timeOfAcknowledge);
-      const endOfDay = dayjs(rawData[0].lastEndTime).add(1, "day");
-
-      rawData.forEach((event) => {
-        const startTime = dayjs(event.timeOfOccurence);
-        const endTime = dayjs(event.timeOfAcknowledge);
-
-        if (startTime.isAfter(lastEndTime)) {
-          const runningDuration = dayjs
-            .duration(startTime.diff(lastEndTime))
-            .asMinutes();
-          result.push({
-            time: (runningDuration / totalMinutes).toFixed(8),
-            state: "running",
-            message: null,
-          });
-        }
-
-        const errorDuration = dayjs
-          .duration(endTime.diff(startTime))
-          .asMinutes();
-        result.push({
-          time: (errorDuration / totalMinutes).toFixed(8),
-          state: "error",
-          message: event.alarmText,
-        });
-
-        lastEndTime = endTime;
-      });
-
-      if (lastEndTime.isBefore(endOfDay)) {
-        const runningDuration = dayjs
-          .duration(endOfDay.diff(lastEndTime))
-          .asMinutes();
-        result.push({
-          time: (runningDuration / totalMinutes).toFixed(8),
-          state: "running",
-          message: null,
-        });
-      }
-
-      res.json(result);
     } catch (error) {
       console.error("Error fetching KPI resume:", error);
       res.status(500).json({ error: error.message });

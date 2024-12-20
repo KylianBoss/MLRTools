@@ -218,15 +218,35 @@
                 <div class="col">{{ zone.dataSource }}</div>
               </div>
               <div class="row">
+                <div class="col col-3">Runtime :</div>
+                <div class="col col-3">
+                  {{ zone.runtime.toFixed(2) }} minutes
+                </div>
+                <div class="col col-3">Stoptime :</div>
+                <div class="col col-3">
+                  {{ zone.stoptime.toFixed(2) }} minutes
+                </div>
+                <div class="col col-3">Nombre de pannes :</div>
+                <div class="col col-3">
+                  {{ zone.nbFaillures }}
+                </div>
+                <div class="col col-3">MTBF :</div>
+                <div class="col col-3">{{ zone.MTBF.toFixed(2) }} minutes</div>
+                <div class="col col-3">MTTR :</div>
+                <div class="col col-3">{{ zone.MTTR.toFixed(2) }} minutes</div>
+                <div class="col col-3">Disponibilité :</div>
+                <div class="col col-3">
+                  {{ (zone.dispo * 100).toFixed(2) }}%
+                </div>
+              </div>
+              <div class="row">
                 <div
-                  v-for="alarm in zone.alarms"
-                  :key="alarm.alarmId"
-                  class="col col-auto text-transparent"
-                  :class="
-                    alarm.state === 'running' ? 'bg-positive' : 'bg-negative'
-                  "
-                  :style="`width: ${alarm.time}%`"
-                  :title="alarm.alarmText"
+                  v-for="d in zone.data"
+                  :key="d.id"
+                  class="text-transparent"
+                  :class="d.state == 0 ? 'bg-positive' : 'bg-negative'"
+                  :style="`width: ${d.duration}%`"
+                  :title="d.alarmText"
                 >
                   .
                 </div>
@@ -247,6 +267,7 @@ import isBetween from "dayjs/plugin/isBetween";
 import { useDataLogStore } from "stores/datalog";
 import MessagesByDay from "src/components/charts/MessagesByDay.vue";
 import ErrorsPerZoneCount from "src/components/charts/ErrorsPerZoneCount.vue";
+import VueApexCharts from "vue3-apexcharts";
 
 dayjs.extend(isBetween);
 
@@ -266,7 +287,7 @@ const dataSources = [
   "F001",
   "F002",
   "F003",
-  "F004",
+  /*"F004",
   "F005",
   "F006",
   "F007",
@@ -282,7 +303,7 @@ const dataSources = [
   "X101",
   "X102",
   "X103",
-  "X104",
+  "X104",*/
 ];
 const KPITop3Number = ref([]);
 const KPITop3Duration = ref([]);
@@ -336,15 +357,62 @@ const getData = (filter) => {
           dataSource,
           alarms,
         });
-        const day = await dataLogStore.getDayResume({
-          from,
-          to,
-          dataSource,
-        });
-        dayResume.value.push({
-          dataSource,
-          alarms: day,
-        });
+        console.info("Send:", dataSource);
+        dataLogStore
+          .getDayResume({
+            from,
+            to,
+            dataSource,
+          })
+          .then((day) => {
+            if (day.length === 0) return;
+            const totalTimeInSeconds = dayjs(
+              day[day.length - 1].timeOfAcknowledge
+            ).diff(day[0].timeOfOccurence, "second");
+            const runtime = totalTimeInSeconds / 60;
+            const stoptime =
+              day.reduce((acc, message) => {
+                if (message.alarmCode == 0) return acc;
+                return acc + message.duration;
+              }, 0) / 60;
+            const nbFaillures = day.reduce((acc, message) => {
+              if (message.alarmCode == 0) return acc;
+              return acc + 1;
+            }, 0);
+            const MTTR = stoptime / nbFaillures;
+            const MTBF = runtime / nbFaillures;
+            const dispo = MTBF / (MTBF + MTTR);
+            dayResume.value.push({
+              dataSource,
+              runtime,
+              stoptime,
+              nbFaillures,
+              MTBF,
+              MTTR,
+              dispo,
+              data: day.map((message) => {
+                return {
+                  id: message.group_id,
+                  state: message.alarmCode,
+                  alarmText: message.alarmText,
+                  startTime: dayjs(message.timeOfOccurence).format(
+                    "YYYY-MM-DD HH:mm:ss"
+                  ),
+                  endTime: dayjs(message.timeOfAcknowledge).format(
+                    "YYYY-MM-DD HH:mm:ss"
+                  ),
+                  duration: mapValue(
+                    message.duration,
+                    0,
+                    totalTimeInSeconds,
+                    0,
+                    100
+                  ),
+                };
+              }),
+            });
+            console.info("Recieve:", dataSource);
+          });
       }
       KPITop3Number.value = kpiTop3Count;
       KPITop3Duration.value = kpiTop3Duration;
@@ -410,6 +478,10 @@ const showLoading = () => {
     messageColor: "white",
   });
 };
+
+function mapValue(x, in_min, in_max, out_min, out_max) {
+  return ((x - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
+}
 </script>
 
 <style></style>
