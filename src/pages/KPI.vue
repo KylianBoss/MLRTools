@@ -287,7 +287,7 @@ const dataSources = [
   "F001",
   "F002",
   "F003",
-  /*"F004",
+  "F004",
   "F005",
   "F006",
   "F007",
@@ -303,7 +303,7 @@ const dataSources = [
   "X101",
   "X102",
   "X103",
-  "X104",*/
+  "X104",
 ];
 const KPITop3Number = ref([]);
 const KPITop3Duration = ref([]);
