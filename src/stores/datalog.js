@@ -172,8 +172,8 @@ export const useDataLogStore = defineStore("datalog", {
       return new Promise((resolve) => {
         window.electron
           .serverRequest("GET", "/alarms/kpi/count", filter)
-          .then((data) => {
-            resolve(data.data);
+          .then((response) => {
+            resolve(response.data);
           });
       });
     },

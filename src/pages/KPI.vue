@@ -22,7 +22,7 @@
     <div class="row q-pt-xs">
       <div class="col">
         <q-expansion-item
-          label="Top 3 erreurs - Nombre"
+          label="Top erreurs - Nombre"
           header-class="bg-primary text-weight-bold text-white"
           expand-icon-class="text-white"
           v-model="sectionKPITop3"
@@ -61,7 +61,7 @@
                 field: 'count',
               },
             ]"
-            :rows-per-page-options="[3]"
+            :rows-per-page-options="[0]"
             hide-bottom
             row-key="date"
             flat
@@ -74,7 +74,7 @@
     <div class="row q-pt-xs">
       <div class="col">
         <q-expansion-item
-          label="Top 3 erreurs - Durée"
+          label="Top erreurs - Durée"
           header-class="bg-primary text-weight-bold text-white"
           expand-icon-class="text-white"
           v-model="sectionKPITop3"
@@ -117,7 +117,7 @@
                 },
               },
             ]"
-            :rows-per-page-options="[3]"
+            :rows-per-page-options="[0]"
             hide-bottom
             row-key="date"
             flat
@@ -130,7 +130,7 @@
     <div class="row q-pt-xs">
       <div class="col">
         <q-expansion-item
-          label="Top 3 erreurs par zone"
+          label="Top erreurs par zone"
           header-class="bg-primary text-weight-bold text-white"
           expand-icon-class="text-white"
           v-model="sectionKPITop3Zone"
@@ -203,56 +203,87 @@
       v-if="typeof toDisplay == 'string' && dayResume.length > 0"
     >
       <div class="col">
+        <q-linear-progress
+          v-if="!Object.values(allLoaded).every(Boolean)"
+          color="secondary"
+          :value="
+            Object.values(allLoaded).filter(Boolean).length /
+            Object.keys(allLoaded).length
+          "
+        />
         <q-expansion-item
           label="Résumé de la journée"
           header-class="bg-primary text-weight-bold text-white"
           expand-icon-class="text-white"
+          :disable="!Object.values(allLoaded).every(Boolean)"
         >
-          <div
-            class="row full-width"
-            v-for="zone in dayResume"
-            :key="zone.dataSource"
-          >
-            <div class="col">
-              <div class="row">
-                <div class="col">{{ zone.dataSource }}</div>
-              </div>
-              <div class="row">
-                <div class="col col-3">Runtime :</div>
-                <div class="col col-3">
-                  {{ zone.runtime.toFixed(2) }} minutes
-                </div>
-                <div class="col col-3">Stoptime :</div>
-                <div class="col col-3">
-                  {{ zone.stoptime.toFixed(2) }} minutes
-                </div>
-                <div class="col col-3">Nombre de pannes :</div>
-                <div class="col col-3">
-                  {{ zone.nbFaillures }}
-                </div>
-                <div class="col col-3">MTBF :</div>
-                <div class="col col-3">{{ zone.MTBF.toFixed(2) }} minutes</div>
-                <div class="col col-3">MTTR :</div>
-                <div class="col col-3">{{ zone.MTTR.toFixed(2) }} minutes</div>
-                <div class="col col-3">Disponibilité :</div>
-                <div class="col col-3">
-                  {{ (zone.dispo * 100).toFixed(2) }}%
-                </div>
-              </div>
-              <div class="row">
-                <div
-                  v-for="d in zone.data"
-                  :key="d.id"
-                  class="text-transparent"
-                  :class="d.state == 0 ? 'bg-positive' : 'bg-negative'"
-                  :style="`width: ${d.duration}%`"
-                  :title="d.alarmText"
-                >
-                  .
-                </div>
-              </div>
-            </div>
-          </div>
+          <vue-apex-charts
+            type="rangeBar"
+            height="500"
+            :options="chartOptions"
+            :series="chartOptions.series"
+          />
+          <q-table
+            :rows="dayResume"
+            :columns="[
+              {
+                name: 'dataSource',
+                label: 'Zone',
+                align: 'left',
+                field: 'dataSource',
+              },
+              {
+                name: 'runtime',
+                label: 'Runtime [min]',
+                align: 'right',
+                field: (row) => {
+                  return Math.round(row.runtime, 0);
+                },
+              },
+              {
+                name: 'stoptime',
+                label: 'Stoptime [min]',
+                align: 'right',
+                field: (row) => {
+                  return Math.round(row.stoptime, 0);
+                },
+              },
+              {
+                name: 'nbFaillures',
+                label: 'Nombre de pannes [#]',
+                align: 'right',
+                field: 'nbFaillures',
+              },
+              {
+                name: 'MTBF',
+                label: 'MTBF [min]',
+                align: 'right',
+                field: (row) => {
+                  return row.MTBF.toFixed(2);
+                },
+              },
+              {
+                name: 'MTTR',
+                label: 'MTTR [min]',
+                align: 'right',
+                field: (row) => {
+                  return row.MTTR.toFixed(2);
+                },
+              },
+              {
+                name: 'dispo',
+                label: 'Disponibilité',
+                align: 'right',
+                field: (row) => {
+                  return (row.dispo * 100).toFixed(2) + '%';
+                },
+              },
+            ]"
+            row-key="dataSource"
+            flat
+            bordered
+            dense
+          />
         </q-expansion-item>
       </div>
     </div>
@@ -304,11 +335,67 @@ const dataSources = [
   "X102",
   "X103",
   "X104",
+  "W001",
+  "W002",
+  "W003",
+  "W004",
+  "W005",
+  "W006",
 ];
 const KPITop3Number = ref([]);
 const KPITop3Duration = ref([]);
 const KPITop3PerZone = ref([]);
 const dayResume = ref([]);
+const chartOptions = {
+  chart: {
+    type: "rangeBar",
+    toolbar: {
+      show: false,
+    },
+    animations: {
+      enabled: false,
+    },
+    zoom: {
+      enabled: false,
+    },
+  },
+  plotOptions: {
+    bar: {
+      horizontal: true,
+      barHeight: "80%",
+      rangeBarGroupRows: true,
+    },
+  },
+  xaxis: {
+    type: "datetime",
+    labels: {
+      datetimeFormatter: {
+        hour: "HH:mm",
+      },
+    },
+  },
+  yaxis: {
+    labels: {
+      style: {
+        fontSize: "12px",
+      },
+    },
+  },
+  grid: {
+    show: false,
+  },
+  colors: ["#00E396", "#FF4560"],
+  tooltip: {
+    x: {
+      format: "HH:mm",
+    },
+  },
+  legend: {
+    show: false,
+  },
+  series: [],
+};
+const allLoaded = ref({});
 
 watch(toDisplay, async (newDate, oldValue) => {
   if (JSON.stringify(newDate) === JSON.stringify(oldValue)) return;
@@ -326,6 +413,8 @@ watch(toDisplay, async (newDate, oldValue) => {
 const getData = (filter) => {
   return new Promise(async (resolve) => {
     if (typeof filter === "string") {
+      chartOptions.series = [];
+      dayResume.value = [];
       const from = dayjs(filter)
         .set("hour", 0)
         .set("minute", 0)
@@ -358,6 +447,8 @@ const getData = (filter) => {
           alarms,
         });
         console.info("Send:", dataSource);
+        showLoading(`Chargement des données pour ${dataSource}...`);
+        allLoaded.value[dataSource] = false;
         dataLogStore
           .getDayResume({
             from,
@@ -365,6 +456,8 @@ const getData = (filter) => {
             dataSource,
           })
           .then((day) => {
+            console.info("Recieve:", dataSource);
+            allLoaded.value[dataSource] = true;
             if (day.length === 0) return;
             const totalTimeInSeconds = dayjs(
               day[day.length - 1].timeOfAcknowledge
@@ -379,8 +472,8 @@ const getData = (filter) => {
               if (message.alarmCode == 0) return acc;
               return acc + 1;
             }, 0);
-            const MTTR = stoptime / nbFaillures;
-            const MTBF = runtime / nbFaillures;
+            const MTTR = stoptime / Math.max(nbFaillures, 1);
+            const MTBF = runtime / Math.max(nbFaillures, 1);
             const dispo = MTBF / (MTBF + MTTR);
             dayResume.value.push({
               dataSource,
@@ -411,7 +504,25 @@ const getData = (filter) => {
                 };
               }),
             });
-            console.info("Recieve:", dataSource);
+            dayResume.value.sort((a, b) => {
+              return a.dataSource.localeCompare(b.dataSource);
+            });
+            chartOptions.series.push({
+              name: dataSource,
+              data: day.map((message) => {
+                return {
+                  x: dataSource,
+                  y: [
+                    dayjs(message.timeOfOccurence).valueOf(),
+                    dayjs(message.timeOfAcknowledge).valueOf(),
+                  ],
+                  fillColor: message.alarmCode == 0 ? "green" : "red",
+                };
+              }),
+            });
+            chartOptions.series.sort((a, b) => {
+              return a.name.localeCompare(b.name);
+            });
           });
       }
       KPITop3Number.value = kpiTop3Count;
@@ -468,13 +579,13 @@ onMounted(async () => {
   $q.loading.hide();
 });
 
-const showLoading = () => {
+const showLoading = (message) => {
   $q.loading.show({
     spinner: QSpinnerFacebook,
     spinnerColor: "primary",
     spinnerSize: 160,
     backgroundColor: "dark",
-    message: "Rechargement des données...",
+    message: message ? message : "Rechargement des données...",
     messageColor: "white",
   });
 };

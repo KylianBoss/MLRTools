@@ -13,6 +13,12 @@ function initDB(config) {
       password: config.db_password,
       database: config.db_name,
       logging: false,
+      pool: {
+        max: 10, // Maximum number of connection in pool (default: 5)
+        min: 0, // Minimum number of connection in pool
+        acquire: 60000, // The maximum time, in milliseconds, that pool will try to get connection before throwing error (default: 60000)
+        idle: 10000, // The maximum time, in milliseconds, that a connection can be idle before being released (default: 10000)
+      },
     });
 
     const Datalog = db.define(

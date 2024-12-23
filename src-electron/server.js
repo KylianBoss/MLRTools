@@ -566,62 +566,20 @@ export function setupServer(app) {
     const { from, to, includesExcluded = false } = req.body;
 
     try {
-      let query;
-      if (!!!includesExcluded) {
-        query = `
-          SELECT
-            alarmId,
-            MAX(alarmText) as alarmText,
-            MAX(alarmArea) as alarmArea,
-            MAX(alarmCode) as alarmCode,
-            MAX(dataSource) as "dataSource",
-            COUNT(*) as count
-          FROM
-            Datalogs
-          WHERE
-            timeOfOccurence BETWEEN :from AND :to
-            AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
-            AND alarmCode NOT IN (SELECT alarmCode FROM ExcludedAlarmCodes)
-          GROUP BY
-            alarmId
-          ORDER BY
-            count DESC
-          LIMIT 3
-        `;
-      } else {
-        query = `
-          SELECT
-            alarmId,
-            MAX(alarmText) as alarmText,
-            MAX(dataSource) as dataSource,
-            COUNT(*) as count
-          FROM
-            Datalogs
-          WHERE
-            timeOfOccurence BETWEEN :from AND :to
-          GROUP BY
-            alarmId
-          ORDER BY
-            count DESC
-          LIMIT 3
-        `;
-      }
-      const result = await db.query(query, {
-        replacements: { from, to },
-        type: QueryTypes.SELECT,
+      db.query(
+        "CALL getKPICount(:from, :to, :dataSource, :includesExcluded, :limit)",
+        {
+          replacements: {
+            from,
+            to,
+            dataSource: "*", // All zones
+            includesExcluded,
+            limit: 5,
+          },
+        }
+      ).then((result) => {
+        res.json(result);
       });
-
-      const translations = await db.models.AlarmTranslations.findAll();
-
-      res.json(
-        result.map((r) => {
-          const translation = translations.find((t) => t.alarmId === r.alarmId);
-          return {
-            ...r,
-            alarmText: translation ? translation.translation : r.alarmText,
-          };
-        })
-      );
     } catch (error) {
       console.error("Error fetching KPI count:", error);
       res.status(500).json({ error: error.message });
@@ -633,63 +591,20 @@ export function setupServer(app) {
     const { dataSource } = req.params;
 
     try {
-      let query;
-      if (!!!includesExcluded) {
-        query = `
-          SELECT
-            alarmId,
-            MAX(alarmText) as alarmText,
-            MAX(alarmArea) as alarmArea,
-            MAX(alarmCode) as alarmCode,
-            MAX(dataSource) as dataSource,
-            COUNT(*) as count
-          FROM
-            Datalogs
-          WHERE
-            timeOfOccurence BETWEEN :from AND :to
-            AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
-            AND alarmCode NOT IN (SELECT alarmCode FROM ExcludedAlarmCodes)
-            AND dataSource = :dataSource
-          GROUP BY
-            alarmId
-          ORDER BY
-            count DESC
-          LIMIT 3
-        `;
-      } else {
-        query = `
-          SELECT
-            alarmId,
-            MAX(alarmText) as alarmText,
-            MAX(dataSource) as dataSource,
-            COUNT(*) as count
-          FROM
-            Datalogs
-          WHERE
-            timeOfOccurence BETWEEN :from AND :to
-            AND dataSource = :dataSource
-          GROUP BY
-            alarmId
-          ORDER BY
-            count DESC
-          LIMIT 3
-        `;
-      }
-      const result = await db.query(query, {
-        replacements: { from, to, dataSource },
-        type: QueryTypes.SELECT,
+      db.query(
+        "CALL getKPICount(:from, :to, :dataSource, :includesExcluded, :limit)",
+        {
+          replacements: {
+            from,
+            to,
+            dataSource,
+            includesExcluded,
+            limit: 5,
+          },
+        }
+      ).then((result) => {
+        res.json(result);
       });
-
-      const translations = await db.models.AlarmTranslations.findAll();
-      res.json(
-        result.map((r) => {
-          const translation = translations.find((t) => t.alarmId === r.alarmId);
-          return {
-            ...r,
-            alarmText: translation ? translation.translation : r.alarmText,
-          };
-        })
-      );
     } catch (error) {
       console.error("Error fetching KPI count:", error);
       res.status(500).json({ error: error.message });
@@ -700,62 +615,20 @@ export function setupServer(app) {
     const { from, to, includesExcluded = false } = req.body;
 
     try {
-      let query;
-      if (!!!includesExcluded) {
-        query = `
-          SELECT
-            alarmId,
-            MAX(alarmText) as alarmText,
-            MAX(alarmArea) as alarmArea,
-            MAX(alarmCode) as alarmCode,
-            MAX(dataSource) as dataSource,
-            SUM(duration) as duration
-          FROM
-            Datalogs
-          WHERE
-            timeOfOccurence BETWEEN :from AND :to
-            AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
-            AND alarmCode NOT IN (SELECT alarmCode FROM ExcludedAlarmCodes)
-          GROUP BY
-            alarmId
-          ORDER BY
-            duration DESC
-          LIMIT 3
-        `;
-      } else {
-        query = `
-          SELECT
-            alarmId,
-            MAX(alarmText) as alarmText,
-            MAX(dataSource) as dataSource,
-            SUM(duration) as duration
-          FROM
-            Datalogs
-          WHERE
-            timeOfOccurence BETWEEN :from AND :to
-          GROUP BY
-            alarmId
-          ORDER BY
-            duration DESC
-          LIMIT 3
-        `;
-      }
-      const result = await db.query(query, {
-        replacements: { from, to },
-        type: QueryTypes.SELECT,
+      db.query(
+        "CALL getKPIDuration(:from, :to, :dataSource, :includesExcluded, :limit)",
+        {
+          replacements: {
+            from,
+            to,
+            dataSource: "*", // All zones
+            includesExcluded,
+            limit: 5,
+          },
+        }
+      ).then((result) => {
+        res.json(result);
       });
-
-      const translations = await db.models.AlarmTranslations.findAll();
-
-      res.json(
-        result.map((r) => {
-          const translation = translations.find((t) => t.alarmId === r.alarmId);
-          return {
-            ...r,
-            alarmText: translation ? translation.translation : r.alarmText,
-          };
-        })
-      );
     } catch (error) {
       console.error("Error fetching KPI duration:", error);
       res.status(500).json({ error: error.message });
@@ -767,83 +640,8 @@ export function setupServer(app) {
     const { dataSource } = req.params;
 
     try {
-      // const where = {
-      //   timeOfOccurence: {
-      //     [Op.between]: [from, to],
-      //   },
-      //   dataSource,
-      // };
-      // if (!!!includesExcluded) {
-      //   where.alarmId = {
-      //     [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
-      //   };
-      // }
-      // if (!!!filter.excludedCode) {
-      //   where.alarmCode = {
-      //     [Op.notIn]: db.literal(`(SELECT alarmCode FROM ExcludedAlarmCodes)`),
-      //   };
-      // }
-
-      // const rawData = await db.models.Datalog.findAll({
-      //   where,
-      //   order: [["timeOfOccurence", "ASC"]],
-      //   attributes: [
-      //     "dbId",
-      //     "timeOfOccurence",
-      //     "timeOfAcknowledge",
-      //     "duration",
-      //     "dataSource",
-      //     "alarmArea",
-      //     "alarmText",
-      //   ],
-      // });
-
-      // const result = [];
-      // const totalMinutes = 1440;
-      // let lastEndTime = dayjs(rawData[0].timeOfAcknowledge);
-      // const endOfDay = dayjs(rawData[0].lastEndTime).add(1, "day");
-
-      // rawData.forEach((event) => {
-      //   const startTime = dayjs(event.timeOfOccurence);
-      //   const endTime = dayjs(event.timeOfAcknowledge);
-
-      //   if (startTime.isAfter(lastEndTime)) {
-      //     const runningDuration = dayjs
-      //       .duration(startTime.diff(lastEndTime))
-      //       .asMinutes();
-      //     result.push({
-      //       time: (runningDuration / totalMinutes).toFixed(8),
-      //       state: "running",
-      //       message: null,
-      //     });
-      //   }
-
-      //   const errorDuration = dayjs
-      //     .duration(endTime.diff(startTime))
-      //     .asMinutes();
-      //   result.push({
-      //     time: (errorDuration / totalMinutes).toFixed(8),
-      //     state: "error",
-      //     message: event.alarmText,
-      //   });
-
-      //   lastEndTime = endTime;
-      // });
-
-      // if (lastEndTime.isBefore(endOfDay)) {
-      //   const runningDuration = dayjs
-      //     .duration(endOfDay.diff(lastEndTime))
-      //     .asMinutes();
-      //   result.push({
-      //     time: (runningDuration / totalMinutes).toFixed(8),
-      //     state: "running",
-      //     message: null,
-      //   });
-      // }
-
-      // res.json(result);
       db.query("CALL getGroupedAlarms(:fromDateTime, :toDateTime, :zone)", {
-        replacements: { fromDateTime: from, toDateTime: to, zone: dataSource }
+        replacements: { fromDateTime: from, toDateTime: to, zone: dataSource },
       }).then((result) => {
         res.json(result);
       });
