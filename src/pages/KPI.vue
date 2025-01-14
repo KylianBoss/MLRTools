@@ -6,17 +6,50 @@
     </div>
     <div class="row">
       <div class="col">
-        <q-date
-          v-model="toDisplay"
-          :events="days"
-          class="full-width"
-          minimal
-          range
-          :navigation-max-year-month="dayjs().format('YYYY/MM')"
-          landscape
-          title="Période d'affichage"
-          first-day-of-week="1"
-        />
+        <q-card class="q-ma-none q-pa-none">
+          <q-card-section class="q-ma-none q-pa-none">
+            <q-date
+              v-model="toDisplay"
+              :events="days"
+              :options="(date) => !dataLogStore.isDayOff(date)"
+              :event-color="
+                (date) =>
+                  dataLogStore.isMissingProductionTimes(date)
+                    ? 'negative'
+                    : 'secondary'
+              "
+              class="full-width"
+              minimal
+              range
+              :navigation-max-year-month="dayjs().format('YYYY/MM')"
+              landscape
+              title="Période d'affichage"
+              first-day-of-week="1"
+              locale="fr"
+              flat
+            />
+            <div class="row">
+              <div class="col">
+                <q-expansion-item label="Légende" dense>
+                  <small>
+                    <q-icon
+                      name="mdi-circle-small"
+                      color="negative"
+                      size="4em"
+                      dense
+                    />Données mais pas d'horaire de production
+                    <q-icon
+                      name="mdi-circle-small"
+                      color="secondary"
+                      size="4em"
+                      dense
+                    />Données et horaires de production
+                  </small>
+                </q-expansion-item>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
       </div>
     </div>
     <div class="row q-pt-xs">
@@ -283,6 +316,7 @@
             flat
             bordered
             dense
+            :rows-per-page-options="[0]"
           />
         </q-expansion-item>
       </div>
@@ -306,10 +340,7 @@ const $q = useQuasar();
 const dataLogStore = useDataLogStore();
 const sectionKPITop3 = ref(false);
 const sectionKPITop3Zone = ref(false);
-const toDisplay = ref({
-  from: dayjs().set("date", 1).format("YYYY/MM/DD"),
-  to: dayjs().format("YYYY/MM/DD"),
-});
+const toDisplay = ref(dayjs().subtract(1, "day").format("YYYY/MM/DD"));
 const days = computed(() =>
   dataLogStore.dates.map((date) => dayjs(date).format("YYYY/MM/DD"))
 );
@@ -415,16 +446,11 @@ const getData = (filter) => {
     if (typeof filter === "string") {
       chartOptions.series = [];
       dayResume.value = [];
-      const from = dayjs(filter)
-        .set("hour", 0)
-        .set("minute", 0)
-        .set("second", 0)
-        .format("YYYY-MM-DD HH:mm:ss");
-      const to = dayjs(filter)
-        .set("hour", 23)
-        .set("minute", 59)
-        .set("second", 59)
-        .format("YYYY-MM-DD HH:mm:ss");
+      const productionTime = dataLogStore.productionTime(
+        dayjs(filter).format("YYYY-MM-DD")
+      );
+      const from = dayjs(filter).format("YYYY-MM-DD ") + productionTime.from;
+      const to = dayjs(filter).format("YYYY-MM-DD ") + productionTime.to;
       const kpiTop3Count = await dataLogStore.getKPItop3Count({
         from,
         to,
@@ -435,6 +461,7 @@ const getData = (filter) => {
         to,
         includesExcluded: false,
       });
+      const promises = [];
       for (const dataSource of dataSources) {
         const alarms = await dataLogStore.getKPItop3CountPerZone({
           from,
@@ -449,7 +476,7 @@ const getData = (filter) => {
         console.info("Send:", dataSource);
         showLoading(`Chargement des données pour ${dataSource}...`);
         allLoaded.value[dataSource] = false;
-        dataLogStore
+        const d = dataLogStore
           .getDayResume({
             from,
             to,
@@ -504,9 +531,6 @@ const getData = (filter) => {
                 };
               }),
             });
-            dayResume.value.sort((a, b) => {
-              return a.dataSource.localeCompare(b.dataSource);
-            });
             chartOptions.series.push({
               name: dataSource,
               data: day.map((message) => {
@@ -520,14 +544,38 @@ const getData = (filter) => {
                 };
               }),
             });
-            chartOptions.series.sort((a, b) => {
-              return a.name.localeCompare(b.name);
-            });
           });
+        promises.push(d);
       }
+      await Promise.all(promises);
+      dayResume.value.sort((a, b) => {
+        return a.dataSource.localeCompare(b.dataSource);
+      });
+      chartOptions.series.sort((a, b) => {
+        return a.name.localeCompare(b.name);
+      });
       KPITop3Number.value = kpiTop3Count;
       KPITop3Duration.value = kpiTop3Duration;
       $q.loading.hide();
+      // Add total at the end of the table
+      dayResume.value.push({
+        dataSource: "Total",
+        runtime: dayResume.value.reduce((acc, day) => acc + day.runtime, 0),
+        stoptime: dayResume.value.reduce((acc, day) => acc + day.stoptime, 0),
+        nbFaillures: dayResume.value.reduce(
+          (acc, day) => acc + day.nbFaillures,
+          0
+        ),
+        MTBF:
+          dayResume.value.reduce((acc, day) => acc + day.MTBF, 0) /
+          dayResume.value.length,
+        MTTR:
+          dayResume.value.reduce((acc, day) => acc + day.MTTR, 0) /
+          dayResume.value.length,
+        dispo:
+          dayResume.value.reduce((acc, day) => acc + day.dispo, 0) /
+          dayResume.value.length,
+      });
       resolve();
     } else if (typeof filter === typeof {}) {
       const from = dayjs(filter.from)
@@ -573,8 +621,9 @@ const getData = (filter) => {
 
 onMounted(async () => {
   showLoading();
-  dataLogStore.initialize();
-  // await getData(toDisplay.value);
+  dataLogStore.initialize().then(async () => {
+    await getData(toDisplay);
+  });
   sectionKPITop3.value = true;
   $q.loading.hide();
 });
