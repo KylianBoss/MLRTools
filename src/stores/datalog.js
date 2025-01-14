@@ -125,8 +125,38 @@ export const useDataLogStore = defineStore("datalog", {
     alarms: [],
     dates: [],
     lastObjectTreated: null,
+    productionTimes: [],
+    importing: false,
   }),
-  getters: {},
+  getters: {
+    isMissingProductionTimes() {
+      return (date) => {
+        return !this.productionTimes.some(
+          (p) => p.date === dayjs(date).format("YYYY-MM-DD")
+        );
+      };
+    },
+    isDayOff() {
+      return (date) => {
+        const dates = this.productionTimes.filter(
+          (p) => p.date === dayjs(date).format("YYYY-MM-DD")
+        );
+        if (dates.length === 0) return false;
+        if (dates[0].dayOff === 1) return true;
+        return false;
+      };
+    },
+    productionTime() {
+      return (date) => {
+        const productionTime = this.productionTimes.find(
+          (p) => p.date === dayjs(date).format("YYYY-MM-DD")
+        );
+        return productionTime
+          ? { from: productionTime.start, to: productionTime.end }
+          : { from: "00:00", to: "23:59" };
+      };
+    },
+  },
   actions: {
     async getData(startRow, count, filter, sortBy, descending, sum) {
       return new Promise((resolve, reject) => {
@@ -207,8 +237,8 @@ export const useDataLogStore = defineStore("datalog", {
             `/alarms/kpi/resume/${filter.dataSource}`,
             filter
           )
-          .then((data) => {
-            resolve(data.data);
+          .then((response) => {
+            resolve(response.data);
           });
       });
     },
@@ -223,26 +253,33 @@ export const useDataLogStore = defineStore("datalog", {
       });
     },
     initialize() {
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         try {
           console.log("Initializing data log store");
-          window.electron.serverRequest("GET", "/alarms/day").then((data) => {
-            this.dates = data.data;
-          });
-          window.electron
+          await window.electron
+            .serverRequest("GET", "/alarms/day")
+            .then((data) => {
+              this.dates = data.data;
+            });
+          await window.electron
             .serverRequest("GET", "/alarms/unique?excluded=false")
             .then((data) => {
               this.alarms = data.data;
             });
-          window.electron
+          await window.electron
             .serverRequest("GET", "/alarms/exclude/id")
             .then((data) => {
               this.excludedAlarmIds = data.data;
             });
-          window.electron
+          await window.electron
             .serverRequest("GET", "/alarms/exclude/code")
             .then((data) => {
               this.excludedAlarmCodes = data.data;
+            });
+          await window.electron
+            .serverRequest("GET", "/production/times")
+            .then((response) => {
+              this.productionTimes = response.data;
             });
           resolve();
         } catch (error) {
@@ -256,6 +293,7 @@ export const useDataLogStore = defineStore("datalog", {
       this.importError = [];
       this.importedLines = 0;
       this.progression = this.progress.initialize(totalLines);
+      this.importing = true;
     },
     async importDataChunk(lines, fileType) {
       console.log("Importing data chunk from file", fileType);
@@ -267,15 +305,20 @@ export const useDataLogStore = defineStore("datalog", {
         return;
       }
 
-      for (const data of newData) {
-        this.lastObjectTreated = data;
+      // for (const data of newData) {
+      //   this.lastObjectTreated = data;
 
-        await window.electron.serverRequest("POST", "/alarms", data);
+      //   await window.electron.serverRequest("POST", "/alarms", data);
 
-        this.importedLines++;
-        if (this.importedLines % 20 === 0)
-          this.progression = this.progress.update(this.importedLines);
-      }
+      //   this.importedLines++;
+      //   if (this.importedLines % 20 === 0)
+      //     this.progression = this.progress.update(this.importedLines);
+      // }
+      // Send by bulk
+      this.lastObjectTreated = newData[newData.length - 1];
+      await window.electron.serverRequest("POST", "/alarms", newData);
+      this.importedLines += newData.length;
+      this.progression = this.progress.update(this.importedLines);
     },
     importTXT(lines) {
       return lines
@@ -360,6 +403,7 @@ export const useDataLogStore = defineStore("datalog", {
     },
     finishImport() {
       this.loading = false;
+      this.importing = false;
     },
     clearDataLog() {
       this.dataLog = [];
@@ -399,6 +443,48 @@ export const useDataLogStore = defineStore("datalog", {
           });
       });
     },
+    updateAlarmZone(data) {
+      return new Promise((resolve, reject) => {
+        window.electron
+          .serverRequest("POST", `/alarms/zone/${data.alarmId}`, {
+            zone: data.zone,
+          })
+          .then((result) => {
+            this.alarms.find((a) => a.alarmId == data.alarmId).TGWzone =
+              result.data;
+            resolve(true);
+          });
+      });
+    },
+    getProductionTimes() {
+      return new Promise((resolve, reject) => {
+        window.electron
+          .serverRequest("GET", "/production/times")
+          .then((response) => {
+            this.productionTimes = response.data;
+            resolve(response.data);
+          });
+      });
+    },
+    getProductionTime(date) {
+      return new Promise((resolve, reject) => {
+        window.electron
+          .serverRequest("GET", `/production/times/${date}`)
+          .then((response) => {
+            resolve(response.data);
+          });
+      });
+    },
+    setProductionTime(data) {
+      return new Promise((resolve, reject) => {
+        window.electron
+          .serverRequest("POST", `/production/times`, { ...data })
+          .then((response) => {
+            this.productionTimes.push(response.data);
+            resolve(response.data);
+          });
+      });
+    },
   },
   persist: false,
 });
@@ -410,7 +496,7 @@ class ProgressTracker {
     this.importedLines = 0;
     this.totalLines = 0;
     this.timePerLineEMA = null;
-    this.alpha = 0.1; // EMA smoothing factor (0.1 = more stable, 0.3 = more reactive)
+    this.alpha = 0.01; // EMA smoothing factor (0.1 = more stable, 0.3 = more reactive)
     this.updateCount = 0;
   }
 
@@ -468,9 +554,7 @@ class ProgressTracker {
 
     return {
       elapsedTime: dayjs.duration(elapsedTime, "seconds").format("HH:mm:ss"),
-      estimatedTimeLeft: estimatedTimeLeft
-        ? dayjs.duration(estimatedTimeLeft, "seconds").format("HH:mm:ss")
-        : "--:--:--",
+      estimatedTimeLeft: estimatedTimeLeft,
       percentComplete: percentComplete.toFixed(2),
       linesProcessed: this.importedLines,
       totalLines: this.totalLines,
