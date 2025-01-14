@@ -28,7 +28,7 @@
             emit-value
             map-options
             @update:model-value="App.updateUser(props.row)"
-            style="max-width: 200px; overflow: hidden;"
+            style="max-width: 200px; overflow: hidden"
           >
             <template
               v-slot:option="{ itemProps, opt, selected, toggleOption }"
@@ -92,6 +92,7 @@ const columns = [
 //   "charts",
 //   "importMessages",
 //   "excludedAlarms",
+//   "tgwReportAlarms",
 //   "suspiciousPlaces",
 //   "admin",
 //   "admin-db",
@@ -103,6 +104,7 @@ const access = [
   { label: "Charts", value: "charts" },
   { label: "Import Messages", value: "importMessages" },
   { label: "Excluded Alarms", value: "excludedAlarms" },
+  { label: "TGW rapport zones", value: "tgwReportZones" },
   { label: "Suspicious Places", value: "suspiciousPlaces" },
   { label: "Admin", value: "admin" },
   { label: "Admin DB", value: "admin-db" },
