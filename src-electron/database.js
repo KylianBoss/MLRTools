@@ -169,6 +169,9 @@ function initDB(config) {
             "charts",
             "importMessages",
             "excludedAlarms",
+            "tgwReportZones",
+            "productionTime",
+            "alarmList",
             "suspiciousPlaces",
             "admin",
             "admin-db",
@@ -181,8 +184,180 @@ function initDB(config) {
       }
     );
 
+    const ProductionTimes = db.define(
+      "ProductionTimes",
+      {
+        date: {
+          type: DataTypes.DATEONLY,
+          allowNull: false,
+          primaryKey: true,
+          unique: true,
+        },
+        start: {
+          type: DataTypes.TIME,
+          allowNull: false,
+          defaultValue: "00:00:00",
+        },
+        end: {
+          type: DataTypes.TIME,
+          allowNull: false,
+          defaultValue: "23:59:59",
+        },
+        dayOff: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
+    const ignoredAlarms = db.define("ignoredAlarms", {
+      id: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      alarmDbId: {
+        type: DataTypes.INTEGER,
+        references: {
+          model: Datalog,
+          key: "dbId",
+        },
+        allowNull: false,
+      },
+      reason: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      ignoredBy: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        references: {
+          model: Users,
+          key: "id",
+        },
+        allowNull: false,
+      },
+    });
+
+    const alarmZoneTGWReport = db.define(
+      "alarmZoneTGWReport",
+      {
+        alarmId: {
+          type: DataTypes.STRING,
+          references: {
+            model: Alarms,
+            key: "alarmId",
+          },
+          allowNull: false,
+          primaryKey: true,
+        },
+        zone: {
+          type: DataTypes.ENUM(
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "H",
+            "I",
+            "J",
+            "K",
+            "L",
+            "M",
+            "N",
+            "O",
+            "P",
+            "Q",
+            "R",
+            "S",
+            "T",
+            "U",
+            "V",
+            "W",
+            "X",
+            "Y",
+            "Z",
+            "AA",
+            "AB",
+            "AC",
+            "AD",
+            "AE",
+            "AF",
+            "AG",
+            "XX"
+          ),
+          allowNull: false,
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["alarmId", "zone"],
+          },
+        ],
+      }
+    );
+
+    const DayResume = db.define(
+      "DayResume",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        dataSource: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        from: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        to: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        data: {
+          type: DataTypes.JSON,
+          allowNull: false,
+          get() {
+            return JSON.parse(this.getDataValue("data"));
+          },
+          set(value) {
+            this.setDataValue("data", JSON.stringify(value));
+          },
+        },
+        TTL: {
+          type: DataTypes.DATEONLY,
+          allowNull: false,
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["dataSource", "from", "to"],
+          },
+        ],
+      }
+    );
+
     Users.hasMany(UserAccess, {
       foreignKey: "userId",
+    });
+
+    Alarms.hasOne(alarmZoneTGWReport, {
+      as: "TGWzone",
+      foreignKey: "alarmId",
     });
 
     console.log("Database initialized");
