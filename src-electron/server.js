@@ -115,6 +115,91 @@ export function setupServer(app) {
       res.status(500).json({ error: error.message });
     }
   });
+  app.post("/db/empty-day-resume", async (req, res) => {
+    const { user } = req.body;
+    if (!user) {
+      res.status(400).json({ error: "No user provided" });
+      return;
+    }
+    try {
+      // Get the user
+      const user_ = await db.models.Users.findOne({
+        where: {
+          username: user,
+        },
+        include: {
+          model: db.models.UserAccess,
+          attributes: ["menuId"],
+        },
+      });
+      if (!user_) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      // Control if the user has access to the admin menu
+      const hasAccess = user_.UserAccesses.find((a) => a.menuId === "admin");
+      if (!hasAccess) {
+        res.status(403).json({ error: "User not authorized" });
+        return;
+      }
+      console.log("Emptying day resume");
+      await db.models.DayResume.destroy({
+        where: {},
+      });
+      console.log("Day resume emptied");
+      res.sendStatus(201);
+    } catch (error) {
+      console.error("Error emptying day resume:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app.post("/db/empty-day-resume-at-date", async (req, res) => {
+    const { user, date } = req.body;
+    if (!user) {
+      res.status(400).json({ error: "No user provided" });
+      return;
+    }
+    try {
+      // Get the user
+      const user_ = await db.models.Users.findOne({
+        where: {
+          username: user,
+        },
+        include: {
+          model: db.models.UserAccess,
+          attributes: ["menuId"],
+        },
+      });
+      if (!user_) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      // Control if the user has access to the admin menu
+      const hasAccess = user_.UserAccesses.find((a) => a.menuId === "admin");
+      if (!hasAccess) {
+        res.status(403).json({ error: "User not authorized" });
+        return;
+      }
+      console.log("Emptying day resume at date", date);
+      await db.models.DayResume.destroy({
+        where: {
+          from: {
+            [Op.between]: [
+              dayjs(date).startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+              dayjs(date).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+            ],
+          },
+        },
+      });
+      console.log("Day resume emptied");
+      res.sendStatus(201);
+    } catch (error) {
+      console.error("Error emptying day resume at date:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // USERS
   app.get("/users", async (req, res) => {
@@ -184,17 +269,39 @@ export function setupServer(app) {
   // INSERT ALARM MESSAGES
   app.post("/alarms", async (req, res) => {
     try {
-      const alarm = await db.models.Datalog.upsert(req.body);
-      await db.models.Alarms.upsert({
-        alarmId: req.body.alarmId,
-        dataSource: req.body.dataSource,
-        alarmArea: req.body.alarmArea,
-        alarmCode: req.body.alarmCode,
-        alarmText: req.body.alarmText,
+      const alarms = await db.models.Datalog.bulkCreate(req.body, {
+        updateOnDuplicate: [
+          "timeOfOccurence",
+          "timeOfAcknowledge",
+          "duration",
+          "dataSource",
+          "alarmArea",
+          "alarmCode",
+          "alarmText",
+          "severity",
+          "classification",
+          "alarmId",
+        ],
       });
-      res.status(201).json(alarm);
+
+      // Keep only unique alarms from the inserted alarms
+      const uniqueAlarms = alarms.filter(
+        (alarm, index, self) =>
+          index === self.findIndex((a) => a.alarmId === alarm.alarmId)
+      );
+      console.log("unique alarms:", uniqueAlarms.length);
+
+      for (const alarm of uniqueAlarms) {
+        await db.models.Alarms.upsert({
+          alarmId: alarm.alarmId,
+          dataSource: alarm.dataSource,
+          alarmArea: alarm.alarmArea,
+          alarmCode: alarm.alarmCode,
+          alarmText: alarm.alarmText,
+        });
+      }
+      res.sendStatus(201);
     } catch (error) {
-      console.error("Error creating alarm:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -495,6 +602,10 @@ export function setupServer(app) {
           "alarmCode",
           "alarmText",
         ],
+        include: {
+          model: db.models.alarmZoneTGWReport,
+          as: "TGWzone",
+        },
         group: ["alarmId", "dataSource", "alarmArea", "alarmCode", "alarmText"],
         where,
       });
@@ -642,11 +753,62 @@ export function setupServer(app) {
     try {
       db.query("CALL getGroupedAlarms(:fromDateTime, :toDateTime, :zone)", {
         replacements: { fromDateTime: from, toDateTime: to, zone: dataSource },
-      }).then((result) => {
-        res.json(result);
-      });
+      })
+        .then((result) => {
+          res.json(result);
+        })
+        .catch((error) => {
+          console.error("Error fetching KPI resume:", error);
+          res.status(500).json({ error: error.message });
+        });
     } catch (error) {
       console.error("Error fetching KPI resume:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/alarms/zone/:alarmId", async (req, res) => {
+    const { zone } = req.body;
+    console.log("Updating alarm zone:", req.params.alarmId, zone);
+    try {
+      const alarm = await db.models.Alarms.findOne({
+        where: {
+          alarmId: req.params.alarmId,
+        },
+        include: {
+          model: db.models.alarmZoneTGWReport,
+          as: "TGWzone",
+        },
+      });
+      if (!alarm) {
+        res.status(404).json({ error: "Alarm not found" });
+        return;
+      }
+
+      if (zone === null) {
+        await db.models.alarmZoneTGWReport.destroy({
+          where: {
+            alarmId: req.params.alarmId,
+          },
+        });
+        res.json(null);
+        return;
+      }
+
+      await db.models.alarmZoneTGWReport.destroy({
+        where: {
+          alarmId: req.params.alarmId,
+        },
+      });
+      const newZone = await db.models.alarmZoneTGWReport.create({
+        alarmId: req.params.alarmId,
+        zone,
+      });
+
+      console.log("Alarm zone updated");
+      res.json(newZone.dataValues);
+    } catch (error) {
+      console.error("Error updating alarm zone:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -661,6 +823,35 @@ export function setupServer(app) {
       res.json(alarm.toJSON());
     } catch (error) {
       console.error("Error fetching alarm:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // PRODUCTION TIME
+  app.get("/production/times", async (req, res) => {
+    try {
+      const times = await db.models.ProductionTimes.findAll({
+        order: [["date", "ASC"]],
+        raw: true,
+      });
+      res.json(times);
+    } catch (error) {
+      console.error("Error fetching production times:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app.post("/production/times", async (req, res) => {
+    const { date, start, end, dayOff } = req.body;
+    try {
+      const time = await db.models.ProductionTimes.create({
+        date,
+        start,
+        end,
+        dayOff,
+      });
+      res.json(time.dataValues);
+    } catch (error) {
+      console.error("Error creating production time:", error);
       res.status(500).json({ error: error.message });
     }
   });
