@@ -15,10 +15,13 @@
       :columns="
         sum
           ? [
-              ...dataLogStore.columns.filter((c) =>
-                !['timeOfOccurence', 'timeOfAcknowledge', 'duration'].includes(
-                  c.name
-                )
+              ...dataLogStore.columns.filter(
+                (c) =>
+                  ![
+                    'timeOfOccurence',
+                    'timeOfAcknowledge',
+                    'duration',
+                  ].includes(c.name)
               ),
               {
                 name: 'count',
@@ -81,6 +84,7 @@
         <tr
           :props="props"
           :class="
+            dataLogStore.excludedAlarms &&
             dataLogStore.excludedAlarms.includes(props.row.alarmId)
               ? 'bg-grey'
               : null
