@@ -12,24 +12,49 @@ const routes = [
         component: () => import("pages/SearchMessages.vue"),
       },
       {
-        path: "import",
-        name: "import",
-        component: () => import("src/pages/ImportData.vue"),
-      },
-      {
-        path: "excluded-alarms",
-        name: "excluded-alarms",
-        component: () => import("src/pages/ExcludedAlarms.vue"),
-      },
-      {
-        path: "suspicious-places",
-        name: "suspicious_places",
-        component: () => import("src/pages/SuspiciousPlaces.vue"),
-      },
-      {
         path: "charts",
         name: "charts",
         component: () => import("src/pages/ChartsPage.vue"),
+      },
+      {
+        path: "alarms",
+        children: [
+          {
+            path: "import",
+            name: "import",
+            component: () => import("src/pages/alarms/ImportData.vue"),
+          },
+          {
+            path: "alarm-list",
+            name: "alarm-list",
+            component: () => import("src/pages/alarms/AlarmList.vue"),
+          },
+          {
+            path: "excluded-alarms",
+            name: "excluded-alarms",
+            component: () => import("src/pages/alarms/ExcludedAlarms.vue"),
+          },
+          {
+            path: "production-time",
+            name: "production-time",
+            component: () => import("src/pages/alarms/ProductionTime.vue"),
+          },
+          {
+            path: "tgw-report-zones",
+            name: "tgw-report-zones",
+            component: () => import("src/pages/alarms/TGWReportZones.vue"),
+          },
+        ],
+      },
+      {
+        path: "tools",
+        children: [
+          {
+            path: "suspicious-places",
+            name: "suspicious_places",
+            component: () => import("src/pages/tools/SuspiciousPlaces.vue"),
+          },
+        ],
       },
       {
         path: "admin",
