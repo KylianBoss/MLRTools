@@ -1,7 +1,7 @@
 <template>
   <q-page padding>
     <!-- Create an input to import a txt file -->
-    <q-card>
+    <q-card class="q-mb-md">
       <q-card-section v-if="!dataLogStore.loading" class="q-pa-md">
         <q-btn
           color="primary"
@@ -35,7 +35,13 @@
           <div class="absolute-full flex flex-center">
             <q-badge
               text-color="white"
-              :label="`Chargement des données... ${dataLogStore.progression.percentComplete}% temps restant ${dataLogStore.progression.estimatedTimeLeft} (${dataLogStore.progression.linesProcessed}/${dataLogStore.progression.totalLines})`"
+              :label="`Chargement des données... ${
+                dataLogStore.progression.percentComplete
+              }% temps restant ${dayjs
+                .duration(estimatedTimeLeft, 'seconds')
+                .format('HH:mm:ss')} (${
+                dataLogStore.progression.linesProcessed
+              }/${dataLogStore.progression.totalLines})`"
             />
           </div>
         </q-linear-progress>
@@ -48,12 +54,6 @@
         <span class="text-negative">{{ dataLogStore.importError }}</span>
       </q-card-section>
     </q-card>
-    <q-date
-      v-model="date"
-      :events="dataLogStore.dates.map((d) => dayjs(d).format('YYYY/MM/DD'))"
-      class="full-width"
-      minimal
-    />
     <q-table
       :rows="dataLogStore.alarms"
       row-key="alarmId"
@@ -123,6 +123,7 @@ const saved = ref(false);
 const date = ref(dayjs().format("YYYY/MM/DD"));
 const filter = ref("");
 const data = ref("");
+const estimatedTimeLeft = ref(0);
 
 const selectFile = async () => {
   try {
@@ -161,6 +162,7 @@ const importFile = async () => {
 
       for (const line of fileContent) {
         await dataLogStore.importDataChunk([line]);
+        estimatedTimeLeft.value = dataLogStore.progression.estimatedTimeLeft;
       }
 
       $q.notify({
@@ -204,6 +206,7 @@ const importFile = async () => {
 
     for (const chunk of fileContent) {
       await dataLogStore.importDataChunk(chunk, fileType);
+      estimatedTimeLeft.value = dataLogStore.progression.estimatedTimeLeft;
     }
 
     $q.notify({
@@ -250,5 +253,10 @@ const translateAlarm = async (alarmId) => {
 
 onMounted(async () => {
   dataLogStore.initialize();
+  setInterval(() => {
+    if (dataLogStore.importing) {
+      estimatedTimeLeft.value = estimatedTimeLeft.value - 1;
+    }
+  }, 1000);
 });
 </script>
