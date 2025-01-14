@@ -27,6 +27,7 @@
     >
       <q-scroll-area class="fit">
         <q-list>
+          <!-- KPI -->
           <q-item
             clickable
             v-ripple
@@ -39,6 +40,7 @@
             </q-item-section>
             <q-item-section>KPI</q-item-section>
           </q-item>
+          <!-- SEARCH -->
           <q-item
             clickable
             v-ripple
@@ -51,6 +53,7 @@
             </q-item-section>
             <q-item-section>Recherche alarmes</q-item-section>
           </q-item>
+          <!-- CHARTS -->
           <q-item
             clickable
             v-ripple
@@ -63,6 +66,7 @@
             </q-item-section>
             <q-item-section>Graphiques</q-item-section>
           </q-item>
+          <!-- ALARMS -->
           <q-expansion-item
             expand-separator
             icon="mdi-bell-outline"
@@ -73,31 +77,38 @@
               App.user.UserAccesses.includes('excludedAlarms')
             "
           >
-            <q-item
-              clickable
-              v-ripple
-              :to="{ name: 'import' }"
-              :active="$route.name == 'import'"
-              v-if="App.user.UserAccesses.includes('importMessages')"
-            >
-              <q-item-section avatar>
-                <q-icon name="mdi-file-import-outline" />
-              </q-item-section>
-              <q-item-section>Importer des messages</q-item-section>
-            </q-item>
-            <q-item
-              clickable
-              v-ripple
-              :to="{ name: 'excluded-alarms' }"
-              :active="$route.name == 'excluded-alarms'"
-              v-if="App.user.UserAccesses.includes('excludedAlarms')"
-            >
-              <q-item-section avatar>
-                <q-icon name="mdi-bell-cancel-outline" />
-              </q-item-section>
-              <q-item-section>Alarmes exclues</q-item-section>
-            </q-item>
+            <drawer-item
+              to="import"
+              autorisation="importMessages"
+              icon="mdi-file-import-outline"
+              label="Importer des messages"
+            />
+            <drawer-item
+              to="alarm-list"
+              autorisation="alarmList"
+              icon="mdi-format-list-bulleted-type"
+              label="Liste des alarmes"
+            />
+            <drawer-item
+              to="excluded-alarms"
+              autorisation="excludedAlarms"
+              icon="mdi-bell-cancel-outline"
+              label="Alarmes exclues"
+            />
+            <drawer-item
+              to="production-time"
+              autorisation="productionTime"
+              icon="mdi-timetable"
+              label="Temps de production"
+            />
+            <drawer-item
+              to="tgw-report-zones"
+              autorisation="tgwReportZones"
+              icon="mdi-order-bool-ascending-variant"
+              label="TGW Rapport zones"
+            />
           </q-expansion-item>
+          <!-- TOOLS -->
           <q-expansion-item
             expand-separator
             icon="mdi-toolbox-outline"
@@ -118,6 +129,7 @@
               <q-item-section>Lieux suspects</q-item-section>
             </q-item>
           </q-expansion-item>
+          <!-- ADMINISTRATION -->
           <q-expansion-item
             expand-separator
             icon="mdi-shield-account-outline"
@@ -155,6 +167,45 @@
     </q-drawer>
 
     <q-page-container>
+      <!-- Information banners -->
+      <div
+        v-if="!App.notConfigured && App.user.autorised && loaded"
+        class="q-pa-sm"
+      >
+        <q-banner
+          v-if="
+            App.user.UserAccesses.includes('tgwReportZones') &&
+            dataLogStore.alarms &&
+            dataLogStore.alarms.length -
+              dataLogStore.alarms.filter((alarm) => alarm.TGWzone).length >
+              0 &&
+            !banners['tgw-report-zones']
+          "
+          class="bg-blue text-white"
+          dense
+        >
+          {{
+            dataLogStore.alarms.length -
+            dataLogStore.alarms.filter((alarm) => alarm.TGWzone).length
+          }}
+          alarmes non traitées dans le rapport TGW
+          <template v-slot:action>
+            <q-btn
+              flat
+              color="white"
+              label="Masquer"
+              @click="banners['tgw-report-zones'] = true"
+            />
+            <q-btn
+              flat
+              color="white"
+              label="TGW Rapport zones"
+              :to="{ name: 'tgw-report-zones' }"
+            />
+          </template>
+        </q-banner>
+      </div>
+      <!-- View -->
       <router-view v-if="!App.notConfigured && App.user.autorised && loaded" />
       <q-card v-if="!App.notConfigured && !App.user.autorised && loaded">
         <q-card-section>
@@ -168,6 +219,7 @@
       </q-card>
     </q-page-container>
 
+    <!-- Dialogs -->
     <q-dialog v-model="App.notConfigured" persistent v-if="loaded">
       <q-card>
         <q-card-section>
@@ -203,6 +255,8 @@ import pack from "../../package.json";
 import { useAppStore } from "stores/app";
 import { useQuasar, QSpinnerFacebook } from "quasar";
 import UpdateChecker from "components/UpdateChecker.vue";
+import { useDataLogStore } from "src/stores/datalog";
+import DrawerItem from "components/navigation/DrawerItem.vue";
 
 const App = useAppStore();
 const $q = useQuasar();
@@ -211,6 +265,10 @@ const miniState = ref(true);
 const drawers = ref([]);
 const configFile = ref(null);
 const loaded = ref(false);
+const dataLogStore = useDataLogStore();
+const banners = ref({
+  "tgw-report-zones": false,
+});
 
 const closeDrawers = () => {
   drawers.value = [];
@@ -223,6 +281,7 @@ watch(miniState, (value) => {
 onMounted(async () => {
   showLoading();
   await App.init();
+  await dataLogStore.initialize();
   $q.loading.hide();
   loaded.value = true;
 });
