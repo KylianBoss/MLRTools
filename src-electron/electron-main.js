@@ -162,7 +162,7 @@ app.whenReady().then(async () => {
       let chunk = [];
       rl.on("line", (line) => {
         chunk.push(line);
-        if (chunk.length >= 1000) {
+        if (chunk.length >= 2000) {
           event.sender.send("fileChunk", chunk);
           chunk = [];
         }
