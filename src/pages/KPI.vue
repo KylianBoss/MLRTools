@@ -215,7 +215,7 @@
         </q-expansion-item>
       </div>
     </div>
-    <div class="row q-pt-xs" v-if="KPITop3Number.length > 0">
+    <div class="row q-pt-xs" v-if="KPITop3Number.length > 0 && false">
       <div class="col">
         <q-expansion-item
           label="Graphiques"
@@ -233,15 +233,14 @@
     </div>
     <div
       class="row q-pt-xs"
-      v-if="typeof toDisplay == 'string' && dayResume.length > 0"
+      v-if="typeof toDisplay == 'string'"
     >
       <div class="col">
         <q-linear-progress
-          v-if="!Object.values(allLoaded).every(Boolean)"
+          v-if="dayResume.map((d) => d.dataSource).length < dataSources.length"
           color="secondary"
           :value="
-            Object.values(allLoaded).filter(Boolean).length /
-            Object.keys(allLoaded).length
+            dayResume.map((d) => d.dataSource).length / dataSources.length
           "
         />
         <q-expansion-item
@@ -255,6 +254,7 @@
             height="500"
             :options="chartOptions"
             :series="chartOptions.series"
+            :key="chartOptions.series.length"
           />
           <q-table
             :rows="dayResume"
@@ -436,16 +436,15 @@ watch(toDisplay, async (newDate, oldValue) => {
   sectionKPITop3.value = false;
   sectionKPITop3Zone.value = false;
 
+  chartOptions.series = [];
+  dayResume.value = [];
   await getData(newDate);
   sectionKPITop3.value = true;
-  $q.loading.hide();
 });
 
 const getData = (filter) => {
   return new Promise(async (resolve) => {
     if (typeof filter === "string") {
-      chartOptions.series = [];
-      dayResume.value = [];
       const productionTime = dataLogStore.productionTime(
         dayjs(filter).format("YYYY-MM-DD")
       );
@@ -473,7 +472,6 @@ const getData = (filter) => {
           dataSource,
           alarms,
         });
-        console.info("Send:", dataSource);
         showLoading(`Chargement des données pour ${dataSource}...`);
         allLoaded.value[dataSource] = false;
         const d = dataLogStore
@@ -484,11 +482,11 @@ const getData = (filter) => {
           })
           .then((day) => {
             console.info("Recieve:", dataSource);
-            allLoaded.value[dataSource] = true;
             if (day.length === 0) return;
             const totalTimeInSeconds = dayjs(
               day[day.length - 1].timeOfAcknowledge
             ).diff(day[0].timeOfOccurence, "second");
+
             const runtime = totalTimeInSeconds / 60;
             const stoptime =
               day.reduce((acc, message) => {
@@ -531,6 +529,7 @@ const getData = (filter) => {
                 };
               }),
             });
+            allLoaded.value[dataSource] = true;
             chartOptions.series.push({
               name: dataSource,
               data: day.map((message) => {
@@ -544,6 +543,9 @@ const getData = (filter) => {
                 };
               }),
             });
+          })
+          .catch((error) => {
+            console.error("Error getting day resume:", error);
           });
         promises.push(d);
       }
@@ -556,7 +558,7 @@ const getData = (filter) => {
       });
       KPITop3Number.value = kpiTop3Count;
       KPITop3Duration.value = kpiTop3Duration;
-      $q.loading.hide();
+      // $q.loading.hide();
       // Add total at the end of the table
       dayResume.value.push({
         dataSource: "Total",
@@ -576,6 +578,8 @@ const getData = (filter) => {
           dayResume.value.reduce((acc, day) => acc + day.dispo, 0) /
           dayResume.value.length,
       });
+      console.info("All data received");
+      $q.loading.hide();
       resolve();
     } else if (typeof filter === typeof {}) {
       const from = dayjs(filter.from)
@@ -621,11 +625,18 @@ const getData = (filter) => {
 
 onMounted(async () => {
   showLoading();
-  dataLogStore.initialize().then(async () => {
+  // toDisplay is the date off the last day with data and not a day off
+  let date = dayjs(dataLogStore.dates[dataLogStore.dates.length - 1]);
+  while (dataLogStore.isDayOff(date)) {
+    date = date.subtract(1, "day");
+  }
+  toDisplay.value = date.format("YYYY/MM/DD");
+  await dataLogStore.initialize()/*.then(async () => {
+    chartOptions.series = [];
+    dayResume.value = [];
     await getData(toDisplay);
-  });
-  sectionKPITop3.value = true;
-  $q.loading.hide();
+  });*/
+  sectionKPITop3.value = false;
 });
 
 const showLoading = (message) => {
