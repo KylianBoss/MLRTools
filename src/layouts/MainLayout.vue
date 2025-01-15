@@ -172,6 +172,7 @@
         v-if="!App.notConfigured && App.user.autorised && loaded"
         class="q-pa-sm"
       >
+        <!-- TGW Report zone -->
         <q-banner
           v-if="
             App.user.UserAccesses.includes('tgwReportZones') &&
