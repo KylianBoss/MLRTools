@@ -109,6 +109,7 @@ const access = [
   { label: "Admin", value: "admin" },
   { label: "Admin DB", value: "admin-db" },
   { label: "Admin Users", value: "admin-users" },
+  { label: "Temps de production", value: "productionTime" },
 ];
 
 onMounted(() => {
