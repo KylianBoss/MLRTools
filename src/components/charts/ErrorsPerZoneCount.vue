@@ -14,6 +14,16 @@ import VueApexCharts from "vue3-apexcharts";
 import dayjs from "dayjs";
 import { ref } from "vue";
 
+const props = defineProps({
+  from: {
+    type: String,
+    required: true,
+  },
+  to: {
+    type: String,
+    required: true,
+  },
+});
 const locale = [
   {
     name: "fr",
@@ -104,10 +114,9 @@ const chartVisibility = ref(false);
 window.electron
   .serverRequest(
     "GET",
-    `/charts/messages-per-zone/${dayjs()
-      .set("date", 1)
-      .set("month", 1)
-      .format("YYYY-MM-DD")}/${dayjs().format("YYYY-MM-DD")}`
+    `/charts/messages-per-zone/${dayjs(props.from).format(
+      "YYYY-MM-DD"
+    )}/${dayjs(props.to).format("YYYY-MM-DD")}`
   )
   .then((response) => {
     chartSeries.value = response.data.map((item) => item.count);
