@@ -231,10 +231,7 @@
         </q-expansion-item>
       </div>
     </div>
-    <div
-      class="row q-pt-xs"
-      v-if="typeof toDisplay == 'string'"
-    >
+    <div class="row q-pt-xs" v-if="typeof toDisplay == 'string'">
       <div class="col">
         <q-linear-progress
           v-if="dayResume.map((d) => d.dataSource).length < dataSources.length"
@@ -481,7 +478,6 @@ const getData = (filter) => {
             dataSource,
           })
           .then((day) => {
-            console.info("Recieve:", dataSource);
             if (day.length === 0) return;
             const totalTimeInSeconds = dayjs(
               day[day.length - 1].timeOfAcknowledge
@@ -631,7 +627,7 @@ onMounted(async () => {
     date = date.subtract(1, "day");
   }
   toDisplay.value = date.format("YYYY/MM/DD");
-  await dataLogStore.initialize()/*.then(async () => {
+  await dataLogStore.initialize(); /*.then(async () => {
     chartOptions.series = [];
     dayResume.value = [];
     await getData(toDisplay);
