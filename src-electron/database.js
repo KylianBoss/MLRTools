@@ -308,22 +308,25 @@ function initDB(config) {
     const DayResume = db.define(
       "DayResume",
       {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-        },
+        // id: {
+        //   type: DataTypes.INTEGER.UNSIGNED,
+        //   primaryKey: true,
+        //   autoIncrement: true,
+        // },
         dataSource: {
           type: DataTypes.STRING,
           allowNull: false,
+          primaryKey: true,
         },
         from: {
           type: DataTypes.DATE,
           allowNull: false,
+          primaryKey: true,
         },
         to: {
           type: DataTypes.DATE,
           allowNull: false,
+          primaryKey: true,
         },
         data: {
           type: DataTypes.JSON,
@@ -342,12 +345,12 @@ function initDB(config) {
       },
       {
         timestamps: false,
-        indexes: [
-          {
-            unique: true,
-            fields: ["dataSource", "from", "to"],
-          },
-        ],
+        // indexes: [
+        //   {
+        //     unique: true,
+        //     fields: ["dataSource", "from", "to"],
+        //   },
+        // ],
       }
     );
 
