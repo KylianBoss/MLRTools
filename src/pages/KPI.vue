@@ -244,7 +244,7 @@
           label="Résumé de la journée"
           header-class="bg-primary text-weight-bold text-white"
           expand-icon-class="text-white"
-          :disable="!Object.values(allLoaded).every(Boolean)"
+          :disable="gettingData"
         >
           <vue-apex-charts
             type="rangeBar"
@@ -337,7 +337,7 @@ const $q = useQuasar();
 const dataLogStore = useDataLogStore();
 const sectionKPITop3 = ref(false);
 const sectionKPITop3Zone = ref(false);
-const toDisplay = ref(dayjs().subtract(1, "day").format("YYYY/MM/DD"));
+const toDisplay = ref(dayjs().format("YYYY/MM/DD"));
 const days = computed(() =>
   dataLogStore.dates.map((date) => dayjs(date).format("YYYY/MM/DD"))
 );
@@ -424,6 +424,8 @@ const chartOptions = {
   series: [],
 };
 const allLoaded = ref({});
+const timeoutLoading = ref(null);
+const gettingData = ref(false);
 
 watch(toDisplay, async (newDate, oldValue) => {
   if (JSON.stringify(newDate) === JSON.stringify(oldValue)) return;
@@ -433,15 +435,18 @@ watch(toDisplay, async (newDate, oldValue) => {
   sectionKPITop3.value = false;
   sectionKPITop3Zone.value = false;
 
-  chartOptions.series = [];
-  dayResume.value = [];
   await getData(newDate);
   sectionKPITop3.value = true;
 });
 
 const getData = (filter) => {
   return new Promise(async (resolve) => {
+    if (gettingData.value) return;
+    gettingData.value = true;
+    chartOptions.series = [];
+    dayResume.value = [];
     if (typeof filter === "string") {
+      console.log("Getting data for", filter);
       const productionTime = dataLogStore.productionTime(
         dayjs(filter).format("YYYY-MM-DD")
       );
@@ -469,7 +474,7 @@ const getData = (filter) => {
           dataSource,
           alarms,
         });
-        showLoading(`Chargement des données pour ${dataSource}...`);
+        showLoading(`Chargement ou calcul des données pour ${dataSource}...`);
         allLoaded.value[dataSource] = false;
         const d = dataLogStore
           .getDayResume({
@@ -576,6 +581,7 @@ const getData = (filter) => {
       });
       console.info("All data received");
       $q.loading.hide();
+      gettingData.value = false;
       resolve();
     } else if (typeof filter === typeof {}) {
       const from = dayjs(filter.from)
@@ -614,28 +620,27 @@ const getData = (filter) => {
       KPITop3Number.value = kpiTop3Count;
       KPITop3Duration.value = kpiTop3Duration;
       $q.loading.hide();
+      gettingData.value = false;
       resolve();
     }
   });
 };
 
 onMounted(async () => {
-  showLoading();
+  showLoading(null, true);
   // toDisplay is the date off the last day with data and not a day off
   let date = dayjs(dataLogStore.dates[dataLogStore.dates.length - 1]);
   while (dataLogStore.isDayOff(date)) {
     date = date.subtract(1, "day");
   }
   toDisplay.value = date.format("YYYY/MM/DD");
-  await dataLogStore.initialize(); /*.then(async () => {
-    chartOptions.series = [];
-    dayResume.value = [];
+  await dataLogStore.initialize().then(async () => {
     await getData(toDisplay);
-  });*/
+  });
   sectionKPITop3.value = false;
 });
 
-const showLoading = (message) => {
+const showLoading = (message, timeout = false) => {
   $q.loading.show({
     spinner: QSpinnerFacebook,
     spinnerColor: "primary",
@@ -644,6 +649,22 @@ const showLoading = (message) => {
     message: message ? message : "Rechargement des données...",
     messageColor: "white",
   });
+  if (timeout) {
+    console.log("Setting timeout");
+    timeoutLoading.value = setTimeout(() => {
+      $q.notify({
+        message: "Impossible de charger les données",
+        color: "negative",
+        position: "top",
+        timeout: 5000,
+      });
+      $q.loading.hide();
+    }, 20000);
+  } else if (!timeout && timeoutLoading.value) {
+    console.log("Clearing timeout");
+    clearTimeout(timeoutLoading.value);
+    timeoutLoading.value = null;
+  }
 };
 
 function mapValue(x, in_min, in_max, out_min, out_max) {
