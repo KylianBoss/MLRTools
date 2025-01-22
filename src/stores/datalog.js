@@ -396,6 +396,7 @@ export const useDataLogStore = defineStore("datalog", {
             alarmText: rawData[8],
             severity: rawData[9],
             classification: rawData[10],
+            assignedUser: rawData[12],
             alarmId: `${rawData[5]}.${rawData[6]}.${rawData[7]}`.toLowerCase(),
           };
         })
@@ -448,6 +449,10 @@ export const useDataLogStore = defineStore("datalog", {
         window.electron
           .serverRequest("POST", `/alarms/zone/${data.alarmId}`, {
             zone: data.zone,
+            zone2: data.zone2,
+            zone3: data.zone3,
+            zone4: data.zone4,
+            zone5: data.zone5,
           })
           .then((result) => {
             this.alarms.find((a) => a.alarmId == data.alarmId).TGWzone =
