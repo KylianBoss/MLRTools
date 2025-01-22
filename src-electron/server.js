@@ -768,8 +768,22 @@ export function setupServer(app) {
   });
 
   app.post("/alarms/zone/:alarmId", async (req, res) => {
-    const { zone } = req.body;
-    console.log("Updating alarm zone:", req.params.alarmId, zone);
+    const {
+      zone,
+      zone2 = null,
+      zone3 = null,
+      zone4 = null,
+      zone5 = null,
+    } = req.body;
+    console.log(
+      "Updating alarm zone:",
+      req.params.alarmId,
+      zone,
+      zone2,
+      zone3,
+      zone4,
+      zone5
+    );
     try {
       const alarm = await db.models.Alarms.findOne({
         where: {
@@ -785,7 +799,13 @@ export function setupServer(app) {
         return;
       }
 
-      if (zone === null) {
+      if (
+        zone === null &&
+        zone2 === null &&
+        zone3 === null &&
+        zone4 === null &&
+        zone5 === null
+      ) {
         await db.models.alarmZoneTGWReport.destroy({
           where: {
             alarmId: req.params.alarmId,
@@ -803,6 +823,10 @@ export function setupServer(app) {
       const newZone = await db.models.alarmZoneTGWReport.create({
         alarmId: req.params.alarmId,
         zone,
+        zone2,
+        zone3,
+        zone4,
+        zone5,
       });
 
       console.log("Alarm zone updated");
