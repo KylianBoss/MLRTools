@@ -568,14 +568,31 @@ export function setupServer(app) {
     }
   });
 
+  // INCLUDE ALARM
   app.post("/alarms/include", async (req, res) => {
+    const { alarmIdCode } = req.body;
+
+    if (!alarmIdCode)
+      res.status(400).json({ error: "No alarm ID or Code provided" });
+
     try {
-      const excludedAlarm = await db.models.ExcludedAlarms.destroy({
+      let includedAlarm;
+      includedAlarm = await db.models.ExcludedAlarms.destroy({
         where: {
-          alarmId: req.body,
+          alarmId: alarmIdCode,
         },
       });
-      res.sendStatus(201);
+      if (includedAlarm) {
+        res.status(201).json(includedAlarm);
+        return;
+      }
+
+      includedAlarm = await db.models.ExcludedAlarmCodes.destroy({
+        where: {
+          alarmCode: alarmIdCode,
+        },
+      });
+      res.status(201).json(includedAlarm);
     } catch (error) {
       console.error("Error including alarm:", error);
       res.status(500).json({ error: error.message });
@@ -837,11 +854,18 @@ export function setupServer(app) {
     }
   });
 
-  app.get("/alarms/:alarmId", async (req, res) => {
+  app.get("/alarms/:alarmIdCode", async (req, res) => {
+    const { alarmIdCode } = req.params;
+
+    if (!alarmIdCode) {
+      res.status(400).json({ error: "No alarm ID provided" });
+      return;
+    }
+
     try {
       const alarm = await db.models.Alarms.findOne({
         where: {
-          alarmId: req.params.alarmId,
+          [Op.or]: [{ alarmId: alarmIdCode }, { alarmCode: alarmIdCode }],
         },
       });
       res.json(alarm.toJSON());

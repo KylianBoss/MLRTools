@@ -425,22 +425,24 @@ export const useDataLogStore = defineStore("datalog", {
           this.alarms = this.alarms.filter((a) => a.alarmCode !== alarmCode);
         });
     },
-    async includeAlarm(alarmId) {
+    async includeAlarm(alarmIdCode) {
       window.electron
-        .serverRequest("POST", "/alarms/include", alarmId)
-        .then(() => {
+        .serverRequest("POST", "/alarms/include", { alarmIdCode })
+        .then((res) => {
+          console.log(res);
           this.excludedAlarms = this.excludedAlarms.filter(
-            (a) => a !== alarmId
+            (a) => a.alarmId !== alarmIdCode && a.alarmCode !== alarmIdCode
           );
-          this.alarms.push(this.alarms.find((a) => a.alarmId === alarmId));
+          // this.alarms.push(this.alarms.find((a) => a.alarmId === alarmId));
+          this.alarms.push(res.data);
         });
     },
-    getAlarm(alarmId) {
+    getAlarm(alarmIdCode) {
       return new Promise((resolve, reject) => {
         window.electron
-          .serverRequest("GET", `/alarms/${alarmId}`)
-          .then((data) => {
-            resolve(data.data);
+          .serverRequest("GET", `/alarms/${alarmIdCode}`)
+          .then((res) => {
+            resolve(res.data);
           });
       });
     },

@@ -30,9 +30,17 @@
               <q-item
                 clickable
                 v-close-popup
-                @click="includeAlarm(props.row.alarmId)"
+                @click="includeAlarmId(props.row)"
               >
-                <q-item-section>Inclure cette alarme</q-item-section>
+                <q-item-section>Inclure cette alarme (ID)</q-item-section>
+              </q-item>
+              <q-item
+                clickable
+                v-close-popup
+                @click="includeAlarmCode(props.row)"
+                v-if="props.row.alarmCode"
+              >
+                <q-item-section>Inclure cette alarme (CODE)</q-item-section>
               </q-item>
             </q-list>
           </q-menu>
@@ -50,18 +58,29 @@ const dataLogStore = useDataLogStore();
 const filter = ref("");
 const excludedAlarms = ref([]);
 
-const includeAlarm = async (alarmId) => {
-  await dataLogStore.includeAlarm(alarmId);
+const includeAlarmId = async (alarm) => {
+  await dataLogStore.includeAlarm(alarm.alarmId);
   excludedAlarms.value = excludedAlarms.value.filter(
-    (alarm) => alarm.alarmId !== alarmId
+    (a) => a.alarmId !== alarm.alarmId
   );
-  dataLogStore.initialize();
+};
+
+const includeAlarmCode = async (alarm) => {
+  await dataLogStore.includeAlarm(alarm.alarmCode);
+  excludedAlarms.value = excludedAlarms.value.filter(
+    (a) => a.alarmCode !== alarm.alarmCode
+  );
 };
 
 onMounted(async () => {
   await dataLogStore.initialize();
-  for (const alarmId of dataLogStore.excludedAlarms) {
+  for (const alarmId of dataLogStore.excludedAlarmIds) {
     dataLogStore.getAlarm(alarmId).then((alarm) => {
+      excludedAlarms.value.push(alarm);
+    });
+  }
+  for (const alarmCode of dataLogStore.excludedAlarmCodes) {
+    dataLogStore.getAlarm(alarmCode).then((alarm) => {
       excludedAlarms.value.push(alarm);
     });
   }
