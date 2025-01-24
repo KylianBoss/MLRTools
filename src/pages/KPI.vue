@@ -252,6 +252,7 @@
             :options="chartOptions"
             :series="chartOptions.series"
             :key="chartOptions.series.length"
+            v-if="getData"
           />
           <q-table
             :rows="dayResume"
@@ -267,7 +268,7 @@
                 label: 'Runtime [min]',
                 align: 'right',
                 field: (row) => {
-                  return Math.round(row.runtime, 0);
+                  return row.runtime.toFixed(2);
                 },
               },
               {
@@ -275,7 +276,7 @@
                 label: 'Stoptime [min]',
                 align: 'right',
                 field: (row) => {
-                  return Math.round(row.stoptime, 0);
+                  return row.stoptime.toFixed(2);
                 },
               },
               {
@@ -323,7 +324,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { useQuasar, QSpinnerFacebook } from "quasar";
+import { useQuasar, QSpinnerFacebook, event } from "quasar";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import { useDataLogStore } from "stores/datalog";
@@ -337,7 +338,7 @@ const $q = useQuasar();
 const dataLogStore = useDataLogStore();
 const sectionKPITop3 = ref(false);
 const sectionKPITop3Zone = ref(false);
-const toDisplay = ref(dayjs().format("YYYY/MM/DD"));
+const toDisplay = ref(null);
 const days = computed(() =>
   dataLogStore.dates.map((date) => dayjs(date).format("YYYY/MM/DD"))
 );
@@ -378,14 +379,40 @@ const chartOptions = {
   chart: {
     type: "rangeBar",
     toolbar: {
-      show: false,
+      show: true,
     },
     animations: {
       enabled: false,
     },
     zoom: {
-      enabled: false,
+      enabled: true,
+      allowMouseWheelZoom: false,
     },
+    // events: {
+    //   beforeZoom: (e, { xaxis }) => {
+    //     let maindifference =
+    //       new Date(props.data[0].date).valueOf() -
+    //       new Date(props.data[props.data.length - 1].date).valueOf();
+    //     let zoomdifference = xaxis.max - xaxis.min;
+    //     if (zoomdifference > maindifference)
+    //       return {
+    //         // dont zoom out any further
+    //         xaxis: {
+    //           min: props.data[0].date,
+    //           max: props.data[props.data.length - 1].date,
+    //         },
+    //       };
+    //     else {
+    //       return {
+    //         // keep on zooming
+    //         xaxis: {
+    //           min: xaxis.min,
+    //           max: xaxis.max,
+    //         },
+    //       };
+    //     }
+    //   },
+    // },
   },
   plotOptions: {
     bar: {
@@ -414,8 +441,26 @@ const chartOptions = {
   },
   colors: ["#00E396", "#FF4560"],
   tooltip: {
-    x: {
-      format: "HH:mm",
+    // x: {
+    //   format: "HH:mm",
+    // },
+    custom: function ({ series, seriesIndex, dataPointIndex, w }) {
+      const data = chartOptions.series[seriesIndex].data[dataPointIndex];
+      return (
+        '<div class="arrow_box q-pa-xs">' +
+        '<div class="text-h6">' +
+        w.globals.labels[seriesIndex] +
+        "</div>" +
+        `<div>État : <span class="text-weight-bold text-${
+          data.errorText == "Running" ? "positive" : "negative"
+        }">${
+          data.errorText == "Running" ? "Fonctionnement" : "Arrêt"
+        }</span></div>` +
+        `<div>Temps : ${dayjs(data.y[0]).format("HH:mm")} - ${dayjs(data.y[1]).format("HH:mm")}</div>` +
+        `<div>Durée : ${dayjs(data.y[1]).diff(data.y[0], "minute")} minutes</div>` +
+        `<div>Message : ${data.errorText}</div>` +
+        "</div>"
+      );
     },
   },
   legend: {
@@ -540,7 +585,8 @@ const getData = (filter) => {
                     dayjs(message.timeOfOccurence).valueOf(),
                     dayjs(message.timeOfAcknowledge).valueOf(),
                   ],
-                  fillColor: message.alarmCode == 0 ? "green" : "red",
+                  fillColor: message.alarmText == "Running" ? "green" : "red",
+                  errorText: message.alarmText,
                 };
               }),
             });
@@ -563,21 +609,34 @@ const getData = (filter) => {
       // Add total at the end of the table
       dayResume.value.push({
         dataSource: "Total",
-        runtime: dayResume.value.reduce((acc, day) => acc + day.runtime, 0),
-        stoptime: dayResume.value.reduce((acc, day) => acc + day.stoptime, 0),
+        runtime:
+          dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
+          dayResume.value.length,
+        stoptime:
+          dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
+          dayResume.value.length,
         nbFaillures: dayResume.value.reduce(
           (acc, day) => acc + day.nbFaillures,
           0
         ),
         MTBF:
-          dayResume.value.reduce((acc, day) => acc + day.MTBF, 0) /
-          dayResume.value.length,
+          dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
+          dayResume.value.length /
+          dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0),
         MTTR:
-          dayResume.value.reduce((acc, day) => acc + day.MTTR, 0) /
-          dayResume.value.length,
+          dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
+          dayResume.value.length /
+          dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0),
         dispo:
-          dayResume.value.reduce((acc, day) => acc + day.dispo, 0) /
-          dayResume.value.length,
+          dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
+          dayResume.value.length /
+          dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0) /
+          (dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
+            dayResume.value.length /
+            dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0) +
+            dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
+              dayResume.value.length /
+              dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0)),
       });
       console.info("All data received");
       $q.loading.hide();
