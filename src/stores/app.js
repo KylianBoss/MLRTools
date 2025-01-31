@@ -63,6 +63,7 @@ export const useAppStore = defineStore("App", {
                   (access) => access.menuId
                 );
                 this.notConfigured = false;
+                window.electron.restartApp();
                 resolve(true);
               } else {
                 console.error("Error loading configuration:", response);
