@@ -327,12 +327,14 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useQuasar, QSpinnerFacebook, event } from "quasar";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
+import utc from "dayjs/plugin/utc";
 import { useDataLogStore } from "stores/datalog";
 import MessagesByDay from "src/components/charts/MessagesByDay.vue";
 import ErrorsPerZoneCount from "src/components/charts/ErrorsPerZoneCount.vue";
 import VueApexCharts from "vue3-apexcharts";
 
 dayjs.extend(isBetween);
+dayjs.extend(utc);
 
 const $q = useQuasar();
 const dataLogStore = useDataLogStore();
@@ -447,7 +449,7 @@ const chartOptions = {
     custom: function ({ series, seriesIndex, dataPointIndex, w }) {
       const data = chartOptions.series[seriesIndex].data[dataPointIndex];
       return (
-        '<div class="arrow_box q-pa-xs">' +
+        '<q-card class="q-pa-xs"><q-card-section>' +
         '<div class="text-h6">' +
         w.globals.labels[seriesIndex] +
         "</div>" +
@@ -456,10 +458,15 @@ const chartOptions = {
         }">${
           data.errorText == "Running" ? "Fonctionnement" : "Arrêt"
         }</span></div>` +
-        `<div>Temps : ${dayjs(data.y[0]).format("HH:mm")} - ${dayjs(data.y[1]).format("HH:mm")}</div>` +
-        `<div>Durée : ${dayjs(data.y[1]).diff(data.y[0], "minute")} minutes</div>` +
+        `<div>Temps : ${dayjs(data.start).format("HH:mm")} - ${dayjs(
+          data.end
+        ).format("HH:mm")}</div>` +
+        `<div>Durée : ${dayjs(data.end).diff(
+          data.start,
+          "minute"
+        )} minutes</div>` +
         `<div>Message : ${data.errorText}</div>` +
-        "</div>"
+        "</q-card-section></q-card>"
       );
     },
   },
@@ -585,6 +592,8 @@ const getData = (filter) => {
                     dayjs(message.timeOfOccurence).valueOf(),
                     dayjs(message.timeOfAcknowledge).valueOf(),
                   ],
+                  start: dayjs.utc(message.timeOfOccurence),
+                  end: dayjs.utc(message.timeOfAcknowledge),
                   fillColor: message.alarmText == "Running" ? "green" : "red",
                   errorText: message.alarmText,
                 };
