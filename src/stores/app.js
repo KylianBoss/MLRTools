@@ -13,7 +13,7 @@ export const useAppStore = defineStore("App", {
     },
     userHaveAccessToOneOf: (state) => (menuIds) => {
       return state.user.UserAccesses.some((access) => menuIds.includes(access));
-    }
+    },
   },
   actions: {
     init() {
@@ -56,6 +56,7 @@ export const useAppStore = defineStore("App", {
                 this.user.UserAccesses = this.user.UserAccesses.map(
                   (access) => access.menuId
                 );
+                this.notConfigured = false;
                 resolve(true);
               } else {
                 this.notConfigured = true;
