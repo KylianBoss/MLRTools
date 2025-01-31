@@ -4,7 +4,7 @@
     v-ripple
     :to="{ name: to }"
     :active="$route.name == to"
-    v-if="App.user.UserAccesses.includes(autorisation)"
+    v-if="App.userHasAccess(autorisation)"
   >
     <q-item-section avatar>
       <q-icon :name="icon" />

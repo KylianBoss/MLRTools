@@ -33,7 +33,7 @@
             v-ripple
             :to="{ name: 'home' }"
             :active="$route.name == 'home'"
-            v-if="App.user.UserAccesses.includes('kpi')"
+            v-if="App.userHasAccess('kpi')"
           >
             <q-item-section avatar>
               <q-icon name="mdi-chart-arc" />
@@ -46,7 +46,7 @@
             v-ripple
             :to="{ name: 'search' }"
             :active="$route.name == 'search'"
-            v-if="App.user.UserAccesses.includes('searchMessages')"
+            v-if="App.userHasAccess('searchMessages')"
           >
             <q-item-section avatar>
               <q-icon name="mdi-magnify" />
@@ -59,7 +59,7 @@
             v-ripple
             :to="{ name: 'charts' }"
             :active="$route.name == 'charts'"
-            v-if="App.user.UserAccesses.includes('charts')"
+            v-if="App.userHasAccess('charts')"
           >
             <q-item-section avatar>
               <q-icon name="mdi-chart-bell-curve-cumulative" />
@@ -73,8 +73,13 @@
             label="Alarmes"
             v-model="drawers[0]"
             v-if="
-              App.user.UserAccesses.includes('importMessages') ||
-              App.user.UserAccesses.includes('excludedAlarms')
+              App.userHaveAccessToOneOf([
+                'importMessages',
+                'alarmList',
+                'excludedAlarms',
+                'productionTime',
+                'tgwReportZones',
+              ])
             "
           >
             <drawer-item
@@ -114,20 +119,14 @@
             icon="mdi-toolbox-outline"
             label="Utilitaires"
             v-model="drawers[1]"
-            v-if="App.user.UserAccesses.includes('suspiciousPlaces')"
+            v-if="App.userHaveAccessToOneOf(['suspiciousPlaces'])"
           >
-            <q-item
-              clickable
-              v-ripple
-              :to="{ name: 'suspicious_places' }"
-              :active="$route.name == 'suspicious_places'"
-              v-if="App.user.UserAccesses.includes('suspiciousPlaces')"
-            >
-              <q-item-section avatar>
-                <q-icon name="mdi-map-marker-alert-outline" />
-              </q-item-section>
-              <q-item-section>Lieux suspects</q-item-section>
-            </q-item>
+          <drawer-item
+              to="suspicious_places"
+              autorisation="suspiciousPlaces"
+              icon="mdi-map-marker-alert-outline"
+              label="Lieux suspects"
+            />
           </q-expansion-item>
           <!-- ADMINISTRATION -->
           <q-expansion-item
@@ -135,32 +134,20 @@
             icon="mdi-shield-account-outline"
             label="Administration"
             v-model="drawers[99]"
-            v-if="App.user.UserAccesses.includes('admin')"
+            v-if="App.userHasAccess('admin')"
           >
-            <q-item
-              clickable
-              v-ripple
-              :to="{ name: 'admin-db' }"
-              :active="$route.name == 'admin-db'"
-              v-if="App.user.UserAccesses.includes('admin-db') || true"
-            >
-              <q-item-section avatar>
-                <q-icon name="mdi-database-settings-outline" />
-              </q-item-section>
-              <q-item-section>Database</q-item-section>
-            </q-item>
-            <q-item
-              clickable
-              v-ripple
-              :to="{ name: 'admin-users' }"
-              :active="$route.name == 'admin-users'"
-              v-if="App.user.UserAccesses.includes('admin-users')"
-            >
-              <q-item-section avatar>
-                <q-icon name="mdi-account-group-outline" />
-              </q-item-section>
-              <q-item-section>Users</q-item-section>
-            </q-item>
+            <drawer-item
+              to="admin-db"
+              autorisation="admin-db"
+              icon="mdi-database-settings-outline"
+              label="Database"
+            />
+            <drawer-item
+              to="admin-users"
+              autorisation="admin-users"
+              icon="mdi-account-group-outline"
+              label="Users"
+            />
           </q-expansion-item>
         </q-list>
       </q-scroll-area>

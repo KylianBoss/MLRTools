@@ -7,7 +7,14 @@ export const useAppStore = defineStore("App", {
     user: null,
     users: [],
   }),
-  getters: {},
+  getters: {
+    userHasAccess: (state) => (menuId) => {
+      return state.user.UserAccesses.includes(menuId);
+    },
+    userHaveAccessToOneOf: (state) => (menuIds) => {
+      return state.user.UserAccesses.some((access) => menuIds.includes(access));
+    }
+  },
   actions: {
     init() {
       return new Promise((resolve, reject) => {
