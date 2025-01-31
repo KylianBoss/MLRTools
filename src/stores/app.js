@@ -18,9 +18,11 @@ export const useAppStore = defineStore("App", {
   actions: {
     init() {
       return new Promise((resolve, reject) => {
+        console.log("Initializing app store");
         window.electron
           .serverRequest("GET", "/config", null)
           .then((response) => {
+            console.log(response)
             if (response.data && response.data.config === true) {
               this.notConfigured = false;
               this.user = response.data.user;
@@ -44,13 +46,17 @@ export const useAppStore = defineStore("App", {
     },
     loadConfig(file) {
       return new Promise((resolve, reject) => {
+        console.info("Loading configuration file in server");
         const reader = new FileReader();
         reader.onload = (event) => {
+          console.info("Sending file to server");
           const config = JSON.parse(event.target.result);
           window.electron
             .serverRequest("POST", "/config", config)
             .then((response) => {
+              console.info("File sent to server");
               if (response.statusCode === 201) {
+                console.info("Configuration loaded");
                 this.notConfigured = false;
                 this.user = response.data.user;
                 this.user.UserAccesses = this.user.UserAccesses.map(
@@ -59,6 +65,7 @@ export const useAppStore = defineStore("App", {
                 this.notConfigured = false;
                 resolve(true);
               } else {
+                console.error("Error loading configuration:", response);
                 this.notConfigured = true;
                 resolve(false);
               }
