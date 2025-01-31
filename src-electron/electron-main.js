@@ -85,7 +85,8 @@ async function setupStorage() {
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=4096");
 app.whenReady().then(async () => {
   // Initialize auto-updater
-  if (app.isPackaged) new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
+  // if (app.isPackaged) new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
+  new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
 
   // await syncDatabase();
   await setupStorage();
@@ -222,8 +223,23 @@ app.on("window-all-closed", () => {
   }
 });
 
+app.on("before-quit", () => {
+  cleanUp();
+});
+
 app.on("activate", () => {
   if (mainWindow === null) {
     createWindow();
   }
 });
+
+function cleanUp() {
+  ipcMain.removeHandler("server-request");
+  ipcMain.removeHandler("selectFile");
+  ipcMain.removeHandler("readLargeFile");
+  ipcMain.removeHandler("print-pdf");
+  ipcMain.removeHandler("check-for-updates");
+  ipcMain.removeHandler("download-update");
+  ipcMain.removeHandler("install-update");
+  ipcMain.removeHandler("restart-app");
+}

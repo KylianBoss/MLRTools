@@ -83,7 +83,7 @@ const setupUpdateListeners = () => {
 };
 
 onMounted(() => {
-  // checkForUpdates();
+  checkForUpdates();
   setupUpdateListeners();
 });
 
