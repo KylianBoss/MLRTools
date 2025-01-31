@@ -83,7 +83,10 @@ export class AutoUpdater {
         currentVersion: this.currentVersion,
         latestVersion,
         updateAvailable,
-        downloadUrl: updateAvailable && windowsAsset ? windowsAsset.browser_download_url : null,
+        downloadUrl:
+          updateAvailable && windowsAsset
+            ? windowsAsset.browser_download_url
+            : null,
       };
     } catch (error) {
       console.error("Error checking for updates:", error);
@@ -98,6 +101,7 @@ export class AutoUpdater {
         throw new Error("No update available");
       }
 
+      console.info("Downloading update from:", downloadUrl);
       const response = await axios({
         method: "get",
         url: downloadUrl,
@@ -106,9 +110,10 @@ export class AutoUpdater {
           Accept: "application/vnd.github.v3+json",
         },
       });
-
+      console.info("Update downloaded successfully");
       const downloadPath = path.join(app.getPath("temp"), "update.zip");
       fs.writeFileSync(downloadPath, response.data);
+      console.info("Update saved to:", downloadPath);
 
       return { success: true, downloadPath };
     } catch (error) {
@@ -119,23 +124,66 @@ export class AutoUpdater {
 
   async installUpdate() {
     try {
-      const downloadPath = path.join(app.getPath('temp'), 'update.zip');
+      const downloadPath = path.join(app.getPath("temp"), "update.zip");
       const zip = new AdmZip(downloadPath);
-      const appPath = path.dirname(app.getPath('exe'));
+      const appPath = path.dirname(app.getPath("exe"));
+      console.log("Getting update from:", downloadPath);
 
       // Extract update to temporary directory
-      const tempExtractPath = path.join(app.getPath('temp'), 'update-extract');
-      zip.extractAllTo(tempExtractPath, true);
+      const tempExtractPath = path.join(app.getPath("temp"), "update-extract");
+      console.info("Extracting update to:", tempExtractPath);
+      if (fs.existsSync(tempExtractPath)) {
+        fs.rmSync(tempExtractPath, { recursive: true });
+      }
+
+      // Create temp directory if it doesn't exist
+      fs.mkdirSync(tempExtractPath, { recursive: true });
+
+      // Extract with error handling for permissions
+      // Skip special Electron files during extraction
+      const skipFiles = [
+        "app.asar",
+        "electron.exe",
+        "chrome_crashpad_handler.exe",
+      ];
+
+      zip.getEntries().forEach((entry) => {
+        try {
+          const fileName = path.basename(entry.entryName);
+          if (skipFiles.includes(fileName)) {
+            console.log(`Skipping special file: ${fileName}`);
+            return;
+          }
+
+          const entryPath = path.join(tempExtractPath, entry.entryName);
+          const entryDir = path.dirname(entryPath);
+
+          // Create directory if it doesn't exist
+          if (!fs.existsSync(entryDir)) {
+            fs.mkdirSync(entryDir, { recursive: true });
+          }
+
+          if (!entry.isDirectory) {
+            // Write file without trying to set permissions
+            fs.writeFileSync(entryPath, entry.getData());
+          }
+        } catch (err) {
+          console.warn(`Warning: Could not extract ${entry.entryName}:`, err);
+        }
+      });
+      console.log("Update extracted to:", tempExtractPath);
 
       // Navigate to the correct directory structure
-      const updateSource = path.join(tempExtractPath, 'MLR Tools-win32-x64');
+      const updateSource = path.join(tempExtractPath, "MLR Tools-win32-x64");
 
       if (!fs.existsSync(updateSource)) {
-        throw new Error('Update package structure is invalid');
+        throw new Error("Update package structure is invalid");
       }
 
       // Copy new files to app directory
+      console.info("Copying files to app directory:", appPath);
       this.copyRecursive(updateSource, appPath);
+      console.info("Files copied successfully");
 
       // Clean up
       fs.rmSync(downloadPath);
@@ -143,8 +191,11 @@ export class AutoUpdater {
 
       return { success: true };
     } catch (error) {
-      console.error('Error installing update:', error);
-      throw new Error('Failed to install update');
+      console.error("Error installing update:", error);
+      // Clean up
+      fs.rmSync(downloadPath);
+      fs.rmSync(tempExtractPath, { recursive: true });
+      throw new Error("Failed to install update");
     }
   }
 
