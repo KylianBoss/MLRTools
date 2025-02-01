@@ -11,6 +11,64 @@ export class AutoUpdater {
     this.mainWindow = mainWindow;
     this.githubOwner = githubOwner;
     this.githubRepo = githubRepo;
+    this.console = {
+      info: (...messages) => {
+        if (!this.mainWindow) return console.info(...messages);
+        const processedMessages = messages.map((msg) => {
+          if (typeof msg === "object" && msg !== null) {
+            return {
+              __isObject: true,
+              type: "info",
+              value: JSON.parse(JSON.stringify(msg)),
+            };
+          }
+          return msg;
+        });
+        this.mainWindow.webContents.send("console-log", processedMessages);
+      },
+      warn: (...messages) => {
+        if (!this.mainWindow) return console.warn(...messages);
+        const processedMessages = messages.map((msg) => {
+          if (typeof msg === "object" && msg !== null) {
+            return {
+              __isObject: true,
+              type: "warn",
+              value: JSON.parse(JSON.stringify(msg)),
+            };
+          }
+          return msg;
+        });
+        this.mainWindow.webContents.send("console-log", processedMessages);
+      },
+      error: (...messages) => {
+        if (!this.mainWindow) return console.error(...messages);
+        const processedMessages = messages.map((msg) => {
+          if (typeof msg === "object" && msg !== null) {
+            return {
+              __isObject: true,
+              type: "error",
+              value: JSON.parse(JSON.stringify(msg)),
+            };
+          }
+          return msg;
+        });
+        this.mainWindow.webContents.send("console-log", processedMessages);
+      },
+      log: (...messages) => {
+        if (!this.mainWindow) return console.log(...messages);
+        const processedMessages = messages.map((msg) => {
+          if (typeof msg === "object" && msg !== null) {
+            return {
+              __isObject: true,
+              type: "log",
+              value: JSON.parse(JSON.stringify(msg)),
+            };
+          }
+          return msg;
+        });
+        this.mainWindow.webContents.send("console-log", processedMessages);
+      },
+    };
 
     let version;
     try {
@@ -20,11 +78,11 @@ export class AutoUpdater {
       // Fallback to app.getVersion() if package.json is not available (in production)
       version = app.getVersion();
     }
-    console.log("App version:", version); // Debug log
+    this.console.log("App version:", version); // Debug log
     this.currentVersion = version;
     this.setupIPC();
     this.setupCron();
-    console.log("AutoUpdater initialized");
+    this.console.log("AutoUpdater initialized");
   }
 
   setupCron() {
@@ -36,7 +94,10 @@ export class AutoUpdater {
             this.mainWindow.webContents.send("update-available", result);
         })
         .catch((error) => {
-          console.error("Cron job update check failed:", error);
+          this.mainWindow.webContents.send(
+            "console-log",
+            `Cron job update check failed: ${error}`
+          );
         });
     });
   }
@@ -78,6 +139,12 @@ export class AutoUpdater {
       const windowsAsset = response.data.assets.find((asset) =>
         asset.name.endsWith(".zip")
       );
+      this.console.info("Update check:", {
+        currentVersion,
+        latestVersion,
+        updateAvailable,
+        downloadUrl: windowsAsset ? windowsAsset.browser_download_url : null,
+      });
 
       return {
         currentVersion: this.currentVersion,
@@ -89,7 +156,7 @@ export class AutoUpdater {
             : null,
       };
     } catch (error) {
-      console.error("Error checking for updates:", error);
+      this.console.error("Error checking for updates:", error);
       throw new Error("Failed to check for updates");
     }
   }
@@ -101,7 +168,7 @@ export class AutoUpdater {
         throw new Error("No update available");
       }
 
-      console.info("Downloading update from:", downloadUrl);
+      this.console.info("Downloading update from:", downloadUrl);
       const response = await axios({
         method: "get",
         url: downloadUrl,
@@ -110,14 +177,14 @@ export class AutoUpdater {
           Accept: "application/vnd.github.v3+json",
         },
       });
-      console.info("Update downloaded successfully");
+      this.console.info("Update downloaded successfully");
       const downloadPath = path.join(app.getPath("temp"), "update.zip");
       fs.writeFileSync(downloadPath, response.data);
-      console.info("Update saved to:", downloadPath);
+      this.console.info("Update saved to:", downloadPath);
 
       return { success: true, downloadPath };
     } catch (error) {
-      console.error("Error downloading update:", error);
+      this.console.error("Error downloading update:", error);
       throw new Error("Failed to download update");
     }
   }
@@ -127,11 +194,11 @@ export class AutoUpdater {
       const downloadPath = path.join(app.getPath("temp"), "update.zip");
       const zip = new AdmZip(downloadPath);
       const appPath = path.dirname(app.getPath("exe"));
-      console.log("Getting update from:", downloadPath);
+      this.console.log("Getting update from:", downloadPath);
 
       // Extract update to temporary directory
       const tempExtractPath = path.join(app.getPath("temp"), "update-extract");
-      console.info("Extracting update to:", tempExtractPath);
+      this.console.info("Extracting update to:", tempExtractPath);
       if (fs.existsSync(tempExtractPath)) {
         fs.rmSync(tempExtractPath, { recursive: true });
       }
@@ -151,7 +218,7 @@ export class AutoUpdater {
         try {
           const fileName = path.basename(entry.entryName);
           if (skipFiles.includes(fileName)) {
-            console.log(`Skipping special file: ${fileName}`);
+            this.console.log(`Skipping special file: ${fileName}`);
             return;
           }
 
@@ -168,10 +235,13 @@ export class AutoUpdater {
             fs.writeFileSync(entryPath, entry.getData());
           }
         } catch (err) {
-          console.warn(`Warning: Could not extract ${entry.entryName}:`, err);
+          this.console.warn(
+            `Warning: Could not extract ${entry.entryName}:`,
+            err
+          );
         }
       });
-      console.log("Update extracted to:", tempExtractPath);
+      this.console.log("Update extracted to:", tempExtractPath);
 
       // Navigate to the correct directory structure
       const updateSource = path.join(tempExtractPath, "MLR Tools-win32-x64");
@@ -181,9 +251,9 @@ export class AutoUpdater {
       }
 
       // Copy new files to app directory
-      console.info("Copying files to app directory:", appPath);
+      this.console.info("Copying files to app directory:", appPath);
       this.copyRecursive(updateSource, appPath);
-      console.info("Files copied successfully");
+      this.console.info("Files copied successfully");
 
       // Clean up
       fs.rmSync(downloadPath);
@@ -191,7 +261,7 @@ export class AutoUpdater {
 
       return { success: true };
     } catch (error) {
-      console.error("Error installing update:", error);
+      this.console.error("Error installing update:", error);
       // Clean up
       fs.rmSync(downloadPath);
       fs.rmSync(tempExtractPath, { recursive: true });

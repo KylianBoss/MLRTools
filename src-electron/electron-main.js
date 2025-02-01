@@ -84,13 +84,13 @@ async function setupStorage() {
 
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=4096");
 app.whenReady().then(async () => {
-  // Initialize auto-updater
-  // if (app.isPackaged) new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
-  new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
-
   // await syncDatabase();
   await setupStorage();
   createWindow();
+
+  // Initialize auto-updater
+  // if (app.isPackaged) new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
+  new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
 
   // Setup embedded express server
   expressApp = express();

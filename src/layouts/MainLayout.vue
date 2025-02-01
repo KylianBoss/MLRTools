@@ -121,7 +121,7 @@
             v-model="drawers[1]"
             v-if="App.userHaveAccessToOneOf(['suspiciousPlaces'])"
           >
-          <drawer-item
+            <drawer-item
               to="suspicious_places"
               autorisation="suspiciousPlaces"
               icon="mdi-map-marker-alert-outline"
@@ -238,7 +238,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import pack from "../../package.json";
 import { useAppStore } from "stores/app";
 import { useQuasar, QSpinnerFacebook } from "quasar";
@@ -272,6 +272,45 @@ onMounted(async () => {
   await dataLogStore.initialize();
   $q.loading.hide();
   loaded.value = true;
+  window.electron.onConsoleFromServer((messages) => {
+    if (Array.isArray(messages)) {
+      const formattedArgs = messages.map((msg) => {
+        if (msg && msg.__isObject) {
+          return {
+            type: msg.type || "log",
+            value: msg.value,
+          };
+        }
+        return {
+          type: "log",
+          value: msg,
+        };
+      });
+
+      const type = formattedArgs[0]?.type || "log";
+      const values = formattedArgs.map((arg) => arg.value);
+
+      switch (type) {
+        case "info":
+          console.info(...values);
+          break;
+        case "warn":
+          console.warn(...values);
+          break;
+        case "error":
+          console.error(...values);
+          break;
+        default:
+          console.log(...values);
+      }
+    } else {
+      console.log(messages);
+    }
+  });
+});
+
+onBeforeUnmount(() => {
+  window.electron.removeConsoleFromServerListener();
 });
 
 const showLoading = () => {

@@ -58,4 +58,10 @@ contextBridge.exposeInMainWorld("electron", {
   removeUpdateListener: () => {
     ipcRenderer.removeAllListeners("update-available");
   },
+  onConsoleFromServer: (callback) => {
+    ipcRenderer.on("console-log", (_event, value) => callback(value));
+  },
+  removeConsoleFromServerListener: () => {
+    ipcRenderer.removeAllListeners("console-log");
+  },
 });
