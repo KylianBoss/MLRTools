@@ -245,10 +245,32 @@ export class AutoUpdater {
 
       // Navigate to the correct directory structure
       const updateSource = path.join(tempExtractPath, "MLR Tools-win32-x64");
-
       if (!fs.existsSync(updateSource)) {
         throw new Error("Update package structure is invalid");
       }
+
+      // Create update script
+      const scriptContent = `
+        @echo off
+        timeout /t 1 /nobreak >nul
+        xcopy "${updateSource}" "${appPath}" /E /I /Y
+        start "" "${app.getPath("exe")}"
+        del "%~f0"
+      `;
+
+      const scriptPath = path.join(app.getPath("temp"), "update.bat");
+      fs.writeFileSync(scriptPath, scriptContent);
+
+      // Run update script and quit app
+      require("child_process")
+        .spawn("cmd.exe", ["/c", scriptPath], {
+          detached: true,
+          stdio: "ignore",
+        })
+        .unref();
+
+      app.quit();
+      return { success: true };
 
       // Copy new files to app directory
       this.console.info("Copying files to app directory:", appPath);
