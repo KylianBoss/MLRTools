@@ -148,7 +148,7 @@ app.whenReady().then(async () => {
   ipcMain.handle("selectFile", async (event, filter) => {
     console.log("selectFile", filter);
     const result = await dialog.showOpenDialog({
-      properties: ["openFile"],
+      properties: ["openFile", "multiSelections"],
       filters: [filter],
     });
     return result;

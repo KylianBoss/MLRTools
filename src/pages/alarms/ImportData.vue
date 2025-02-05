@@ -134,7 +134,7 @@ const selectFile = async () => {
     if (result.canceled) {
       return;
     }
-    selectedFilePath.value = result.filePaths[0];
+    selectedFilePath.value = result.filePaths;
   } catch (error) {
     console.error("Error selecting file:", error);
     $q.notify({
@@ -189,45 +189,46 @@ const importFile = async () => {
   }
 
   if (!selectedFilePath.value) return;
-  console.log("Importing file:", selectedFilePath.value);
 
-  try {
-    const fileType = selectedFilePath.value.split(".").pop().toLowerCase();
-    const fileContent = await window.electron.readLargeFile(
-      selectedFilePath.value
-    );
+  for (const filePath of selectedFilePath.value) {
+    console.log("Importing file:", filePath);
 
-    const totalLines = fileContent.reduce(
-      (acc, chunk) => acc + chunk.length,
-      0
-    );
-    console.log("Total lines:", totalLines);
-    dataLogStore.startImport(totalLines);
+    try {
+      const fileType = filePath.split(".").pop().toLowerCase();
+      const fileContent = await window.electron.readLargeFile(filePath);
 
-    for (const chunk of fileContent) {
-      await dataLogStore.importDataChunk(chunk, fileType);
-      estimatedTimeLeft.value = dataLogStore.progression.estimatedTimeLeft;
+      const totalLines = fileContent.reduce(
+        (acc, chunk) => acc + chunk.length,
+        0
+      );
+      console.log("Total lines:", totalLines);
+      dataLogStore.startImport(totalLines);
+
+      for (const chunk of fileContent) {
+        await dataLogStore.importDataChunk(chunk, fileType);
+        estimatedTimeLeft.value = dataLogStore.progression.estimatedTimeLeft;
+      }
+
+      $q.notify({
+        type: "positive",
+        message: `File : ${filePath} imported successfully`,
+        actions: [{ icon: "close", color: "white" }],
+        timeout: 0,
+      });
+
+      dataLogStore.finishImport();
+    } catch (error) {
+      console.error("Error importing file:", error);
+      $q.notify({
+        type: "negative",
+        message: "Error importing file: " + error.message,
+        actions: [{ icon: "close", color: "white" }],
+        timeout: 0,
+      });
     }
-
-    $q.notify({
-      type: "positive",
-      message: `File : ${selectedFilePath.value} imported successfully`,
-      actions: [{ icon: "close", color: "white" }],
-      timeout: 0,
-    });
-
-    dataLogStore.finishImport();
-    selectedFilePath.value = null;
-    saved.value = false;
-  } catch (error) {
-    console.error("Error importing file:", error);
-    $q.notify({
-      type: "negative",
-      message: "Error importing file: " + error.message,
-      actions: [{ icon: "close", color: "white" }],
-      timeout: 0,
-    });
   }
+  saved.value = false;
+  selectedFilePath.value = null;
 };
 
 // const excludeAlarm = async (alarmId) => {
