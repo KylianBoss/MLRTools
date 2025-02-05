@@ -280,6 +280,7 @@ export function setupServer(app) {
           "alarmText",
           "severity",
           "classification",
+          "assignedUser",
           "alarmId",
         ],
       });
