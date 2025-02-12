@@ -219,6 +219,35 @@ function initDB(config) {
       }
     );
 
+    const ProductionData = db.define(
+      "ProductionData",
+      {
+        date: {
+          type: DataTypes.DATEONLY,
+          primaryKey: true,
+          allowNull: false,
+        },
+        start: {
+          type: DataTypes.DATE,
+          allowNull: true,
+        },
+        end: {
+          type: DataTypes.DATE,
+          allowNull: true,
+        },
+        dayOff: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+        },
+        boxTreated: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          defaultValue: 0,
+        },
+      }
+    );
+
     const ignoredAlarms = db.define("ignoredAlarms", {
       id: {
         type: DataTypes.INTEGER.UNSIGNED,

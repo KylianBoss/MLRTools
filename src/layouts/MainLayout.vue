@@ -13,6 +13,7 @@
       <update-checker v-if="loaded" />
     </q-header>
 
+    <!-- MENU -->
     <q-drawer
       v-model="rightDrawerOpen"
       :breakpoint="500"
@@ -54,18 +55,20 @@
             <q-item-section>Recherche alarmes</q-item-section>
           </q-item>
           <!-- CHARTS -->
-          <q-item
-            clickable
-            v-ripple
-            :to="{ name: 'charts' }"
-            :active="$route.name == 'charts'"
-            v-if="App.userHasAccess('charts')"
+          <q-expansion-item
+            expand-separator
+            icon="mdi-chart-bell-curve-cumulative"
+            label="Graphiques"
+            v-model="drawers[0]"
+            v-if="App.userHaveAccessToOneOf(['charts'])"
           >
-            <q-item-section avatar>
-              <q-icon name="mdi-chart-bell-curve-cumulative" />
-            </q-item-section>
-            <q-item-section>Graphiques</q-item-section>
-          </q-item>
+            <drawer-item
+              to="charts"
+              autorisation="charts"
+              icon="mdi-chart-bell-curve-cumulative"
+              label="Graphiques"
+            />
+          </q-expansion-item>
           <!-- ALARMS -->
           <q-expansion-item
             expand-separator

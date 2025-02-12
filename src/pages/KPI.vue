@@ -14,7 +14,7 @@
               :options="(date) => !dataLogStore.isDayOff(date)"
               :event-color="
                 (date) =>
-                  dataLogStore.isMissingProductionTimes(date)
+                  dataLogStore.isMissingProductionData(date)
                     ? 'negative'
                     : 'secondary'
               "
@@ -319,6 +319,23 @@
         </q-expansion-item>
       </div>
     </div>
+    <div class="row q-pt-xs">
+      <div class="col">
+        <q-expansion-item
+          label="Alarmes par utilisateur"
+          header-class="bg-primary text-weight-bold text-white"
+          expand-icon-class="text-white"
+        >
+          <vue-apex-charts
+            type="bar"
+            height="400"
+            :options="assignedUsersChartOption"
+            :series="assignedUsersChartOption.series"
+            :key="assignedUsersChartOption.series.length"
+          />
+        </q-expansion-item>
+      </div>
+    </div>
   </q-page>
 </template>
 
@@ -475,9 +492,41 @@ const chartOptions = {
   },
   series: [],
 };
+const assignedUsersChartOption = ref({
+  chart: {
+    type: "bar",
+  },
+  plotOptions: {
+    bar: {
+      horizontal: false,
+      columnWidth: "55%",
+    },
+  },
+  xaxis: {
+    labels: {
+      rotate: -45,
+      rotateAlways: true,
+    },
+  },
+  title: {
+    text: "Nombre d'alarmes traitées par utilisateur",
+    align: "center",
+  },
+  dataLabels: {
+    enabled: true,
+  },
+  tooltip: {
+    enabled: false,
+  },
+  colors: [
+    "#ff6600",
+  ],
+  series: [],
+});
 const allLoaded = ref({});
 const timeoutLoading = ref(null);
 const gettingData = ref(false);
+const alarmsByUsers = ref([]);
 
 watch(toDisplay, async (newDate, oldValue) => {
   if (JSON.stringify(newDate) === JSON.stringify(oldValue)) return;
@@ -488,6 +537,7 @@ watch(toDisplay, async (newDate, oldValue) => {
   sectionKPITop3Zone.value = false;
 
   await getData(newDate);
+  await getAlarmsByUser(newDate);
   sectionKPITop3.value = true;
 });
 
@@ -499,7 +549,7 @@ const getData = (filter) => {
     dayResume.value = [];
     if (typeof filter === "string") {
       console.log("Getting data for", filter);
-      const productionTime = dataLogStore.productionTime(
+      const productionTime = dataLogStore.productionTimes(
         dayjs(filter).format("YYYY-MM-DD")
       );
       const from = dayjs(filter).format("YYYY-MM-DD ") + productionTime.from;
@@ -694,6 +744,31 @@ const getData = (filter) => {
   });
 };
 
+const getAlarmsByUser = async () => {
+  const from =
+    typeof toDisplay.value === "string"
+      ? dayjs(toDisplay.value).format("YYYY-MM-DD")
+      : dayjs(toDisplay.value.from).format("YYYY-MM-DD");
+  const to =
+    typeof toDisplay.value === "string"
+      ? dayjs(toDisplay.value).format("YYYY-MM-DD")
+      : dayjs(toDisplay.value.to).format("YYYY-MM-DD");
+  alarmsByUsers.value = await dataLogStore.getAlarmsByUsers(from, to);
+
+  assignedUsersChartOption.value.title.text = `Nombre d'alarmes traitées par utilisateur du ${from} au ${to}`;
+
+  assignedUsersChartOption.value.series = [
+    {
+      data: alarmsByUsers.value.map((item) => {
+        return {
+          y: item.QuantityTreated,
+          x: item.assignedUser,
+        };
+      }),
+    },
+  ];
+};
+
 onMounted(async () => {
   showLoading(null, true);
   // toDisplay is the date off the last day with data and not a day off
@@ -704,6 +779,7 @@ onMounted(async () => {
   toDisplay.value = date.format("YYYY/MM/DD");
   await dataLogStore.initialize().then(async () => {
     await getData(toDisplay);
+    await getAlarmsByUser(toDisplay);
   });
   sectionKPITop3.value = false;
 });

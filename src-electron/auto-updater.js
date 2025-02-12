@@ -139,12 +139,6 @@ export class AutoUpdater {
       const windowsAsset = response.data.assets.find((asset) =>
         asset.name.endsWith(".zip")
       );
-      this.console.info("Update check:", {
-        currentVersion,
-        latestVersion,
-        updateAvailable,
-        downloadUrl: windowsAsset ? windowsAsset.browser_download_url : null,
-      });
 
       return {
         currentVersion: this.currentVersion,

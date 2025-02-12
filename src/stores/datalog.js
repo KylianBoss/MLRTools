@@ -125,20 +125,20 @@ export const useDataLogStore = defineStore("datalog", {
     alarms: [],
     dates: [],
     lastObjectTreated: null,
-    productionTimes: [],
+    productionData: [],
     importing: false,
   }),
   getters: {
-    isMissingProductionTimes() {
+    isMissingProductionData() {
       return (date) => {
-        return !this.productionTimes.some(
+        return !this.productionData.some(
           (p) => p.date === dayjs(date).format("YYYY-MM-DD")
         );
       };
     },
     isDayOff() {
       return (date) => {
-        const dates = this.productionTimes.filter(
+        const dates = this.productionData.filter(
           (p) => p.date === dayjs(date).format("YYYY-MM-DD")
         );
         if (dates.length === 0) return false;
@@ -146,13 +146,13 @@ export const useDataLogStore = defineStore("datalog", {
         return false;
       };
     },
-    productionTime() {
+    productionTimes() {
       return (date) => {
-        const productionTime = this.productionTimes.find(
+        const productionData = this.productionData.find(
           (p) => p.date === dayjs(date).format("YYYY-MM-DD")
         );
-        return productionTime
-          ? { from: productionTime.start, to: productionTime.end }
+        return productionData
+          ? { from: productionData.start, to: productionData.end }
           : { from: "00:00", to: "23:59" };
       };
     },
@@ -277,9 +277,9 @@ export const useDataLogStore = defineStore("datalog", {
               this.excludedAlarmCodes = data.data;
             });
           await window.electron
-            .serverRequest("GET", "/production/times")
+            .serverRequest("GET", "/production/data")
             .then((response) => {
-              this.productionTimes = response.data;
+              this.productionData = response.data;
             });
           resolve();
         } catch (error) {
@@ -446,6 +446,15 @@ export const useDataLogStore = defineStore("datalog", {
           });
       });
     },
+    getAlarmsByUsers(from, to) {
+      return new Promise((resolve, reject) => {
+        window.electron
+          .serverRequest("GET", `/alarms/by-users/${from}/${to}`)
+          .then((res) => {
+            resolve(res.data);
+          });
+      });
+    },
     updateAlarmZone(data) {
       return new Promise((resolve, reject) => {
         window.electron
@@ -463,31 +472,36 @@ export const useDataLogStore = defineStore("datalog", {
           });
       });
     },
-    getProductionTimes() {
+    getProductionData() {
       return new Promise((resolve, reject) => {
         window.electron
-          .serverRequest("GET", "/production/times")
+          .serverRequest("GET", "/production/data")
           .then((response) => {
-            this.productionTimes = response.data;
+            this.productionData = response.data;
             resolve(response.data);
           });
       });
     },
-    getProductionTime(date) {
+    getProductionData(date) {
       return new Promise((resolve, reject) => {
         window.electron
-          .serverRequest("GET", `/production/times/${date}`)
+          .serverRequest("GET", `/production/data/${date}`)
           .then((response) => {
             resolve(response.data);
           });
       });
     },
-    setProductionTime(data) {
+    setProductionData(data) {
       return new Promise((resolve, reject) => {
         window.electron
-          .serverRequest("POST", `/production/times`, { ...data })
+          .serverRequest("POST", `/production/data`, { ...data })
           .then((response) => {
-            this.productionTimes.push(response.data);
+            // Replace if exist else add
+            const index = this.productionData.findIndex(
+              (p) => p.date === data.date
+            );
+            if (index >= 0) this.productionData[index] = data;
+            else this.productionData.push(data);
             resolve(response.data);
           });
       });

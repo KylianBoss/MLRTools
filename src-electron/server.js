@@ -432,7 +432,6 @@ export function setupServer(app) {
       res.status(500).json({ error: error.message });
     }
   });
-
   app.get("/alarms/count", async (req, res) => {
     const { date, excluded, like = null, sum = false } = req.body;
     try {
@@ -490,7 +489,6 @@ export function setupServer(app) {
       res.status(500).json({ error: error.message });
     }
   });
-
   app.get("/alarms/day", async (req, res) => {
     try {
       const dates = await db.query(
@@ -505,7 +503,6 @@ export function setupServer(app) {
       res.status(500).json({ error: error.message });
     }
   });
-
   app.get("/alarms/day/:date", async (req, res) => {
     try {
       const alarms = await db.models.Datalog.findAll({
@@ -521,6 +518,28 @@ export function setupServer(app) {
       res.json(alarms);
     } catch (error) {
       console.error("Error fetching alarms:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app.get("/alarms/by-users/:from/:to", async (req, res) => {
+    const { from, to } = req.params;
+
+    if (!from || !to) {
+      res.status(400).json({ error: "No dates provided" });
+      return;
+    }
+
+    try {
+      db.query("CALL getAlarmsByUser(:from, :to)", {
+        replacements: {
+          from,
+          to,
+        },
+      }).then((result) => {
+        res.json(result);
+      });
+    } catch (error) {
+      console.error("Error fetching alarms by users:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -877,28 +896,34 @@ export function setupServer(app) {
   });
 
   // PRODUCTION TIME
-  app.get("/production/times", async (req, res) => {
+  app.get("/production/data", async (req, res) => {
     try {
-      const times = await db.models.ProductionTimes.findAll({
+      const data = await db.models.ProductionData.findAll({
         order: [["date", "ASC"]],
         raw: true,
       });
-      res.json(times);
+      res.json(data);
     } catch (error) {
-      console.error("Error fetching production times:", error);
+      console.error("Error fetching production data:", error);
       res.status(500).json({ error: error.message });
     }
   });
-  app.post("/production/times", async (req, res) => {
-    const { date, start, end, dayOff } = req.body;
+  app.post("/production/data", async (req, res) => {
+    const { date, start, end, dayOff, boxTreated } = req.body;
     try {
-      const time = await db.models.ProductionTimes.create({
+      await db.models.ProductionData.upsert({
         date,
         start,
         end,
         dayOff,
+        boxTreated,
       });
-      res.json(time.dataValues);
+      const data = await db.models.ProductionData.findOne({
+        where: {
+          date,
+        },
+      });
+      res.json(data.dataValues);
     } catch (error) {
       console.error("Error creating production time:", error);
       res.status(500).json({ error: error.message });
