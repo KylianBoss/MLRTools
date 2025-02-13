@@ -1,10 +1,10 @@
 <template>
-  <div class="text-h5">Nombre de messages par jours</div>
   <vue-apex-charts
     type="area"
     height="350"
     :options="chartMessagesCountOptions"
     :series="chartMessagesCountSeries"
+    :key="chartMessagesCountSeries.length"
     v-if="chartMessagesCountVisibility"
   />
 </template>
@@ -86,6 +86,12 @@ const chartMessagesCountOptions = ref({
     defaultLocale: "fr",
     locales: locale,
   },
+  title: {
+    text: `Nombre de message pour la période du ${dayjs(props.from).format(
+      "DD.MM.YYYY"
+    )} au ${dayjs(props.to).format("DD.MM.YYYY")}`,
+    align: "left",
+  },
   dataLabels: {
     enabled: false,
   },
@@ -110,9 +116,14 @@ const chartMessagesCountSeries = ref([]);
 const chartMessagesCountVisibility = ref(false);
 
 const getData = () => {
-  console.log("GETTING DATA for messages count");
-  console.log("FROM", dayjs(props.from).format("YYYY-MM-DD"));
-  console.log("TO", dayjs(props.to).format("YYYY-MM-DD"));
+  chartMessagesCountOptions.value.title.text = dayjs(props.from).isSame(
+    props.to
+  )
+    ? `Nombre de messages pour le ${dayjs(props.from).format("DD.MM.YYYY")}`
+    : `Nombre de messages pour la période du ${dayjs(props.from).format(
+        "DD.MM.YYYY"
+      )} au ${dayjs(props.to).format("DD.MM.YYYY")}`;
+  chartMessagesCountSeries.value = [];
   window.electron
     .serverRequest(
       "GET",
@@ -152,9 +163,13 @@ const getData = () => {
     });
 };
 
-watch([props.from, props.to], () => {
-  getData();
-});
+watch(
+  props,
+  () => {
+    if (dayjs(props.from).isValid() && dayjs(props.to).isValid()) getData();
+  },
+  { deep: true }
+);
 
 getData();
 </script>
