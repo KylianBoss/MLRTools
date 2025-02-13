@@ -1,18 +1,18 @@
 <template>
-  <div class="text-h5">Messages d'erreur par zone</div>
   <vue-apex-charts
     type="pie"
     height="350"
     :options="chartOptions"
     :series="chartSeries"
     v-if="chartVisibility"
+    :key="chartSeries.length"
   />
 </template>
 
 <script setup>
 import VueApexCharts from "vue3-apexcharts";
 import dayjs from "dayjs";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 
 const props = defineProps({
   from: {
@@ -85,6 +85,18 @@ const chartOptions = ref({
     stackable: false,
     defaultLocale: "fr",
     locales: locale,
+    toolbar: {
+      show: true,
+      tools: {
+        download: true,
+      },
+    },
+  },
+  title: {
+    text: `Nombre de messages par zones pour la période du ${dayjs(
+      props.from
+    ).format("DD.MM.YYYY")} au ${dayjs(props.to).format("DD.MM.YYYY")}`,
+    align: "left",
   },
   dataLabels: {
     enabled: true,
@@ -105,24 +117,44 @@ const chartOptions = ref({
   },
   legend: {
     show: true,
-    position: "right",
+    position: "bottom",
   },
 });
 const chartSeries = ref([]);
 const chartVisibility = ref(false);
 
-window.electron
-  .serverRequest(
-    "GET",
-    `/charts/messages-per-zone/${dayjs(props.from).format(
-      "YYYY-MM-DD"
-    )}/${dayjs(props.to).format("YYYY-MM-DD")}`
-  )
-  .then((response) => {
-    chartSeries.value = response.data.map((item) => item.count);
-    chartOptions.value.labels = response.data.map((item) => item.dataSource);
-    chartVisibility.value = true;
-  });
+const getData = () => {
+  chartOptions.value.title.text = dayjs(props.from).isSame(props.to)
+    ? `Nombre de messages par zones pour le ${dayjs(props.from).format(
+        "DD.MM.YYYY"
+      )}`
+    : `Nombre de messages par zones pour la période du ${dayjs(
+        props.from
+      ).format("DD.MM.YYYY")} au ${dayjs(props.to).format("DD.MM.YYYY")}`;
+  chartSeries.value = [];
+  window.electron
+    .serverRequest(
+      "GET",
+      `/charts/messages-per-zone/${dayjs(props.from).format(
+        "YYYY-MM-DD"
+      )}/${dayjs(props.to).format("YYYY-MM-DD")}`
+    )
+    .then((response) => {
+      chartSeries.value = response.data.map((item) => item.count);
+      chartOptions.value.labels = response.data.map((item) => item.dataSource);
+      chartVisibility.value = true;
+    });
+};
+
+watch(
+  props,
+  () => {
+    if (dayjs(props.from).isValid() && dayjs(props.to).isValid()) getData();
+  },
+  { deep: true }
+);
+
+getData();
 </script>
 
 <style></style>
