@@ -87,7 +87,7 @@ const chartMessagesCountOptions = ref({
     locales: locale,
   },
   title: {
-    text: `Nombre de message pour la période du ${dayjs(props.from).format(
+    text: `Nombre de messages pour la période du ${dayjs(props.from).format(
       "DD.MM.YYYY"
     )} au ${dayjs(props.to).format("DD.MM.YYYY")}`,
     align: "left",
