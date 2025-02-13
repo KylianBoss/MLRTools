@@ -2,10 +2,10 @@
   <vue-apex-charts
     type="area"
     height="350"
-    :options="chartMessagesCountOptions"
-    :series="chartMessagesCountSeries"
-    :key="chartMessagesCountSeries.length"
-    v-if="chartMessagesCountVisibility"
+    :options="chartOptions"
+    :series="chartSeries"
+    :key="chartSeries.length"
+    v-if="chartVisibility"
   />
 </template>
 
@@ -78,7 +78,7 @@ const locale = [
     },
   },
 ];
-const chartMessagesCountOptions = ref({
+const chartOptions = ref({
   chart: {
     height: 350,
     type: "area",
@@ -112,18 +112,18 @@ const chartMessagesCountOptions = ref({
     horizontalAlign: "center",
   },
 });
-const chartMessagesCountSeries = ref([]);
-const chartMessagesCountVisibility = ref(false);
+const chartSeries = ref([]);
+const chartVisibility = ref(false);
 
 const getData = () => {
-  chartMessagesCountOptions.value.title.text = dayjs(props.from).isSame(
+  chartOptions.value.title.text = dayjs(props.from).isSame(
     props.to
   )
     ? `Nombre de messages pour le ${dayjs(props.from).format("DD.MM.YYYY")}`
     : `Nombre de messages pour la période du ${dayjs(props.from).format(
         "DD.MM.YYYY"
       )} au ${dayjs(props.to).format("DD.MM.YYYY")}`;
-  chartMessagesCountSeries.value = [];
+  chartSeries.value = [];
   window.electron
     .serverRequest(
       "GET",
@@ -133,10 +133,10 @@ const getData = () => {
     )
     .then((response) => {
       if (!response.data.length) {
-        chartMessagesCountVisibility.value = false;
+        chartVisibility.value = false;
         return;
       }
-      chartMessagesCountSeries.value.push({
+      chartSeries.value.push({
         name: "Erreurs",
         data: response.data.map((item) => {
           return [dayjs(item.date).valueOf(), item.error];
@@ -144,7 +144,7 @@ const getData = () => {
         color: "#C10015",
         zIndex: 10,
       });
-      chartMessagesCountSeries.value.push({
+      chartSeries.value.push({
         name: "Avertissements",
         data: response.data.map((item) => {
           return [dayjs(item.date).valueOf(), item.warning];
@@ -152,14 +152,14 @@ const getData = () => {
         color: "#F2C037",
         zIndex: 5,
       });
-      chartMessagesCountSeries.value.push({
+      chartSeries.value.push({
         name: "Total",
         data: response.data.map((item) => {
           return [dayjs(item.date).valueOf(), item.total];
         }),
         color: "#000000",
       });
-      chartMessagesCountVisibility.value = true;
+      chartVisibility.value = true;
     });
 };
 
