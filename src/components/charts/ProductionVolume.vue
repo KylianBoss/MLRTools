@@ -23,68 +23,18 @@ const props = defineProps({
     type: String,
     required: true,
   },
-});
-const locale = [
-  {
-    name: "fr",
-    options: {
-      months: [
-        "Janvier",
-        "Février",
-        "Mars",
-        "Avril",
-        "Mai",
-        "Juin",
-        "Juillet",
-        "Août",
-        "Septembre",
-        "Octobre",
-        "Novembre",
-        "Décembre",
-      ],
-      shortMonths: [
-        "Jan",
-        "Fév",
-        "Mar",
-        "Avr",
-        "Mai",
-        "Juin",
-        "Juil",
-        "Août",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Déc",
-      ],
-      days: [
-        "Dimanche",
-        "Lundi",
-        "Mardi",
-        "Mercredi",
-        "Jeudi",
-        "Vendredi",
-        "Samedi",
-      ],
-      shortDays: ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
-      toolbar: {
-        download: "Télécharger SVG",
-        selection: "Sélection",
-        selectionZoom: "Sélectionner pour zoomer",
-        zoomIn: "Zoomer",
-        zoomOut: "Dézoomer",
-        pan: "Déplacer",
-        reset: "Réinitialiser le zoom",
-      },
-    },
+  locale: {
+    type: Array,
+    required: false,
   },
-];
+});
 const chartOptions = ref({
   chart: {
     height: 350,
     type: "area",
     stackable: false,
     defaultLocale: "fr",
-    locales: locale,
+    locales: props.locale,
   },
   title: {
     text: `Volume de production pour la période du ${dayjs(props.from).format(
