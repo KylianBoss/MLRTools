@@ -9,6 +9,7 @@ export const useAppStore = defineStore("App", {
   }),
   getters: {
     userHasAccess: (state) => (menuId) => {
+      if (menuId === "*") return true;
       return state.user.UserAccesses.includes(menuId);
     },
     userHaveAccessToOneOf: (state) => (menuIds) => {
@@ -22,7 +23,7 @@ export const useAppStore = defineStore("App", {
         window.electron
           .serverRequest("GET", "/config", null)
           .then((response) => {
-            console.log(response)
+            console.log(response);
             if (response.data && response.data.config === true) {
               this.notConfigured = false;
               this.user = response.data.user;
@@ -36,6 +37,7 @@ export const useAppStore = defineStore("App", {
             }
           })
           .catch((error) => {
+            console.log(error);
             if (error.response.status === 404) {
               this.notConfigured = true;
               resolve(null);
