@@ -89,12 +89,15 @@ app.whenReady().then(async () => {
   createWindow();
 
   // Initialize auto-updater
-  // if (app.isPackaged) new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
   new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
 
   // Setup embedded express server
   expressApp = express();
   expressApp.use(express.json());
+  expressApp.use((req, res, next) => {
+    console.log(req.method, req.url);
+    next();
+  });
   setupServer(expressApp);
 
   // Handle IPC messages
@@ -234,6 +237,7 @@ app.on("activate", () => {
 });
 
 function cleanUp() {
+  expressApp.close();
   ipcMain.removeHandler("server-request");
   ipcMain.removeHandler("selectFile");
   ipcMain.removeHandler("readLargeFile");

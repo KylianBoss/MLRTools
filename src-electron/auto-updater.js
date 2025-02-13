@@ -202,10 +202,7 @@ export class AutoUpdater {
 
       // Extract with error handling for permissions
       // Skip special Electron files during extraction
-      const skipFiles = [
-        "electron.exe",
-        "chrome_crashpad_handler.exe",
-      ];
+      const skipFiles = ["electron.exe", "chrome_crashpad_handler.exe"];
 
       zip.getEntries().forEach((entry) => {
         try {
@@ -242,7 +239,7 @@ export class AutoUpdater {
         throw new Error("Update package structure is invalid");
       }
 
-      const appName = path.basename(app.getPath('exe'));
+      const appName = path.basename(app.getPath("exe"));
       const killCmd = `taskkill /F /IM "${appName}" /T`;
 
       // Create update script
