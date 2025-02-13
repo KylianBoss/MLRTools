@@ -32,8 +32,7 @@ export function setupServer(app) {
         user: user.toJSON(),
       });
     } catch (error) {
-      console.log(error);
-      res.status(404).json(false);
+      res.status(404).json({ error: "Config file not found" });
     }
   });
   app.post("/config", async (req, res) => {
@@ -710,6 +709,7 @@ export function setupServer(app) {
     }
   });
 
+  // KPI
   app.get("/alarms/kpi/count", async (req, res) => {
     const { from, to, includesExcluded = false } = req.body;
 
@@ -733,7 +733,6 @@ export function setupServer(app) {
       res.status(500).json({ error: error.message });
     }
   });
-
   app.get("/alarms/kpi/count/:dataSource", async (req, res) => {
     const { from, to, includesExcluded = false } = req.body;
     const { dataSource } = req.params;
@@ -758,7 +757,6 @@ export function setupServer(app) {
       res.status(500).json({ error: error.message });
     }
   });
-
   app.get("/alarms/kpi/duration", async (req, res) => {
     const { from, to, includesExcluded = false } = req.body;
 
@@ -782,14 +780,13 @@ export function setupServer(app) {
       res.status(500).json({ error: error.message });
     }
   });
-
   app.get("/alarms/kpi/resume/:dataSource", async (req, res) => {
     const { from, to, includesExcluded = false } = req.body;
     const { dataSource } = req.params;
 
     try {
-      db.query("CALL getGroupedAlarms(:fromDateTime, :toDateTime, :zone)", {
-        replacements: { fromDateTime: from, toDateTime: to, zone: dataSource },
+      db.query("CALL getGroupedAlarms(:from, :to, :dataSource)", {
+        replacements: { from, to, dataSource },
       })
         .then((result) => {
           res.json(result);
@@ -895,7 +892,7 @@ export function setupServer(app) {
     }
   });
 
-  // PRODUCTION TIME
+  // PRODUCTION DATA
   app.get("/production/data", async (req, res) => {
     try {
       const data = await db.models.ProductionData.findAll({
@@ -994,6 +991,7 @@ export function setupServer(app) {
       .then(() => doc.end());
   });
 
+  // CHARTS
   app.get("/charts/messages-count/:startDate/:endDate", async (req, res) => {
     const { startDate, endDate } = req.params;
     try {
@@ -1051,6 +1049,33 @@ export function setupServer(app) {
       res.json(result);
     } catch (error) {
       console.error("Error fetching message count:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app.get("/charts/production/volume/:startDate/:endDate", async (req, res) => {
+    const { startDate, endDate } = req.params;
+    try {
+      // Get the number of boxes treated per day between the start and end dates (inclusive)
+      const result = await db.query(
+        `
+        SELECT
+          date,
+          boxTreated
+        FROM
+          ProductionData
+        WHERE
+          date BETWEEN :startDate AND :endDate
+        ORDER BY
+          date
+      `,
+        {
+          replacements: { startDate, endDate },
+          type: QueryTypes.SELECT,
+        }
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching production volume:", error);
       res.status(500).json({ error: error.message });
     }
   });
