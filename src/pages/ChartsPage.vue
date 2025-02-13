@@ -11,127 +11,119 @@
     /> -->
     <div class="row">
       <div class="col">
-        <messages-by-day from="2024-06-14" :to="dayjs().format('YYYY-MM-DD')" />
+        <q-input
+          filled
+          v-model="period.from"
+          type="date"
+          label="Du"
+          dense
+          :debounce="1000"
+        />
+      </div>
+      <div class="col">
+        <q-input
+          filled
+          v-model="period.to"
+          type="date"
+          label="Au"
+          dense
+          :debounce="1000"
+        />
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <messages-by-day :from="period.from" :to="period.to" :locale="locale" />
       </div>
     </div>
     <div class="row">
       <div class="col">
         <errors-per-zone-count
-          from="2024-06-14"
-          :to="dayjs().format('YYYY-MM-DD')"
+          :from="period.from"
+          :to="period.to"
+          :locale="locale"
         />
       </div>
-      <div class="col"></div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <production-volume
+          :from="period.from"
+          :to="period.to"
+          :locale="locale"
+        />
+      </div>
     </div>
   </q-page>
 </template>
 
 <script setup>
-import MessagesByDay from "src/components/charts/MessagesByDay.vue";
-import ErrorsPerZoneCount from "src/components/charts/ErrorsPerZoneCount.vue";
+import MessagesByDay from "components/charts/MessagesByDay.vue";
+import ErrorsPerZoneCount from "components/charts/ErrorsPerZoneCount.vue";
+import ProductionVolume from "components/charts/ProductionVolume.vue";
 import dayjs from "dayjs";
-// import { ref } from "vue";
+import { ref } from "vue";
 
-// const locale = [
-//   {
-//     name: "fr",
-//     options: {
-//       months: [
-//         "Janvier",
-//         "Février",
-//         "Mars",
-//         "Avril",
-//         "Mai",
-//         "Juin",
-//         "Juillet",
-//         "Août",
-//         "Septembre",
-//         "Octobre",
-//         "Novembre",
-//         "Décembre",
-//       ],
-//       shortMonths: [
-//         "Jan",
-//         "Fév",
-//         "Mar",
-//         "Avr",
-//         "Mai",
-//         "Juin",
-//         "Juil",
-//         "Août",
-//         "Sep",
-//         "Oct",
-//         "Nov",
-//         "Déc",
-//       ],
-//       days: [
-//         "Dimanche",
-//         "Lundi",
-//         "Mardi",
-//         "Mercredi",
-//         "Jeudi",
-//         "Vendredi",
-//         "Samedi",
-//       ],
-//       shortDays: ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
-//       toolbar: {
-//         download: "Télécharger SVG",
-//         selection: "Sélection",
-//         selectionZoom: "Sélectionner pour zoomer",
-//         zoomIn: "Zoomer",
-//         zoomOut: "Dézoomer",
-//         pan: "Déplacer",
-//         reset: "Réinitialiser le zoom",
-//       },
-//     },
-//   },
-// ];
-// const chartMessagesCountOptions = ref({
-//   chart: {
-//     height: 350,
-//     type: "pie",
-//     stackable: false,
-//     defaultLocale: "fr",
-//     locales: locale,
-//   },
-//   dataLabels: {
-//     enabled: true,
-//     formatter: function (val) {
-//       return Math.floor(val) + "%";
-//     },
-//   },
-//   series: [],
-//   xaxis: {
-//     type: "datetime",
-//   },
-//   legend: {
-//     horizontalAlign: "left",
-//     offsetX: 40,
-//   },
-//   stroke: {
-//     width: 2,
-//   },
-//   legend: {
-//     show: true,
-//     position: "right",
-//   },
-// });
-// const chartMessagesCountSeries = ref([]);
-// const chartMessagesCountVisibility = ref(false);
+const period = ref({
+  // First day of the current month
+  from: dayjs().startOf("month").format("YYYY-MM-DD"),
+  to: dayjs().format("YYYY-MM-DD"),
+});
 
-// window.electron
-//   .serverRequest(
-//     "GET",
-//     `/charts/messages-per-zone/2024-06-14/${dayjs().format("YYYY-MM-DD")}`
-//   )
-//   .then((response) => {
-//     console.log("RESPONSE", response);
-//     chartMessagesCountSeries.value = response.data.map((item) => item.count);
-//     chartMessagesCountOptions.value.labels = response.data.map(
-//       (item) => item.dataSource
-//     );
-//     chartMessagesCountVisibility.value = true;
-//   });
+const locale = [
+  {
+    name: "fr",
+    options: {
+      months: [
+        "Janvier",
+        "Février",
+        "Mars",
+        "Avril",
+        "Mai",
+        "Juin",
+        "Juillet",
+        "Août",
+        "Septembre",
+        "Octobre",
+        "Novembre",
+        "Décembre",
+      ],
+      shortMonths: [
+        "Jan",
+        "Fév",
+        "Mar",
+        "Avr",
+        "Mai",
+        "Juin",
+        "Juil",
+        "Août",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Déc",
+      ],
+      days: [
+        "Dimanche",
+        "Lundi",
+        "Mardi",
+        "Mercredi",
+        "Jeudi",
+        "Vendredi",
+        "Samedi",
+      ],
+      shortDays: ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
+      toolbar: {
+        download: "Télécharger SVG",
+        selection: "Sélection",
+        selectionZoom: "Sélectionner pour zoomer",
+        zoomIn: "Zoomer",
+        zoomOut: "Dézoomer",
+        pan: "Déplacer",
+        reset: "Réinitialiser le zoom",
+      },
+    },
+  },
+];
 </script>
 
 <style></style>
