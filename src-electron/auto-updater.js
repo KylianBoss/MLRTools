@@ -244,7 +244,7 @@ export class AutoUpdater {
 
       // Create update script
       const scriptContent = `
-        @echo off
+        
         ${killCmd}
         timeout /t 1 /nobreak >nul
         xcopy "${updateSource}" "${appPath}" /E /I /Y
