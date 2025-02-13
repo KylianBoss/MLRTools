@@ -28,19 +28,21 @@
     >
       <q-scroll-area class="fit">
         <q-list>
+          <!-- HOME -->
+          <drawer-item
+            to="home"
+            autorisation="*"
+            icon="mdi-home"
+            label="Accueil"
+          />
           <!-- KPI -->
-          <q-item
-            clickable
-            v-ripple
-            :to="{ name: 'home' }"
-            :active="$route.name == 'home'"
+          <drawer-item
+            to="kpi"
+            autorisation="kpi"
+            icon="mdi-chart-arc"
+            label="KPI"
             v-if="App.userHasAccess('kpi')"
-          >
-            <q-item-section avatar>
-              <q-icon name="mdi-chart-arc" />
-            </q-item-section>
-            <q-item-section>KPI</q-item-section>
-          </q-item>
+          />
           <!-- SEARCH -->
           <q-item
             clickable
@@ -74,7 +76,7 @@
             expand-separator
             icon="mdi-bell-outline"
             label="Alarmes"
-            v-model="drawers[0]"
+            v-model="drawers[1]"
             v-if="
               App.userHaveAccessToOneOf([
                 'importMessages',
@@ -121,7 +123,7 @@
             expand-separator
             icon="mdi-toolbox-outline"
             label="Utilitaires"
-            v-model="drawers[1]"
+            v-model="drawers[2]"
             v-if="App.userHaveAccessToOneOf(['suspiciousPlaces'])"
           >
             <drawer-item
