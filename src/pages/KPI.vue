@@ -331,7 +331,10 @@
             height="400"
             :options="assignedUsersChartOption"
             :series="assignedUsersChartOption.series"
-            :key="assignedUsersChartOption.series.length"
+            :key="
+              assignedUsersChartOption.series.length +
+              assignedUsersChartOption.title.text
+            "
           />
         </q-expansion-item>
       </div>
@@ -407,31 +410,53 @@ const chartOptions = {
       enabled: true,
       allowMouseWheelZoom: false,
     },
-    // events: {
-    //   beforeZoom: (e, { xaxis }) => {
-    //     let maindifference =
-    //       new Date(props.data[0].date).valueOf() -
-    //       new Date(props.data[props.data.length - 1].date).valueOf();
-    //     let zoomdifference = xaxis.max - xaxis.min;
-    //     if (zoomdifference > maindifference)
-    //       return {
-    //         // dont zoom out any further
-    //         xaxis: {
-    //           min: props.data[0].date,
-    //           max: props.data[props.data.length - 1].date,
-    //         },
-    //       };
-    //     else {
-    //       return {
-    //         // keep on zooming
-    //         xaxis: {
-    //           min: xaxis.min,
-    //           max: xaxis.max,
-    //         },
-    //       };
-    //     }
-    //   },
-    // },
+    events: {
+      mouseMove: function (event, chartContext, config) {
+        // Get X coordinate of mouse pointer relative to chart
+        const chartArea =
+          chartContext.ctx.w.globals.dom.baseEl.querySelector(
+            ".apexcharts-inner"
+          );
+        const rect = chartArea.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+
+        // Remove existing marker line if it exists
+        const existingLine =
+          chartContext.ctx.w.globals.dom.baseEl.querySelector(
+            ".apexcharts-marker-line"
+          );
+        if (existingLine) {
+          existingLine.remove();
+        }
+
+        // Create and add new marker line
+        if (x >= 0 && x <= rect.width) {
+          const line = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "line"
+          );
+          line.setAttribute("class", "apexcharts-marker-line");
+          line.setAttribute("x1", x);
+          line.setAttribute("x2", x);
+          line.setAttribute("y1", 0);
+          line.setAttribute("y2", rect.height);
+          line.setAttribute("stroke", "#b6b6b6");
+          line.setAttribute("stroke-width", "1");
+          line.setAttribute("stroke-dasharray", "3");
+
+          chartArea.appendChild(line);
+        }
+      },
+      mouseLeave: function (event, chartContext, config) {
+        // Remove marker line when mouse leaves chart area
+        const line = chartContext.ctx.w.globals.dom.baseEl.querySelector(
+          ".apexcharts-marker-line"
+        );
+        if (line) {
+          line.remove();
+        }
+      },
+    },
   },
   plotOptions: {
     bar: {
@@ -475,9 +500,9 @@ const chartOptions = {
         }">${
           data.errorText == "Running" ? "Fonctionnement" : "Arrêt"
         }</span></div>` +
-        `<div>Temps : ${dayjs(data.start).format("HH:mm")} - ${dayjs(
-          data.end
-        ).format("HH:mm")}</div>` +
+        `<div>Temps : ${dayjs.utc(data.start).format("HH:mm")} - ${dayjs
+          .utc(data.end)
+          .format("HH:mm")}</div>` +
         `<div>Durée : ${dayjs(data.end).diff(
           data.start,
           "minute"
@@ -518,9 +543,7 @@ const assignedUsersChartOption = ref({
   tooltip: {
     enabled: false,
   },
-  colors: [
-    "#ff6600",
-  ],
+  colors: ["#ff6600"],
   series: [],
 });
 const allLoaded = ref({});
@@ -548,12 +571,11 @@ const getData = (filter) => {
     chartOptions.series = [];
     dayResume.value = [];
     if (typeof filter === "string") {
-      console.log("Getting data for", filter);
       const productionTime = dataLogStore.productionTimes(
         dayjs(filter).format("YYYY-MM-DD")
       );
-      const from = dayjs(filter).format("YYYY-MM-DD ") + productionTime.from;
-      const to = dayjs(filter).format("YYYY-MM-DD ") + productionTime.to;
+      const from = dayjs(productionTime.from).format("YYYY-MM-DD HH:mm:ss");
+      const to = dayjs(productionTime.to).format("YYYY-MM-DD HH:mm:ss");
       const kpiTop3Count = await dataLogStore.getKPItop3Count({
         from,
         to,
@@ -642,8 +664,8 @@ const getData = (filter) => {
                     dayjs(message.timeOfOccurence).valueOf(),
                     dayjs(message.timeOfAcknowledge).valueOf(),
                   ],
-                  start: dayjs.utc(message.timeOfOccurence),
-                  end: dayjs.utc(message.timeOfAcknowledge),
+                  start: dayjs(message.timeOfOccurence).valueOf(),
+                  end: dayjs(message.timeOfAcknowledge).valueOf(),
                   fillColor: message.alarmText == "Running" ? "green" : "red",
                   errorText: message.alarmText,
                 };
@@ -755,7 +777,13 @@ const getAlarmsByUser = async () => {
       : dayjs(toDisplay.value.to).format("YYYY-MM-DD");
   alarmsByUsers.value = await dataLogStore.getAlarmsByUsers(from, to);
 
-  assignedUsersChartOption.value.title.text = `Nombre d'alarmes traitées par utilisateur du ${from} au ${to}`;
+  assignedUsersChartOption.value.title.text = dayjs(from).isSame(to)
+    ? `Nombre d'alarmes traitées par utilisateur le ${dayjs(from).format(
+        "DD.MM.YYYY"
+      )}`
+    : `Nombre d'alarmes traitées par utilisateur du ${dayjs(from).format(
+        "DD.MM.YYYY"
+      )} au ${dayjs(to).format("DD.MM.YYYY")}`;
 
   assignedUsersChartOption.value.series = [
     {
@@ -816,4 +844,9 @@ function mapValue(x, in_min, in_max, out_min, out_max) {
 }
 </script>
 
-<style></style>
+<style>
+.apexcharts-marker-line {
+  pointer-events: none;
+  z-index: 1;
+}
+</style>
