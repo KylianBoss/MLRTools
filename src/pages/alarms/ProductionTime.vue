@@ -118,6 +118,15 @@
                   ).toLocaleString()
                 : 0
             }}
+            <small>
+              <i>
+                ({{
+                  dayjs(props.row.end)
+                    .diff(dayjs(props.row.start), "hour", true)
+                    .toFixed(2)
+                }}h)
+              </i>
+            </small>
           </q-td>
           <q-td class="text-right">
             <q-icon
@@ -196,7 +205,12 @@ const columns = [
     name: "boxesPerHour",
     label: "Boxes/h",
     align: "left",
-    field: "boxesPerHour",
+    field: (row) =>
+      row.boxTreated > 0
+        ? Math.round(
+            row.boxTreated / dayjs(row.end).diff(dayjs(row.start), "hour", true)
+          )
+        : 0,
     value: (row) =>
       row.boxTreated > 0
         ? Math.round(
