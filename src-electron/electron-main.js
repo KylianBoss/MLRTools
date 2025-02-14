@@ -237,7 +237,6 @@ app.on("activate", () => {
 });
 
 function cleanUp() {
-  expressApp.close();
   ipcMain.removeHandler("server-request");
   ipcMain.removeHandler("selectFile");
   ipcMain.removeHandler("readLargeFile");
