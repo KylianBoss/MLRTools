@@ -3,7 +3,6 @@ import axios from "axios";
 import semver from "semver";
 import fs from "fs";
 import path from "path";
-import AdmZip from "adm-zip";
 import cron from "node-cron";
 
 export class AutoUpdater {
@@ -24,6 +23,7 @@ export class AutoUpdater {
           }
           return msg;
         });
+        console.log(...processedMessages);
         this.mainWindow.webContents.send("console-log", processedMessages);
       },
       warn: (...messages) => {
@@ -38,6 +38,7 @@ export class AutoUpdater {
           }
           return msg;
         });
+        console.log(...processedMessages);
         this.mainWindow.webContents.send("console-log", processedMessages);
       },
       error: (...messages) => {
@@ -52,6 +53,7 @@ export class AutoUpdater {
           }
           return msg;
         });
+        console.log(...processedMessages);
         this.mainWindow.webContents.send("console-log", processedMessages);
       },
       log: (...messages) => {
@@ -66,6 +68,7 @@ export class AutoUpdater {
           }
           return msg;
         });
+        console.log(...processedMessages);
         this.mainWindow.webContents.send("console-log", processedMessages);
       },
     };
@@ -186,78 +189,58 @@ export class AutoUpdater {
   async installUpdate() {
     try {
       const downloadPath = path.join(app.getPath("temp"), "update.zip");
-      const zip = new AdmZip(downloadPath);
-      const appPath = path.dirname(app.getPath("exe"));
-      this.console.log("Getting update from:", downloadPath);
-
-      // Extract update to temporary directory
       const tempExtractPath = path.join(app.getPath("temp"), "update-extract");
-      this.console.info("Extracting update to:", tempExtractPath);
-      if (fs.existsSync(tempExtractPath)) {
-        fs.rmSync(tempExtractPath, { recursive: true });
-      }
-
-      // Create temp directory if it doesn't exist
-      fs.mkdirSync(tempExtractPath, { recursive: true });
-
-      // Extract with error handling for permissions
-      // Skip special Electron files during extraction
-      const skipFiles = ["electron.exe", "chrome_crashpad_handler.exe"];
-
-      zip.getEntries().forEach((entry) => {
-        try {
-          const fileName = path.basename(entry.entryName);
-          if (skipFiles.includes(fileName)) {
-            this.console.log(`Skipping special file: ${fileName}`);
-            return;
-          }
-
-          const entryPath = path.join(tempExtractPath, entry.entryName);
-          const entryDir = path.dirname(entryPath);
-
-          // Create directory if it doesn't exist
-          if (!fs.existsSync(entryDir)) {
-            fs.mkdirSync(entryDir, { recursive: true });
-          }
-
-          if (!entry.isDirectory) {
-            // Write file without trying to set permissions
-            fs.writeFileSync(entryPath, entry.getData());
-          }
-        } catch (err) {
-          this.console.warn(
-            `Warning: Could not extract ${entry.entryName}:`,
-            err
-          );
-        }
-      });
-      this.console.log("Update extracted to:", tempExtractPath);
-
-      // Navigate to the correct directory structure
-      const updateSource = path.join(tempExtractPath, "MLR Tools-win32-x64");
-      if (!fs.existsSync(updateSource)) {
-        throw new Error("Update package structure is invalid");
-      }
-
+      const appPath = path.dirname(app.getPath("exe"));
       const appName = path.basename(app.getPath("exe"));
-      const killCmd = `taskkill /F /IM "${appName}" /T`;
 
-      // Create update script
+      // Create batch script to do everything
       const scriptContent = `
-        
-        ${killCmd}
-        timeout /t 1 /nobreak >nul
-        xcopy "${updateSource}" "${appPath}" /E /I /Y
+        @echo off
+        echo ================ UPDATE PROCESS STARTING ================
+        echo Current time: %TIME%
+
+        echo.
+        echo Step 1: Closing current application...
+        taskkill /F /IM "${appName}" /T
+        timeout /t 2 /nobreak >nul
+
+        echo.
+        echo Step 2: Cleaning extract directory...
+        if exist "${tempExtractPath}" rmdir /S /Q "${tempExtractPath}"
+        mkdir "${tempExtractPath}"
+
+        echo.
+        echo Step 3: Extracting update...
+        powershell -command "Expand-Archive -Path '${downloadPath}' -DestinationPath '${tempExtractPath}' -Force"
+
+        echo.
+        echo Step 4: Copying files to application directory...
+        xcopy "${path.join(
+          tempExtractPath,
+          "MLR Tools-win32-x64"
+        )}" "${appPath}" /E /I /Y
+
+        echo.
+        echo Step 5: Cleanup...
+        rmdir /S /Q "${tempExtractPath}"
+        del "${downloadPath}"
+
+        echo.
+        echo Step 6: Starting updated application...
         start "" "${app.getPath("exe")}"
+
+        echo.
+        echo ================ UPDATE COMPLETE ================
+        echo Update finished at: %TIME%
+
         del "%~f0"
       `;
 
       const scriptPath = path.join(app.getPath("temp"), "update.bat");
       fs.writeFileSync(scriptPath, scriptContent);
 
-      // Run update script and quit app
       require("child_process")
-        .spawn("cmd.exe", ["/c", scriptPath], {
+        .spawn("cmd.exe", ["/c", "start", "/wait", scriptPath], {
           detached: true,
           stdio: "ignore",
         })
@@ -265,43 +248,12 @@ export class AutoUpdater {
 
       app.quit();
       return { success: true };
-
-      // Copy new files to app directory
-      this.console.info("Copying files to app directory:", appPath);
-      this.copyRecursive(updateSource, appPath);
-      this.console.info("Files copied successfully");
-
-      // Clean up
-      fs.rmSync(downloadPath);
-      fs.rmSync(tempExtractPath, { recursive: true });
-
-      return { success: true };
     } catch (error) {
       this.console.error("Error installing update:", error);
       // Clean up
       fs.rmSync(downloadPath);
       fs.rmSync(tempExtractPath, { recursive: true });
       throw new Error("Failed to install update");
-    }
-  }
-
-  copyRecursive(src, dest) {
-    const exists = fs.existsSync(src);
-    const stats = exists && fs.statSync(src);
-    const isDirectory = exists && stats.isDirectory();
-
-    if (isDirectory) {
-      if (!fs.existsSync(dest)) {
-        fs.mkdirSync(dest);
-      }
-      fs.readdirSync(src).forEach((childItemName) => {
-        this.copyRecursive(
-          path.join(src, childItemName),
-          path.join(dest, childItemName)
-        );
-      });
-    } else {
-      fs.copyFileSync(src, dest);
     }
   }
 }
