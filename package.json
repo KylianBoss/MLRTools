@@ -1,6 +1,6 @@
 {
   "name": "mlr-tool",
-  "version": "1.2.46",
+  "version": "1.2.47",
   "description": "Tools for MLR",
   "productName": "MLR Tools",
   "author": "Kylian Boss <kylian.boss@bossconcepts.ch>",
@@ -21,7 +21,6 @@
   "dependencies": {
     "@electron/remote": "^2.1.2",
     "@quasar/extras": "^1.16.4",
-    "adm-zip": "^0.5.16",
     "apexcharts": "^4.0.0",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
