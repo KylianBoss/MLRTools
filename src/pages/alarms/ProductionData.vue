@@ -143,9 +143,10 @@
             />
             <q-icon
               v-if="
-                !props.row.isMissing &&
-                !dayjs(props.row.end).diff(dayjs(props.row.start), 'hour') &&
-                !props.row.dayOff
+                (!props.row.isMissing &&
+                  !dayjs(props.row.end).diff(dayjs(props.row.start), 'hour') &&
+                  !props.row.dayOff) ||
+                dayjs(props.row.end).isBefore(dayjs(props.row.start))
               "
               name="warning"
               color="warning"

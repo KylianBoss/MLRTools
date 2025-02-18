@@ -175,43 +175,13 @@ function initDB(config) {
             "importMessages",
             "excludedAlarms",
             "tgwReportZones",
-            "productionTime",
+            "productionData",
             "alarmList",
             "suspiciousPlaces",
             "admin",
             "admin-db",
             "admin-users"
           ),
-        },
-      },
-      {
-        timestamps: false,
-      }
-    );
-
-    const ProductionTimes = db.define(
-      "ProductionTimes",
-      {
-        date: {
-          type: DataTypes.DATEONLY,
-          allowNull: false,
-          primaryKey: true,
-          unique: true,
-        },
-        start: {
-          type: DataTypes.TIME,
-          allowNull: false,
-          defaultValue: "00:00:00",
-        },
-        end: {
-          type: DataTypes.TIME,
-          allowNull: false,
-          defaultValue: "23:59:59",
-        },
-        dayOff: {
-          type: DataTypes.BOOLEAN,
-          allowNull: false,
-          defaultValue: false,
         },
       },
       {

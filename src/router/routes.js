@@ -40,9 +40,9 @@ const routes = [
             component: () => import("src/pages/alarms/ExcludedAlarms.vue"),
           },
           {
-            path: "production-time",
-            name: "production-time",
-            component: () => import("src/pages/alarms/ProductionTime.vue"),
+            path: "production-data",
+            name: "production-data",
+            component: () => import("src/pages/alarms/ProductionData.vue"),
           },
           {
             path: "tgw-report-zones",

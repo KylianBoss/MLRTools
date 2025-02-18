@@ -82,7 +82,6 @@
                 'importMessages',
                 'alarmList',
                 'excludedAlarms',
-                'productionTime',
                 'tgwReportZones',
               ])
             "
@@ -106,16 +105,25 @@
               label="Alarmes exclues"
             />
             <drawer-item
-              to="production-time"
-              autorisation="productionTime"
-              icon="mdi-timetable"
-              label="Temps de production"
-            />
-            <drawer-item
               to="tgw-report-zones"
               autorisation="tgwReportZones"
               icon="mdi-order-bool-ascending-variant"
               label="TGW Rapport zones"
+            />
+          </q-expansion-item>
+          <!-- DATA -->
+          <q-expansion-item
+            expand-separator
+            icon="mdi-database"
+            label="Données"
+            v-model="drawers[3]"
+            v-if="App.userHaveAccessToOneOf(['productionData'])"
+          >
+            <drawer-item
+              to="production-data"
+              autorisation="productionData"
+              icon="mdi-timetable"
+              label="Données de production"
             />
           </q-expansion-item>
           <!-- TOOLS -->
