@@ -35,11 +35,9 @@
                   dataSource: alarm.dataSource.toUpperCase(),
                   alarmArea: alarm.alarmArea.toUpperCase(),
                   alarmCode: alarm.alarmCode.toUpperCase(),
-                  zone: alarm.TGWzone ? alarm.TGWzone.zone : null,
-                  zone2: alarm.TGWzone ? alarm.TGWzone.zone2 : null,
-                  zone3: alarm.TGWzone ? alarm.TGWzone.zone3 : null,
-                  zone4: alarm.TGWzone ? alarm.TGWzone.zone4 : null,
-                  zone5: alarm.TGWzone ? alarm.TGWzone.zone5 : null,
+                  zones: alarm.TGWzone || {
+                    zones: [],
+                  },
                   alarmId: alarm.alarmId,
                 };
               })
@@ -52,16 +50,46 @@
           dense
         >
           <!-- zone is a select -->
-          <template v-slot:body-cell-zone="props">
+          <template v-slot:body-cell-zones="props">
             <q-td>
               <div class="row items-center">
                 <div class="col">
-                  <q-input
+                  <q-select
+                    v-model="props.row.zones.zones"
+                    :options="zoneOptions"
+                    emit-value
+                    map-options
+                    use-chips
+                    multiple
+                    fill-input
+                    use-input
+                    input-debounce="0"
+                    @update:model-value="handleUpdate($event, props.row)"
+                    @keypress="handleEnter($event, props.row)"
+                  >
+                    <template v-slot:selected-item="scope">
+                      <q-chip
+                        removable
+                        dense
+                        @remove="handleRemove(scope.opt, props.row)"
+                        :tabindex="scope.tabindex"
+                        class="q-ma-none"
+                      >
+                        <q-avatar
+                          :color="zoneColors[scope.opt]"
+                          text-color="white"
+                        >
+                          {{ scope.opt }}
+                        </q-avatar>
+                      </q-chip>
+                    </template>
+                  </q-select>
+                  <!-- <q-input
                     @keydown.enter="handleEnter($event, props.row, 0)"
                     @keydown.tab="handleEnter($event, props.row, 0)"
-                  />
+                  /> -->
                 </div>
-                <div class="col col-auto">
+                <!-- <div class="col col-auto">
                   <q-avatar
                     v-if="props.row.zone"
                     :color="zoneColors[props.row.zone]"
@@ -71,11 +99,11 @@
                   >
                     {{ props.row.zone }}
                   </q-avatar>
-                </div>
+                </div> -->
               </div>
             </q-td>
           </template>
-          <template v-slot:body-cell-zone2="props">
+          <!-- <template v-slot:body-cell-zone2="props">
             <q-td>
               <div class="row items-center">
                 <div class="col">
@@ -166,7 +194,7 @@
                 </div>
               </div>
             </q-td>
-          </template>
+          </template> -->
           <!-- alarm id is a link to the alarm list -->
           <template v-slot:body-cell-alarmId="props">
             <q-td>
@@ -206,6 +234,15 @@
                   )
                 }}%)
               </q-td>
+              <!-- <q-td>
+                <q-btn
+                  color="grey"
+                  icon="mdi-refresh"
+                  @click="refresh"
+                  flat
+                  round
+                />
+              </q-td> -->
             </q-tr>
             <q-tr>
               <q-th key="dataSource">
@@ -335,53 +372,34 @@ const zoneColors = ref({
 });
 const $q = useQuasar();
 
-const handleEnter = (event, row, level) => {
-  if (event.target.value.length === 0) return;
+const handleUpdate = (event, row) => {
+  dataLogStore.updateAlarmZone({
+    alarmId: row.alarmId,
+    zones: event.sort(),
+  });
+};
+const handleEnter = (event, row) => {
+  if (event.code !== "Space") return;
 
-  if (zoneOptions.value.includes(event.target.value.toUpperCase())) {
-    const newZone = event.target.value.toUpperCase();
-    const zones = [row.zone, row.zone2, row.zone3, row.zone4, row.zone5];
-    if (zones.includes(newZone)) {
-      $q.notify({
-        type: "negative",
-        message: "Zone déjà attribuée",
-        actions: [{ icon: "close", color: "white" }],
-        position: "top",
-        timeout: 1000,
-      });
-      return;
-    }
-    if (zones[level] !== newZone && zones[level] && zones[level].length > 0) {
-      $q.dialog({
-        title: "Changement de zone",
-        message: `Voulez-vous vraiment changer la zone de l'alarme ${row.alarmId} de ${zones[level]} à ${newZone} ?`,
-        ok: "Oui",
-        cancel: "Non",
-      })
-        .onOk(() => {
-          zones[level] = newZone;
-          row.zone = zones[0];
-          row.zone2 = zones[1];
-          row.zone3 = zones[2];
-          row.zone4 = zones[3];
-          row.zone5 = zones[4];
-          dataLogStore.updateAlarmZone(row);
-          event.target.blur();
-        })
-        .onCancel(() => {
-          return;
-        });
-    } else {
-      zones[level] = newZone;
-      event.target.blur();
-      row.zone = zones[0];
-      row.zone2 = zones[1];
-      row.zone3 = zones[2];
-      row.zone4 = zones[3];
-      row.zone5 = zones[4];
-      dataLogStore.updateAlarmZone(row);
-    }
-  } else {
+  const newZone = event.target.value.trim().toUpperCase();
+
+  if (newZone.length === 0) return;
+
+  // Check for duplicates
+  if ([...row.zones.zones].includes(newZone)) {
+    $q.notify({
+      type: "negative",
+      message: "Zone déjà attribuée",
+      actions: [{ icon: "close", color: "white" }],
+      position: "top",
+      timeout: 1000,
+    });
+    event.target.value = "";
+    return;
+  }
+
+  // Check for valid zone
+  if (!zoneOptions.value.includes(newZone)) {
     $q.notify({
       type: "negative",
       message: "Zone invalide",
@@ -389,8 +407,141 @@ const handleEnter = (event, row, level) => {
       position: "top",
       timeout: 1000,
     });
+    event.target.value = "";
+    return;
   }
+
+  // Array of all zones
+  const newZones = [...row.zones.zones, newZone].sort();
+
+  // Reset the input
+  event.target.value = "";
+
+  // Save the new zones
+  dataLogStore.updateAlarmZone({
+    alarmId: row.alarmId,
+    zones: newZones,
+  });
+
+  // Reset the input
+  event.target.value = "";
+  // let zones = [];
+  // if (event.target.value.length > 0 && event.key !== "Backspace") {
+  //   const newZone = event.target.value.toUpperCase();
+  //   zones = [...row.zones.zones, newZone].sort();
+  // } else {
+  //   zones = row.zones.zones.slice(0, -1);
+  // }
+  // console.log(zones);
+
+  // if (zones.some((zone) => !zoneOptions.value.includes(zone))) {
+  //   $q.notify({
+  //     type: "negative",
+  //     message: "Zone invalide",
+  //     actions: [{ icon: "close", color: "white" }],
+  //     position: "top",
+  //     timeout: 1000,
+  //   });
+  //   return;
+  // }
+
+  // // Check for duplicates
+  // if (new Set(zones).size !== zones.length) {
+  //   return;
+  // }
+
+  // Check for too many zones
+  // if (zones.length > 5) {
+  //   $q.notify({
+  //     type: "negative",
+  //     message: "Trop de zones",
+  //     actions: [{ icon: "close", color: "white" }],
+  //     position: "top",
+  //     timeout: 1000,
+  //   });
+  //   return;
+  // }
+
+  // dataLogStore
+  //   .updateAlarmZone({
+  //     alarmId: row.alarmId,
+  //     zones,
+  //   })
+  //   .then(() => {
+  //     event.target.blur();
+  //     event.target.value = "";
+  //     event.target.focus();
+  //   });
+
+  // if (zoneOptions.value.includes(event.target.value.toUpperCase())) {
+  //   const newZone = event.target.value.toUpperCase();
+  //   const zones = [row.zone, row.zone2, row.zone3, row.zone4, row.zone5];
+  //   if (zones.includes(newZone)) {
+  //     $q.notify({
+  //       type: "negative",
+  //       message: "Zone déjà attribuée",
+  //       actions: [{ icon: "close", color: "white" }],
+  //       position: "top",
+  //       timeout: 1000,
+  //     });
+  //     return;
+  //   }
+  //   if (zones[level] !== newZone && zones[level] && zones[level].length > 0) {
+  //     $q.dialog({
+  //       title: "Changement de zone",
+  //       message: `Voulez-vous vraiment changer la zone de l'alarme ${row.alarmId} de ${zones[level]} à ${newZone} ?`,
+  //       ok: "Oui",
+  //       cancel: "Non",
+  //     })
+  //       .onOk(() => {
+  //         zones[level] = newZone;
+  //         row.zone = zones[0];
+  //         row.zone2 = zones[1];
+  //         row.zone3 = zones[2];
+  //         row.zone4 = zones[3];
+  //         row.zone5 = zones[4];
+  //         dataLogStore.updateAlarmZone(row);
+  //         event.target.blur();
+  //       })
+  //       .onCancel(() => {
+  //         return;
+  //       });
+  //   } else {
+  //     zones[level] = newZone;
+  //     event.target.blur();
+  //     row.zone = zones[0];
+  //     row.zone2 = zones[1];
+  //     row.zone3 = zones[2];
+  //     row.zone4 = zones[3];
+  //     row.zone5 = zones[4];
+  //     dataLogStore.updateAlarmZone(row);
+  //   }
+  // } else {
+  //   $q.notify({
+  //     type: "negative",
+  //     message: "Zone invalide",
+  //     actions: [{ icon: "close", color: "white" }],
+  //     position: "top",
+  //     timeout: 1000,
+  //   });
+  // }
 };
+const handleRemove = (zone, row) => {
+  const zones = row.zones.zones.filter((z) => z !== zone);
+  dataLogStore.updateAlarmZone({
+    alarmId: row.alarmId,
+    zones,
+  });
+};
+// const refresh = () => {
+//   for (const alarm of dataLogStore.alarms) {
+//     if (!alarm.TGWzone) continue;
+//     dataLogStore.updateAlarmZone({
+//       alarmId: alarm.alarmId,
+//       zones: alarm.TGWzone.zones.filter((z) => z),
+//     });
+//   }
+// };
 
 onMounted(async () => {
   dataLogStore.initialize();

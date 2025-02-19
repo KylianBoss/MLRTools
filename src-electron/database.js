@@ -295,25 +295,12 @@ function initDB(config) {
           allowNull: false,
           primaryKey: true,
         },
-        zone: {
-          type: zones,
+        zones: {
+          type: DataTypes.JSON,
           allowNull: false,
-        },
-        zone2: {
-          type: zones,
-          allowNull: true,
-        },
-        zone3: {
-          type: zones,
-          allowNull: true,
-        },
-        zone4: {
-          type: zones,
-          allowNull: true,
-        },
-        zone5: {
-          type: zones,
-          allowNull: true,
+          get() {
+            return JSON.parse(this.getDataValue("zones"));
+          },
         },
       },
       {

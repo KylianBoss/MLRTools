@@ -457,17 +457,17 @@ export const useDataLogStore = defineStore("datalog", {
     },
     updateAlarmZone(data) {
       return new Promise((resolve, reject) => {
+        this.alarms.find((a) => a.alarmId == data.alarmId).TGWzone = {
+          zones: data.zones,
+        };
         window.electron
           .serverRequest("POST", `/alarms/zone/${data.alarmId}`, {
-            zone: data.zone,
-            zone2: data.zone2,
-            zone3: data.zone3,
-            zone4: data.zone4,
-            zone5: data.zone5,
+            zones: data.zones,
           })
           .then((result) => {
-            this.alarms.find((a) => a.alarmId == data.alarmId).TGWzone =
-              result.data;
+            this.alarms.find((a) => a.alarmId == data.alarmId).TGWzone = {
+              zones: data.zones,
+            };
             resolve(true);
           });
       });
