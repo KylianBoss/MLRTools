@@ -54,11 +54,11 @@ const chartOptions = ref({
     offsetX: 40,
   },
   stroke: {
-    width: [2, 2], // Width for both series
-    dashArray: [0, 3], // Solid line for area, dashed for median
+    width: [2, 2, 2],
+    dashArray: [0, 3, 4],
   },
   fill: {
-    type: ["gradient", "none"], // Fill for area series, no fill for median line
+    type: ["gradient", "none", "none"], // Fill for area series, no fill for median line
   },
   legend: {
     show: true,
@@ -101,11 +101,38 @@ const getData = () => {
       // Add median line series
       chartSeries.value.push({
         name: "Médiane",
-        data: response.data.map((item) => [dayjs(item.date).valueOf(), median]),
+        data: response.data.map((item) => [dayjs(item.date).valueOf(), median.toFixed(0)]),
         type: "line",
         color: "#2E93fA",
         dashArray: 3,
         zIndex: 11,
+      });
+
+      // Calcul de la ligne de tendance
+      const xValues = response.data.map((item) => dayjs(item.date).valueOf());
+      const yValues = response.data.map((item) => item.boxTreated);
+
+      // Calcul des coefficients de régression linéaire
+      const n = xValues.length;
+      const sumX = xValues.reduce((a, b) => a + b, 0);
+      const sumY = yValues.reduce((a, b) => a + b, 0);
+      const sumXY = xValues.reduce((sum, x, i) => sum + x * yValues[i], 0);
+      const sumXX = xValues.reduce((sum, x) => sum + x * x, 0);
+
+      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+      const intercept = (sumY - slope * sumX) / n;
+
+      // Création des points de la ligne de tendance
+      const trendLineData = xValues.map((x) => [x, (slope * x + intercept).toFixed(0)]);
+
+      // Ajout de la série de ligne de tendance
+      chartSeries.value.push({
+        name: "Tendance",
+        type: "line",
+        data: trendLineData,
+        color: "#00ff00",
+        dashArray: 2,
+        zIndex: 12,
       });
 
       chartVisibility.value = true;
