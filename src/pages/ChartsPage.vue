@@ -67,7 +67,7 @@ import { ref } from "vue";
 const period = ref({
   // First day of the current month
   from: dayjs().startOf("month").format("YYYY-MM-DD"),
-  to: dayjs().format("YYYY-MM-DD"),
+  to: dayjs().subtract(1, "day").format("YYYY-MM-DD"),
 });
 
 const locale = [
