@@ -39,9 +39,48 @@
                     zones: [],
                   },
                   alarmId: alarm.alarmId,
+                  alarmText: alarm.alarmText,
                 };
               })
           "
+          :columns="[
+            {
+              name: 'dataSource',
+              label: 'Data source',
+              align: 'left',
+              field: 'dataSource',
+              sortable: true,
+            },
+            {
+              name: 'alarmArea',
+              label: 'Alarm area',
+              align: 'left',
+              field: 'alarmArea',
+              sortable: true,
+            },
+            {
+              name: 'alarmCode',
+              label: 'Alarm code',
+              align: 'left',
+              field: 'alarmCode',
+              sortable: true,
+            },
+            {
+              name: 'zones',
+              label: 'Zones',
+              align: 'left',
+              field: (row) => row.zones.zones.join(', '),
+              format: (val) => val.zones.zones.join(', '),
+              sortable: true,
+            },
+            {
+              name: 'alarmText',
+              label: 'Alarm text',
+              align: 'left',
+              field: 'alarmText',
+              sortable: true,
+            },
+          ]"
           row-key="alarmId"
           wrap-cells
           virtual-scroll

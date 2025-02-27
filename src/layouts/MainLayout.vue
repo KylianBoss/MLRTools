@@ -110,6 +110,12 @@
               icon="mdi-order-bool-ascending-variant"
               label="TGW Rapport zones"
             />
+            <drawer-item
+              to="tgw-report"
+              autorisation="tgwReportZones"
+              icon="mdi-order-bool-ascending-variant"
+              label="TGW Rapport"
+            />
           </q-expansion-item>
           <!-- DATA -->
           <q-expansion-item
