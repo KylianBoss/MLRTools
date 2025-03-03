@@ -371,20 +371,13 @@ export const useDataLogStore = defineStore("datalog", {
           const rawData = line.replaceAll('"', "").split(";");
           if (rawData.length < 11) return null;
           if (!!!rawData[0].match(/\d/)) return null;
-          // const parseTimeRegex =
-          //   /(\d{1,2})\s+([\wéû]+\.?)\s+(\d{4})\s+à\s+(\d{2}:\d{2}:\d{2})/gi;
-          // const start = [...rawData[1].matchAll(parseTimeRegex)];
-          // const end = [...rawData[2].matchAll(parseTimeRegex)];
           const startDate = dayjs(rawData[1], "D MMM YYYY à HH:mm:ss", "fr");
           const endDate = dayjs(rawData[2], "D MMM YYYY à HH:mm:ss", "fr");
-          // const startDate = `${start[0][3]}-${
-          //   monthNames.indexOf(start[0][2])
-          // }-${start[0][1]} ${start[0][4]}`;
-          // const endDate = `${end[0][3]}-${monthNames.indexOf(end[0][2]) + 1}-${
-          //   end[0][1]
-          // } ${end[0][4]}`;
-          // if (!startDate || !endDate) return null;
           if (!startDate.isValid() || !endDate.isValid()) return null;
+          if (rawData[7] === "M6009.0306") return null; // Don't put in DB the warning from the shuttle
+          if (rawData[7] === "M6130.0201") return null; // Don't put in DB the warning from the shuttle
+          if (rawData[7] === "M6130.0203") return null; // Don't put in DB the warning from the shuttle
+          if (rawData[7] === "M6130.0202") return null; // Don't put in DB the warning from the shuttle
           return {
             dbId: rawData[0],
             timeOfOccurence: startDate.format("YYYY-MM-DD HH:mm:ss"),
