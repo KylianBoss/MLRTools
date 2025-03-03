@@ -88,8 +88,10 @@ const getData = () => {
         zIndex: 10,
       });
 
+      const data = response.data.filter((item) => item.boxTreated > 0);
+
       // Calculate median
-      const values = response.data.map((item) => item.boxTreated);
+      const values = data.map((item) => item.boxTreated);
       const sortedValues = [...values].sort((a, b) => a - b);
       const median =
         sortedValues.length % 2 === 0
@@ -101,7 +103,7 @@ const getData = () => {
       // Add median line series
       chartSeries.value.push({
         name: "Médiane",
-        data: response.data.map((item) => [dayjs(item.date).valueOf(), median.toFixed(0)]),
+        data: data.map((item) => [dayjs(item.date).valueOf(), median.toFixed(0)]),
         type: "line",
         color: "#2E93fA",
         dashArray: 3,
@@ -109,8 +111,8 @@ const getData = () => {
       });
 
       // Calcul de la ligne de tendance
-      const xValues = response.data.map((item) => dayjs(item.date).valueOf());
-      const yValues = response.data.map((item) => item.boxTreated);
+      const xValues = data.map((item) => dayjs(item.date).valueOf());
+      const yValues = data.map((item) => item.boxTreated);
 
       // Calcul des coefficients de régression linéaire
       const n = xValues.length;
