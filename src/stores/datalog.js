@@ -316,7 +316,11 @@ export const useDataLogStore = defineStore("datalog", {
       // }
       // Send by bulk
       this.lastObjectTreated = newData[newData.length - 1];
-      await window.electron.serverRequest("POST", "/alarms", newData);
+      await window.electron.serverRequest(
+        "POST",
+        "/alarms",
+        newData.filter((l) => l !== null)
+      );
       this.importedLines += newData.length;
       this.progression = this.progress.update(this.importedLines);
     },
@@ -392,8 +396,7 @@ export const useDataLogStore = defineStore("datalog", {
             assignedUser: rawData[12],
             alarmId: `${rawData[5]}.${rawData[6]}.${rawData[7]}`.toLowerCase(),
           };
-        })
-        .filter((l) => l !== null);
+        });
     },
     finishImport() {
       this.loading = false;
