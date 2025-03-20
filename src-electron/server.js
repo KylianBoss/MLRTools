@@ -579,10 +579,10 @@ export function setupServer(app) {
   });
   app.get("/alarms/exclude/code", async (req, res) => {
     try {
-      const excludedAlarms = await db.models.ExcludedAlarmCodes.findAll();
-      res.json(excludedAlarms.map((a) => a.alarmCode));
+      const excludedAlarmsCode = await db.models.ExcludedAlarmCodes.findAll();
+      res.json(excludedAlarmsCode.map((a) => a.alarmCode));
     } catch (error) {
-      console.error("Error fetching excluded alarms:", error);
+      console.error("Error fetching excluded alarms codes:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -649,9 +649,17 @@ export function setupServer(app) {
       res.json(
         alarms.map((a) => {
           const translation = translations.find((t) => t.alarmId === a.alarmId);
+          // const lastOccurence = db.models.Datalog.findOne({
+          //   where: {
+          //     alarmId: a.alarmId,
+          //   },
+          //   order: [["timeOfOccurence", "DESC"]],
+          //   limit: 1,
+          // });
           return {
             ...a.toJSON(),
             alarmText: translation ? translation.translation : a.alarmText,
+            // lastOccurence: lastOccurence.timeOfOccurence,
           };
         })
       );
@@ -1020,7 +1028,7 @@ export function setupServer(app) {
           dataSource,
           SUM(CASE WHEN severity = 'Error' THEN 1 ELSE 0 END) as count
         FROM
-          Datalogs
+          DatalogsWithoutExcluded
         WHERE
           timeOfOccurence BETWEEN :startDate AND :endDate
         GROUP BY
