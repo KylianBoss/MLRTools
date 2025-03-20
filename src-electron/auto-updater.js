@@ -240,7 +240,7 @@ export class AutoUpdater {
       fs.writeFileSync(scriptPath, scriptContent);
 
       require("child_process")
-        .spawn("cmd.exe", ["/c", "start", "/wait", scriptPath], {
+        .spawn("cmd.exe", ["/c", "start", scriptPath], {
           detached: true,
           stdio: "ignore",
         })
