@@ -91,7 +91,10 @@ const getData = () => {
     )
     .then((response) => {
       chartSeries.value = response.data.map((item) => item.count);
-      chartOptions.value.labels = response.data.map((item) => item.dataSource);
+      // Remove everything that is less than 5% of the total but don't change the total
+      const total = chartSeries.value.reduce((acc, cur) => acc + cur, 0);
+      chartSeries.value = chartSeries.value.filter((item) => item / total > 0.05);
+      chartOptions.value.labels = response.data.map((item) => item.dataSource).filter((item, index) => chartSeries.value[index] / total > 0.05);
       chartVisibility.value = true;
     });
 };
