@@ -693,9 +693,7 @@ const getData = (filter) => {
         runtime:
           dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
           dayResume.value.length,
-        stoptime:
-          dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
-          dayResume.value.length,
+        stoptime: dayResume.value.reduce((acc, day) => acc + day.stoptime, 0),
         nbFaillures: dayResume.value.reduce(
           (acc, day) => acc + day.nbFaillures,
           0
@@ -706,7 +704,6 @@ const getData = (filter) => {
           dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0),
         MTTR:
           dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
-          dayResume.value.length /
           dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0),
         dispo:
           dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
@@ -716,7 +713,6 @@ const getData = (filter) => {
             dayResume.value.length /
             dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0) +
             dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
-              dayResume.value.length /
               dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0)),
       });
       console.info("All data received");
