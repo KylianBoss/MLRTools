@@ -1,11 +1,15 @@
 import { defineStore } from "pinia";
 import { Notify } from "quasar";
+import { api } from "boot/axios";
+import { useConfigurationDialog } from "src/plugins/useConfigurationDialog.js";
+import { Loading } from "quasar";
 
 export const useAppStore = defineStore("App", {
   state: () => ({
     notConfigured: true,
     user: null,
     users: [],
+    loading: false,
   }),
   getters: {
     userHasAccess: (state) => (menuId) => {
@@ -20,10 +24,9 @@ export const useAppStore = defineStore("App", {
     init() {
       return new Promise((resolve, reject) => {
         console.log("Initializing app store");
-        window.electron
-          .serverRequest("GET", "/config", null)
+        api
+          .get("/config")
           .then((response) => {
-            console.log(response);
             if (response.data && response.data.config === true) {
               this.notConfigured = false;
               this.user = response.data.user;
@@ -31,18 +34,32 @@ export const useAppStore = defineStore("App", {
                 (access) => access.menuId
               );
               resolve(true);
-            } else {
-              this.notConfigured = true;
-              resolve(false);
             }
           })
           .catch((error) => {
-            console.log(error);
-            if (error.response.status === 404) {
+            if (error.response && error.response.status === 404) {
               this.notConfigured = true;
-              resolve(null);
+              const { askForConfigFile } = useConfigurationDialog();
+              askForConfigFile()
+                .then((file) => {
+                  this.loadConfig(file)
+                    .then((result) => {
+                      if (result) {
+                        resolve(true);
+                      } else {
+                        reject(new Error("Failed to load configuration"));
+                      }
+                    })
+                    .catch((error) => {
+                      console.error("Error loading configuration:", error);
+                      reject(error);
+                    });
+                })
+                .catch((error) => {
+                  console.error("Configuration dialog cancelled:", error);
+                  reject(error);
+                });
             }
-            console.error("Error getting configuration:", error);
           });
       });
     },
@@ -53,11 +70,11 @@ export const useAppStore = defineStore("App", {
         reader.onload = (event) => {
           console.info("Sending file to server");
           const config = JSON.parse(event.target.result);
-          window.electron
-            .serverRequest("POST", "/config", config)
+          api
+            .post("/config", config)
             .then((response) => {
               console.info("File sent to server");
-              if (response.statusCode === 201) {
+              if (response.status === 201) {
                 console.info("Configuration loaded");
                 this.notConfigured = false;
                 this.user = response.data.user;
@@ -65,7 +82,6 @@ export const useAppStore = defineStore("App", {
                   (access) => access.menuId
                 );
                 this.notConfigured = false;
-                window.electron.restartApp();
                 resolve(true);
               } else {
                 console.error("Error loading configuration:", response);
@@ -87,8 +103,8 @@ export const useAppStore = defineStore("App", {
     },
     getUsers() {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("GET", "/users", null)
+        api
+          .get("/users")
           .then((response) => {
             this.users = response.data;
             resolve(response.data);
@@ -101,8 +117,8 @@ export const useAppStore = defineStore("App", {
     },
     updateUser(user) {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("PUT", "/users", JSON.parse(JSON.stringify(user)))
+        api
+          .put("/users", user)
           .then((response) => {
             resolve(response);
           })
@@ -114,8 +130,8 @@ export const useAppStore = defineStore("App", {
     },
     editUser(user) {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("PUT", "/users", user)
+        api
+          .put("/users", user)
           .then((response) => {
             resolve(response);
           })
@@ -127,8 +143,8 @@ export const useAppStore = defineStore("App", {
     },
     authorizeUser(username) {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("POST", "/users/authorize", { username: username })
+        api
+          .post("/users/authorize", { username: username })
           .then((response) => {
             if (response.statusCode === 200) {
               this.user = response.data.user;
@@ -157,12 +173,3 @@ export const useAppStore = defineStore("App", {
   },
   persist: false,
 });
-
-class User {
-  constructor(data) {
-    this.fullname = data.fullname;
-    this.username = data.username;
-    this.id = data.id;
-    this.authorised = data.authorised;
-  }
-}

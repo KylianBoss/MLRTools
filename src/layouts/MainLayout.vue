@@ -225,34 +225,6 @@
         </q-card-section>
       </q-card>
     </q-page-container>
-
-    <!-- Dialogs -->
-    <q-dialog v-model="App.notConfigured" persistent v-if="loaded">
-      <q-card>
-        <q-card-section>
-          <div class="text-h6">Configuration manquante</div>
-          <div>Veuillez charger le fichier de configuration</div>
-        </q-card-section>
-        <q-card-section>
-          <q-input
-            v-model="configFile"
-            type="file"
-            accept=".json"
-            label="Fichier de configuration"
-            required
-          />
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn
-            flat
-            label="Charger"
-            color="primary"
-            @click="App.loadConfig(configFile)"
-            :disable="!configFile"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </q-layout>
 </template>
 
@@ -286,50 +258,11 @@ watch(miniState, (value) => {
 });
 
 onMounted(async () => {
-  showLoading();
+  // showLoading();
   await App.init();
-  await dataLogStore.initialize();
-  $q.loading.hide();
+  // await dataLogStore.initialize();
+  // $q.loading.hide();
   loaded.value = true;
-  window.electron.onConsoleFromServer((messages) => {
-    if (Array.isArray(messages)) {
-      const formattedArgs = messages.map((msg) => {
-        if (msg && msg.__isObject) {
-          return {
-            type: msg.type || "log",
-            value: msg.value,
-          };
-        }
-        return {
-          type: "log",
-          value: msg,
-        };
-      });
-
-      const type = formattedArgs[0]?.type || "log";
-      const values = formattedArgs.map((arg) => arg.value);
-
-      switch (type) {
-        case "info":
-          console.info(...values);
-          break;
-        case "warn":
-          console.warn(...values);
-          break;
-        case "error":
-          console.error(...values);
-          break;
-        default:
-          console.log(...values);
-      }
-    } else {
-      console.log(messages);
-    }
-  });
-});
-
-onBeforeUnmount(() => {
-  window.electron.removeConsoleFromServerListener();
 });
 
 const showLoading = () => {

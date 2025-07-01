@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import "dayjs/locale/fr";
+import { api } from "boot/axios";
 
 dayjs.extend(duration);
 dayjs.extend(customParseFormat);
@@ -160,14 +161,16 @@ export const useDataLogStore = defineStore("datalog", {
   actions: {
     async getData(startRow, count, filter, sortBy, descending, sum) {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("GET", "/alarms", {
-            startRow,
-            count,
-            filter: { ...filter },
-            sortBy,
-            descending,
-            sum,
+        api
+          .get("/alarms", {
+            params: {
+              startRow,
+              count,
+              filter: { ...filter },
+              sortBy,
+              descending,
+              sum,
+            },
           })
           .then((data) => {
             resolve(data.data);
@@ -177,20 +180,20 @@ export const useDataLogStore = defineStore("datalog", {
     async getNumberOfRows(filter) {
       console.log(filter);
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("GET", "/alarms/count", filter)
-          .then((data) => {
-            resolve(data.data);
-          });
+        api.get("/alarms/count", { params: filter }).then((data) => {
+          resolve(data.data);
+        });
       });
     },
     getMessages(from, to, includesExcluded = false) {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("GET", "/alarms/messages", {
-            from,
-            to,
-            includesExcluded,
+        api
+          .get("/alarms/messages", {
+            params: {
+              from: dayjs(from).format("YYYY-MM-DD HH:mm:ss"),
+              to: dayjs(to).format("YYYY-MM-DD HH:mm:ss"),
+              includesExcluded,
+            },
           })
           .then((data) => {
             console.log(data);
@@ -200,87 +203,59 @@ export const useDataLogStore = defineStore("datalog", {
     },
     getKPItop3Count(filter) {
       return new Promise((resolve) => {
-        window.electron
-          .serverRequest("GET", "/alarms/kpi/count", filter)
-          .then((response) => {
-            resolve(response.data);
-          });
+        api.get("/alarms/kpi/count", { params: filter }).then((response) => {
+          resolve(response.data);
+        });
       });
     },
     getKPItop3CountPerZone(filter) {
       return new Promise((resolve) => {
-        window.electron
-          .serverRequest(
-            "GET",
-            `/alarms/kpi/count/${filter.dataSource}`,
-            filter
-          )
-          .then((data) => {
-            resolve(data.data);
-          });
+        api.get("/alarms/kpi/count/zone", { params: filter }).then((data) => {
+          resolve(data.data);
+        });
       });
     },
     getKPItop3Duration(filter) {
       return new Promise((resolve) => {
-        window.electron
-          .serverRequest("GET", "/alarms/kpi/duration", filter)
-          .then((data) => {
-            resolve(data.data);
-          });
+        api.get("/alarms/kpi/duration", { params: filter }).then((data) => {
+          resolve(data.data);
+        });
       });
     },
     getDayResume(filter) {
       return new Promise((resolve) => {
-        window.electron
-          .serverRequest(
-            "GET",
-            `/alarms/kpi/resume/${filter.dataSource}`,
-            filter
-          )
-          .then((response) => {
-            resolve(response.data);
-          });
+        api.get("/alarms/kpi/day", { params: filter }).then((response) => {
+          resolve(response.data);
+        });
       });
     },
     translateAlarm(alarmId, translation) {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("POST", "/alarms/translate", { alarmId, translation })
-          .then((data) => {
-            console.log(data);
-            resolve(data.data);
-          });
+        api.post("/alarms/translate", { alarmId, translation }).then((data) => {
+          console.log(data);
+          resolve(data.data);
+        });
       });
     },
     initialize() {
       return new Promise(async (resolve, reject) => {
         try {
           console.log("Initializing data log store");
-          await window.electron
-            .serverRequest("GET", "/alarms/day")
-            .then((data) => {
-              this.dates = data.data;
-            });
-          await window.electron
-            .serverRequest("GET", "/alarms/unique?excluded=false")
-            .then((data) => {
-              this.alarms = data.data;
-            });
-          await window.electron
-            .serverRequest("GET", "/alarms/exclude/id")
-            .then((data) => {
-              this.excludedAlarmIds = data.data;
-            });
-          await window.electron
-            .serverRequest("GET", "/alarms/exclude/code")
-            .then((data) => {
-              this.excludedAlarmCodes = data.data;
-            });
-          await window.electron
-            .serverRequest("GET", "/production/data")
-            .then((response) => {
-              this.productionData = response.data;
-            });
+          await api.get("/alarms/day").then((response) => {
+            this.dates = response.data;
+          });
+          await api.get("/alarms/unique?excluded=false").then((response) => {
+            this.alarms = response.data;
+          });
+          await api.get("/alarms/exclude/id").then((response) => {
+            this.excludedAlarmIds = response.data;
+          });
+          await api.get("/alarms/exclude/code").then((response) => {
+            this.excludedAlarmCodes = response.data;
+          });
+          await api.get("/production/data").then((response) => {
+            this.productionData = response.data;
+          });
           resolve();
         } catch (error) {
           console.error("Error initializing data log store:", error);
@@ -316,11 +291,9 @@ export const useDataLogStore = defineStore("datalog", {
       // }
       // Send by bulk
       this.lastObjectTreated = newData[newData.length - 1];
-      await window.electron.serverRequest(
-        "POST",
-        "/alarms",
-        newData.filter((l) => l !== null)
-      );
+      await api.post("/alarms", {
+        data: newData.filter((l) => l !== null),
+      });
       this.importedLines += newData.length;
       this.progression = this.progress.update(this.importedLines);
     },
@@ -406,49 +379,39 @@ export const useDataLogStore = defineStore("datalog", {
       this.dataLog = [];
     },
     async excludeAlarmId(alarmId) {
-      window.electron
-        .serverRequest("POST", "/alarms/exclude/id", alarmId)
-        .then(() => {
-          this.excludedAlarmIds.push(alarmId);
-          this.alarms = this.alarms.filter((a) => a.alarmId !== alarmId);
-        });
+      api.post("/alarms/exclude/id", { alarmId }).then(() => {
+        this.excludedAlarmIds.push(alarmId);
+        this.alarms = this.alarms.filter((a) => a.alarmId !== alarmId);
+      });
     },
     async excludeAlarmCode(alarmCode) {
-      window.electron
-        .serverRequest("POST", "/alarms/exclude/code", alarmCode)
-        .then(() => {
-          this.excludedAlarmCodes.push(alarmCode);
-          this.alarms = this.alarms.filter((a) => a.alarmCode !== alarmCode);
-        });
+      api.post("/alarms/exclude/code", { alarmCode }).then(() => {
+        this.excludedAlarmCodes.push(alarmCode);
+        this.alarms = this.alarms.filter((a) => a.alarmCode !== alarmCode);
+      });
     },
     async includeAlarm(alarmIdCode) {
-      window.electron
-        .serverRequest("POST", "/alarms/include", { alarmIdCode })
-        .then((res) => {
-          console.log(res);
-          this.excludedAlarms = this.excludedAlarms.filter(
-            (a) => a.alarmId !== alarmIdCode && a.alarmCode !== alarmIdCode
-          );
-          // this.alarms.push(this.alarms.find((a) => a.alarmId === alarmId));
-          this.alarms.push(res.data);
-        });
+      api.post("/alarms/include", { alarmIdCode }).then((res) => {
+        console.log(res);
+        this.excludedAlarms = this.excludedAlarms.filter(
+          (a) => a.alarmId !== alarmIdCode && a.alarmCode !== alarmIdCode
+        );
+        // this.alarms.push(this.alarms.find((a) => a.alarmId === alarmId));
+        this.alarms.push(res.data);
+      });
     },
     getAlarm(alarmIdCode) {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("GET", `/alarms/${alarmIdCode}`)
-          .then((res) => {
-            resolve(res.data);
-          });
+        api.get(`/alarms/${alarmIdCode}`).then((res) => {
+          resolve(res.data);
+        });
       });
     },
     getAlarmsByUsers(from, to) {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("GET", `/alarms/by-users/${from}/${to}`)
-          .then((res) => {
-            resolve(res.data);
-          });
+        api.get(`/alarms/by-users/${from}/${to}`).then((res) => {
+          resolve(res.data);
+        });
       });
     },
     updateAlarmZone(data) {
@@ -456,8 +419,8 @@ export const useDataLogStore = defineStore("datalog", {
         this.alarms.find((a) => a.alarmId == data.alarmId).TGWzone = {
           zones: data.zones,
         };
-        window.electron
-          .serverRequest("POST", `/alarms/zone/${data.alarmId}`, {
+        api
+          .post(`/alarms/zone/${data.alarmId}`, {
             zones: data.zones,
           })
           .then((result) => {
@@ -470,36 +433,30 @@ export const useDataLogStore = defineStore("datalog", {
     },
     getProductionData() {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("GET", "/production/data")
-          .then((response) => {
-            this.productionData = response.data;
-            resolve(response.data);
-          });
+        api.get("/production/data").then((response) => {
+          this.productionData = response.data;
+          resolve(response.data);
+        });
       });
     },
     getProductionData(date) {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("GET", `/production/data/${date}`)
-          .then((response) => {
-            resolve(response.data);
-          });
+        api.get(`/production/data/${date}`).then((response) => {
+          resolve(response.data);
+        });
       });
     },
     setProductionData(data) {
       return new Promise((resolve, reject) => {
-        window.electron
-          .serverRequest("POST", `/production/data`, { ...data })
-          .then((response) => {
-            // Replace if exist else add
-            const index = this.productionData.findIndex(
-              (p) => p.date === data.date
-            );
-            if (index >= 0) this.productionData[index] = data;
-            else this.productionData.push(data);
-            resolve(response.data);
-          });
+        api.post("/production/data", { ...data }).then((response) => {
+          // Replace if exist else add
+          const index = this.productionData.findIndex(
+            (p) => p.date === data.date
+          );
+          if (index >= 0) this.productionData[index] = data;
+          else this.productionData.push(data);
+          resolve(response.data);
+        });
       });
     },
   },

@@ -78,6 +78,7 @@
           <td>{{ props.row.alarmArea.toUpperCase() }}</td>
           <td>{{ props.row.alarmCode.toUpperCase() }}</td>
           <td>{{ props.row.alarmText }}</td>
+          <td>{{ props.row.lastOccurence }}</td>
           <q-menu touch-position context-menu>
             <q-list dense style="min-width: 100px">
               <q-item
