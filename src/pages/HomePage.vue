@@ -30,9 +30,9 @@
               Les alarmes suivantes ne sont plus prises en compte dans le calcul et ne sont plus enregistrées dans la base de données :
               <ul>
                 <li>Warning | M6009.0306 | Shuttle X - Level X ~ Élévateur de shuttles en WarmUp</li>
-                <li>Warning | M6130.0201 | TLXB - Impossible de démarrer le WarmUp</li>
-                <li>Warning | M6130.0202 | TLXB - WarmUp actif</li>
-                <li>Warning | M6130.0203 | TLXB - Données cinématiques de WarmUp activées</li>
+                <li>Warning | M6130.0201 | TLXX - Impossible de démarrer le WarmUp</li>
+                <li>Warning | M6130.0202 | TLXX - WarmUp actif</li>
+                <li>Warning | M6130.0203 | TLXX - Données cinématiques de WarmUp activées</li>
               </ul>
             </p>
           </div>
