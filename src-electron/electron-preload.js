@@ -31,22 +31,22 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electron", {
-  selectFile: (filter) => ipcRenderer.invoke("selectFile", filter),
-  readLargeFile: (filePath) => {
-    return new Promise((resolve, reject) => {
-      const chunks = [];
-      ipcRenderer.on("fileChunk", (event, chunk) => {
-        chunks.push(chunk);
-      });
+  // selectFile: (filter) => ipcRenderer.invoke("selectFile", filter),
+  // readLargeFile: (filePath) => {
+  //   return new Promise((resolve, reject) => {
+  //     const chunks = [];
+  //     ipcRenderer.on("fileChunk", (event, chunk) => {
+  //       chunks.push(chunk);
+  //     });
 
-      ipcRenderer
-        .invoke("readLargeFile", filePath)
-        .then(() => resolve(chunks))
-        .catch(reject);
-    });
-  },
-  serverRequest: (method, path, body) =>
-    ipcRenderer.invoke("server-request", { method, path, body }),
+  //     ipcRenderer
+  //       .invoke("readLargeFile", filePath)
+  //       .then(() => resolve(chunks))
+  //       .catch(reject);
+  //   });
+  // },
+  // serverRequest: (method, path, body) =>
+  //   ipcRenderer.invoke("server-request", { method, path, body }),
   printPDF: (pdfBuffer) => ipcRenderer.invoke("print-pdf", pdfBuffer),
   checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
   downloadUpdate: () => ipcRenderer.invoke("download-update"),

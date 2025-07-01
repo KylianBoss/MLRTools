@@ -1,28 +1,18 @@
 import { app, BrowserWindow, ipcMain, dialog } from "electron";
-import { initialize, enable } from "@electron/remote/main";
 import path from "path";
 import express from "express";
-import { setupServer } from "./server";
+import { startServer, closeServer } from "./server";
 import os from "os";
 import fs from "fs";
 import fsPromises from "fs/promises";
 import readline from "readline";
-import dotenv from "dotenv";
 import { AutoUpdater } from "./auto-updater.js";
-
-dotenv.config();
-const __dirname = path.resolve();
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
 
-initialize();
 let mainWindow;
-let printWindow;
-let expressApp;
-const preloadPath = app.isPackaged
-  ? path.join(process.resourcesPath, "app.asar.unpacked", "electron-preload.js")
-  : path.resolve(__dirname, process.env.QUASAR_ELECTRON_PRELOAD);
+let httpServer;
 
 function createWindow() {
   /**
@@ -36,19 +26,38 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,
-      // More info: https://v2.quasar.dev/quasar-cli-vite/developing-electron-apps/electron-preload-script
-      preload: preloadPath,
+      nodeIntegration: true,
+      enableRemoteModule: false,
+      preload: path.resolve(__dirname, process.env.QUASAR_ELECTRON_PRELOAD),
     },
   });
 
-  printWindow = new BrowserWindow({
-    show: false,
-    webPreferences: {
-      contextIsolation: true,
-    },
-  });
+  // Contrôle du stockage
+  const storagePath = path.join(process.cwd(), "storage");
 
-  mainWindow.loadURL(process.env.APP_URL);
+  if (!fs.existsSync(storagePath)) {
+    fs.mkdirSync(storagePath, { recursive: true });
+    console.log("Storage directory created at:", storagePath);
+  } else {
+    console.log("Storage directory already exists at:", storagePath);
+  }
+
+  // Démarrage du serveur HTTP
+  if (!httpServer && startServer && typeof startServer === "function") {
+    startServer()
+      .then((server) => {
+        httpServer = server;
+        console.log("HTTP server started successfully");
+
+        mainWindow.loadURL(process.env.APP_URL);
+        console.log("Main window URL loaded:", process.env.APP_URL);
+      })
+      .catch((error) => {
+        console.error("Error while starting HTTP server:", error);
+      });
+  } else {
+    console.log("Server not available or already running");
+  }
 
   if (process.env.DEBUGGING) {
     // if on DEV or Production with debug enabled
@@ -60,130 +69,44 @@ function createWindow() {
     // })
   }
 
-  enable(mainWindow.webContents);
+  // enable(mainWindow.webContents);
 
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
 }
 
-async function setupStorage() {
-  // For development, use the current directory
-  // For production, use the directory containing the .exe
-  storagePath = app.isPackaged
-    ? path.join(path.dirname(app.getPath("exe")), "storage")
-    : path.join(__dirname, "storage");
-
-  try {
-    await fsPromises.mkdir(storagePath, { recursive: true });
-    console.log("Storage directories created successfully");
-  } catch (error) {
-    console.error("Error creating storage directories:", error);
-  }
-}
-
-app.commandLine.appendSwitch("js-flags", "--max-old-space-size=4096");
 app.whenReady().then(async () => {
-  // await syncDatabase();
-  await setupStorage();
   createWindow();
 
   // Initialize auto-updater
   new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
 
-  // Setup embedded express server
-  expressApp = express();
-  expressApp.use(express.json());
-  expressApp.use((req, res, next) => {
-    console.log(req.method, req.url);
-    next();
+  app.on("activate", () => {
+    if (mainWindow === null) {
+      createWindow();
+    }
   });
-  setupServer(expressApp);
+});
 
-  // Handle IPC messages
-  ipcMain.handle("server-request", async (event, { method, path, body }) => {
-    // Simulate an HTTP request to the express server
-    return new Promise((resolve) => {
-      const req = {
-        method,
-        url: path,
-        body,
-        headers: {},
-      };
-      const res = {
-        statusCode: 200,
-        headers: {},
-        body: null,
-        status(code) {
-          this.statusCode = code;
-          return this;
-        },
-        json(data) {
-          this.body = data;
-          resolve({
-            statusCode: this.statusCode,
-            headers: this.headers,
-            data: this.body,
-          });
-        },
-        send(data) {
-          this.body = data;
-          resolve({
-            statusCode: this.statusCode,
-            headers: this.headers,
-            data: this.body,
-          });
-        },
-        setHeader(key, value) {
-          this.headers[key] = value;
-        },
-      };
-      expressApp(req, res, () => {
-        // This is the "next" function, called if no route handles the request
-        resolve({
-          statusCode: 404,
-          headers: res.headers,
-          data: { error: "Not Found" },
-        });
-      });
-    });
-  });
-  ipcMain.handle("selectFile", async (event, filter) => {
-    console.log("selectFile", filter);
-    const result = await dialog.showOpenDialog({
-      properties: ["openFile", "multiSelections"],
-      filters: [filter],
-    });
-    return result;
-  });
-  ipcMain.handle("readLargeFile", async (event, filePath) => {
-    return new Promise((resolve, reject) => {
-      const rl = readline.createInterface({
-        input: fs.createReadStream(filePath),
-        crlfDelay: Infinity,
-      });
+app.on("window-all-closed", () => {
+  if (platform !== "darwin") {
+    app.quit();
+  }
+});
 
-      let chunk = [];
-      rl.on("line", (line) => {
-        chunk.push(line);
-        if (chunk.length >= 2000) {
-          event.sender.send("fileChunk", chunk);
-          chunk = [];
-        }
+app.on("will-quit", async () => {
+  // Arrêter le serveur si la mainWindow est fermée
+  if (httpServer) {
+    console.log("Stopping HTTP server...");
+    await closeServer(httpServer)
+      .then(() => {
+        console.log("HTTP server stopped successfully");
+      })
+      .catch((error) => {
+        console.error("Error while stopping HTTP server:", error);
       });
-
-      rl.on("close", () => {
-        if (chunk.length > 0) {
-          event.sender.send("fileChunk", chunk);
-        }
-        resolve();
-      });
-
-      rl.on("error", (err) => {
-        reject(err);
-      });
-    });
-  });
+  }
 });
 
 // Handle IPC messages for printing
@@ -220,29 +143,16 @@ ipcMain.handle("print-pdf", async (event, pdfUrl) => {
   });
 });
 
-app.on("window-all-closed", () => {
-  if (platform !== "darwin") {
-    app.quit();
+// Gestion des erreurs non capturées
+process.on("uncaughtException", (error) => {
+  console.error("Erreur non capturée:", error);
+  // En mode kiosque, redémarrer l'application
+  if (isKioskMode) {
+    app.relaunch();
+    app.exit();
   }
 });
 
-app.on("before-quit", () => {
-  cleanUp();
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Promesse rejetée non gérée:", reason);
 });
-
-app.on("activate", () => {
-  if (mainWindow === null) {
-    createWindow();
-  }
-});
-
-function cleanUp() {
-  ipcMain.removeHandler("server-request");
-  ipcMain.removeHandler("selectFile");
-  ipcMain.removeHandler("readLargeFile");
-  ipcMain.removeHandler("print-pdf");
-  ipcMain.removeHandler("check-for-updates");
-  ipcMain.removeHandler("download-update");
-  ipcMain.removeHandler("install-update");
-  ipcMain.removeHandler("restart-app");
-}
