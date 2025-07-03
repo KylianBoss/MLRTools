@@ -26,6 +26,13 @@ jobs:
           token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0 # This allows access to commit history for release notes
 
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global url."https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        shell: bash
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -40,10 +47,31 @@ jobs:
       - name: Generate Release Notes
         id: release_notes
         run: |
-          $commits = git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 2>$null || git rev-list --max-parents=0 HEAD)..HEAD
-          $releaseNotes = @"
+          try {
+            # Obtenir le dernier tag ou le premier commit
+            $lastTag = git describe --tags --abbrev=0 2>$null
+            if (-not $lastTag -or $LASTEXITCODE -ne 0) {
+              $lastTag = git rev-list --max-parents=0 HEAD
+            }
+
+            $commits = git log --pretty=format:"- %s" "$lastTag..HEAD" 2>$null
+            if ($LASTEXITCODE -ne 0) {
+              $commits = "- Latest changes from commit ${{ github.sha }}"
+            }
+
+            $releaseNotes = @"
           That's the new v${{ steps.package_version.outputs.version }} of the app
+
+          Changes:
+          $commits
           "@
+          } catch {
+            $releaseNotes = @"
+          That's the new v${{ steps.package_version.outputs.version }} of the app
+
+          This release includes the latest changes from commit ${{ github.sha }}
+          "@
+          }
 
           $releaseNotes | Out-File -FilePath release_notes.txt -Encoding UTF8
 
