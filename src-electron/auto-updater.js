@@ -232,8 +232,12 @@ export class AutoUpdater {
         echo.
         echo ================ UPDATE COMPLETE ================
         echo Update finished at: %TIME%
+        echo.
+        echo Closing update window in 3 seconds...
+        timeout /t 3 /nobreak >nul
 
-        del "%~f0"
+        rem Self-delete and close window
+        (goto) 2>nul & del "%~f0" & exit
       `;
 
       const scriptPath = path.join(app.getPath("temp"), "update.bat");
