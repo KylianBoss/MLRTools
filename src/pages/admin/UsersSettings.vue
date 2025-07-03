@@ -41,6 +41,7 @@
                   <q-toggle
                     :model-value="selected"
                     @update:model-value="toggleOption(opt)"
+                    :disable="opt.disabled && !selected"
                   />
                 </q-item-section>
               </q-item>
@@ -103,7 +104,9 @@ const access = [
   { label: "Search Messages", value: "searchMessages" },
   { label: "Charts", value: "charts" },
   { label: "Import Messages", value: "importMessages" },
-  { label: "Excluded Alarms", value: "excludedAlarms" },
+  { label: "Excluded Alarms", value: "excludedAlarms", disabled: true },
+  { label: "Liste des alarmes", value: "alarmList" },
+  { label: "TGW rapport alarmes", value: "tgwReportAlarms" },
   { label: "TGW rapport zones", value: "tgwReportZones" },
   { label: "Suspicious Places", value: "suspiciousPlaces" },
   { label: "Admin", value: "admin" },

@@ -99,12 +99,6 @@
               label="Liste des alarmes"
             />
             <drawer-item
-              to="excluded-alarms"
-              autorisation="excludedAlarms"
-              icon="mdi-bell-cancel-outline"
-              label="Alarmes exclues"
-            />
-            <drawer-item
               to="tgw-report-zones"
               autorisation="tgwReportZones"
               icon="mdi-order-bool-ascending-variant"
@@ -242,7 +236,6 @@ const $q = useQuasar();
 const rightDrawerOpen = ref(true);
 const miniState = ref(true);
 const drawers = ref([]);
-const configFile = ref(null);
 const loaded = ref(false);
 const dataLogStore = useDataLogStore();
 const banners = ref({
@@ -258,10 +251,8 @@ watch(miniState, (value) => {
 });
 
 onMounted(async () => {
-  // showLoading();
   await App.init();
-  // await dataLogStore.initialize();
-  // $q.loading.hide();
+  await dataLogStore.initialize();
   loaded.value = true;
 });
 

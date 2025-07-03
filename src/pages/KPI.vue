@@ -554,7 +554,6 @@ const alarmsByUsers = ref([]);
 watch(toDisplay, async (newDate, oldValue) => {
   if (JSON.stringify(newDate) === JSON.stringify(oldValue)) return;
   if (newDate === null) return;
-  showLoading();
 
   sectionKPITop3.value = false;
   sectionKPITop3Zone.value = false;
@@ -574,8 +573,8 @@ const getData = (filter) => {
       const productionTime = dataLogStore.productionTimes(
         dayjs(filter).format("YYYY-MM-DD")
       );
-      const from = dayjs(productionTime.from).format("YYYY-MM-DD HH:mm:ss");
-      const to = dayjs(productionTime.to).format("YYYY-MM-DD HH:mm:ss");
+      const from = dayjs(productionTime.from).format("YYYY-MM-DD");
+      const to = dayjs(productionTime.from).format("YYYY-MM-DD");
       const kpiTop3Count = await dataLogStore.getKPItop3Count({
         from,
         to,
@@ -794,17 +793,17 @@ const getAlarmsByUser = async () => {
 };
 
 onMounted(async () => {
-  showLoading(null, true);
+  // showLoading(null, true);
   // toDisplay is the date off the last day with data and not a day off
   let date = dayjs(dataLogStore.dates[dataLogStore.dates.length - 1]);
   while (dataLogStore.isDayOff(date)) {
     date = date.subtract(1, "day");
   }
   toDisplay.value = date.format("YYYY/MM/DD");
-  await dataLogStore.initialize().then(async () => {
-    await getData(toDisplay);
-    await getAlarmsByUser(toDisplay);
-  });
+  // await dataLogStore.initialize().then(async () => {
+  //   await getData(toDisplay);
+  //   await getAlarmsByUser(toDisplay);
+  // });
   sectionKPITop3.value = false;
 });
 
@@ -828,7 +827,8 @@ const showLoading = (message, timeout = false) => {
       });
       $q.loading.hide();
     }, 20000);
-  } else if (!timeout && timeoutLoading.value) {
+  }
+  if (!timeout && timeoutLoading.value) {
     console.log("Clearing timeout");
     clearTimeout(timeoutLoading.value);
     timeoutLoading.value = null;

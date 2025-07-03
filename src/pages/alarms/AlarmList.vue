@@ -1,5 +1,27 @@
 <template>
   <q-page padding>
+    <div class="text-h4">Liste des alarmes</div>
+    <div>
+      <q-banner
+        class="bg-blue text-white q-my-sm"
+        dense
+        v-if="
+          !dataLogStore.alarms ||
+          dataLogStore.alarms.filter((a) => !a.type).length > 0
+        "
+      >
+        Il y a {{ dataLogStore.alarms.filter((a) => !a.type).length }} alarmes
+        non classées dans la liste.
+        <template v-slot:action>
+          <q-btn
+            flat
+            color="white"
+            label="Rafraîchir"
+            @click="dataLogStore.initialize()"
+          />
+        </template>
+      </q-banner>
+    </div>
     <q-table
       :rows="
         dataLogStore.alarms.map((alarm) => {
@@ -9,6 +31,7 @@
             alarmCode: alarm.alarmCode.toUpperCase(),
             alarmText: alarm.alarmText,
             alarmId: alarm.alarmId,
+            type: alarm.type,
           };
         })
       "
@@ -25,7 +48,27 @@
           color="primary"
           dense
           class="full-width"
-        />
+        >
+          <template v-slot:append>
+            <q-btn
+              flat
+              color="primary"
+              icon="close"
+              round
+              @click="filter = ''"
+              v-if="filter"
+            />
+          </template>
+
+          <template v-slot:prepend>
+            <q-icon name="search" />
+          </template>
+
+          <template v-slot:hint>
+            Rechercher par ID d'alarme, source de données, zone d'alarme ou code
+            d'alarme
+          </template>
+        </q-input>
       </template>
       <template v-slot:body="props">
         <tr :props="props">
@@ -34,6 +77,18 @@
           <td>{{ props.row.alarmCode.toUpperCase() }}</td>
           <td>{{ props.row.alarmText }}</td>
           <td>{{ props.row.alarmId }}</td>
+          <td>
+            <q-badge
+              :color="props.row.type === 'primary' ? 'red' : 'blue'"
+              class="q-ma-xs"
+              v-if="props.row.type"
+            >
+              {{ props.row.type === "primary" ? "Arrêt" : "Autre" }}
+            </q-badge>
+            <q-badge color="warning" class="q-ma-xs" v-else>
+              Non définit
+            </q-badge>
+          </td>
           <q-menu
             touch-position
             context-menu
@@ -43,17 +98,18 @@
               <q-item
                 clickable
                 v-close-popup
-                @click="dataLogStore.excludeAlarmId(props.row.alarmId)"
+                @click="dataLogStore.setPrimary(props.row.alarmId)"
+                v-if="props.row.alarmId"
               >
-                <q-item-section>Exclure cette alarme</q-item-section>
+                <q-item-section>Mettre en "primary"</q-item-section>
               </q-item>
               <q-item
                 clickable
                 v-close-popup
-                @click="dataLogStore.excludeAlarmCode(props.row.alarmCode)"
-                v-if="props.row.alarmCode"
+                @click="dataLogStore.setSecondary(props.row.alarmId)"
+                v-if="props.row.alarmId"
               >
-                <q-item-section>Exclure ce code d'alarme</q-item-section>
+                <q-item-section>Mettre en "secondary"</q-item-section>
               </q-item>
               <q-item
                 clickable

@@ -3,9 +3,11 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+let db;
+
 function initDB(config) {
   return new Promise((resolve, reject) => {
-    const db = new Sequelize({
+    db = new Sequelize({
       dialect: "mariadb",
       host: config.db_host,
       port: config.db_port,
@@ -75,18 +77,55 @@ function initDB(config) {
         alarmId: {
           type: DataTypes.STRING,
           primaryKey: true,
+          comment: "Unique identifier for the alarm",
         },
         dataSource: {
           type: DataTypes.STRING,
+          comment: "Data source of the alarm, e.g. 'F001', 'F002', etc.",
         },
         alarmArea: {
           type: DataTypes.STRING,
+          comment: "Area of the alarm",
         },
         alarmCode: {
           type: DataTypes.STRING,
+          comment: "Code of the alarm",
         },
         alarmText: {
           type: DataTypes.STRING,
+          comment: "Text of the alarm, can be translated",
+        },
+        type: {
+          type: DataTypes.ENUM("primary", "secondary"),
+          defaultValue: null,
+          allowNull: true,
+          comment:
+            "Type of alarm, can be 'primary' or 'secondary'. Is null at creation",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
+    const zoneGroups = db.define(
+      "zoneGroups",
+      {
+        zoneGroupName: {
+          type: DataTypes.STRING,
+          primaryKey: true,
+          comment: "Name of the zone group",
+        },
+        zones: {
+          type: DataTypes.JSON,
+          allowNull: false,
+          get() {
+            return JSON.parse(this.getDataValue("zones"));
+          },
+          set(value) {
+            this.setDataValue("zones", JSON.stringify(value));
+          },
+          comment: "Array of zones in the group, e.g. ['F001', 'F002', ...]",
         },
       },
       {
@@ -189,34 +228,31 @@ function initDB(config) {
       }
     );
 
-    const ProductionData = db.define(
-      "ProductionData",
-      {
-        date: {
-          type: DataTypes.DATEONLY,
-          primaryKey: true,
-          allowNull: false,
-        },
-        start: {
-          type: DataTypes.DATE,
-          allowNull: true,
-        },
-        end: {
-          type: DataTypes.DATE,
-          allowNull: true,
-        },
-        dayOff: {
-          type: DataTypes.BOOLEAN,
-          allowNull: false,
-          defaultValue: false,
-        },
-        boxTreated: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          defaultValue: 0,
-        },
-      }
-    );
+    const ProductionData = db.define("ProductionData", {
+      date: {
+        type: DataTypes.DATEONLY,
+        primaryKey: true,
+        allowNull: false,
+      },
+      start: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      end: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      dayOff: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      boxTreated: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+      },
+    });
 
     const ignoredAlarms = db.define("ignoredAlarms", {
       id: {
@@ -377,4 +413,4 @@ function initDB(config) {
   });
 }
 
-export { initDB };
+export { initDB, db };

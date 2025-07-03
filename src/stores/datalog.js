@@ -4,6 +4,7 @@ import duration from "dayjs/plugin/duration";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import "dayjs/locale/fr";
 import { api } from "boot/axios";
+import { Loading, QSpinnerFacebook } from "quasar";
 
 dayjs.extend(duration);
 dayjs.extend(customParseFormat);
@@ -121,8 +122,6 @@ export const useDataLogStore = defineStore("datalog", {
         align: "left",
       },
     ],
-    excludedAlarmIds: [],
-    excludedAlarmCodes: [],
     alarms: [],
     dates: [],
     lastObjectTreated: null,
@@ -201,12 +200,10 @@ export const useDataLogStore = defineStore("datalog", {
           });
       });
     },
-    getKPItop3Count(filter) {
-      return new Promise((resolve) => {
-        api.get("/alarms/kpi/count", { params: filter }).then((response) => {
-          resolve(response.data);
-        });
-      });
+    async getKPItop3Count(filter) {
+      return api
+        .get("/alarms/kpi/count", { params: filter })
+        .then((response) => response.data);
     },
     getKPItop3CountPerZone(filter) {
       return new Promise((resolve) => {
@@ -224,7 +221,7 @@ export const useDataLogStore = defineStore("datalog", {
     },
     getDayResume(filter) {
       return new Promise((resolve) => {
-        api.get("/alarms/kpi/day", { params: filter }).then((response) => {
+        api.get("/alarms/kpi/resume", { params: filter }).then((response) => {
           resolve(response.data);
         });
       });
@@ -239,23 +236,26 @@ export const useDataLogStore = defineStore("datalog", {
     },
     initialize() {
       return new Promise(async (resolve, reject) => {
+        Loading.show({
+          spinner: QSpinnerFacebook,
+          spinnerColor: "primary",
+          spinnerSize: 160,
+          backgroundColor: "dark",
+          message: "Chargement...",
+          messageColor: "white",
+        });
         try {
           console.log("Initializing data log store");
           await api.get("/alarms/day").then((response) => {
             this.dates = response.data;
           });
-          await api.get("/alarms/unique?excluded=false").then((response) => {
+          await api.get("/alarms/unique").then((response) => {
             this.alarms = response.data;
-          });
-          await api.get("/alarms/exclude/id").then((response) => {
-            this.excludedAlarmIds = response.data;
-          });
-          await api.get("/alarms/exclude/code").then((response) => {
-            this.excludedAlarmCodes = response.data;
           });
           await api.get("/production/data").then((response) => {
             this.productionData = response.data;
           });
+          Loading.hide();
           resolve();
         } catch (error) {
           console.error("Error initializing data log store:", error);
@@ -378,26 +378,30 @@ export const useDataLogStore = defineStore("datalog", {
     clearDataLog() {
       this.dataLog = [];
     },
-    async excludeAlarmId(alarmId) {
-      api.post("/alarms/exclude/id", { alarmId }).then(() => {
-        this.excludedAlarmIds.push(alarmId);
-        this.alarms = this.alarms.filter((a) => a.alarmId !== alarmId);
+    async setPrimary(alarmId) {
+      return new Promise((resolve, reject) => {
+        api.post("/alarms/primary", { alarmId }).then((res) => {
+          // Update the alarm in the store
+          const alarm = this.alarms.find((a) => a.alarmId === alarmId);
+          if (alarm) {
+            alarm.type = "primary";
+          }
+          resolve(res.data);
+        });
       });
     },
-    async excludeAlarmCode(alarmCode) {
-      api.post("/alarms/exclude/code", { alarmCode }).then(() => {
-        this.excludedAlarmCodes.push(alarmCode);
-        this.alarms = this.alarms.filter((a) => a.alarmCode !== alarmCode);
-      });
-    },
-    async includeAlarm(alarmIdCode) {
-      api.post("/alarms/include", { alarmIdCode }).then((res) => {
-        console.log(res);
-        this.excludedAlarms = this.excludedAlarms.filter(
-          (a) => a.alarmId !== alarmIdCode && a.alarmCode !== alarmIdCode
-        );
-        // this.alarms.push(this.alarms.find((a) => a.alarmId === alarmId));
-        this.alarms.push(res.data);
+    async setSecondary(alarmId) {
+      return new Promise((resolve, reject) => {
+        api.post("/alarms/secondary", { alarmId }).then((res) => {
+          // Update the alarm in the store
+          console.log("Setting secondary alarm", alarmId);
+          console.log(res.data);
+          const alarm = this.alarms.find((a) => a.alarmId === alarmId);
+          if (alarm) {
+            alarm.type = "secondary";
+          }
+          resolve(res.data);
+        });
       });
     },
     getAlarm(alarmIdCode) {

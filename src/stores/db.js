@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { useAppStore } from "./app.js";
+import { api } from "boot/axios";
 
 export const useDBStore = defineStore("DB", {
   state: () => ({
@@ -11,8 +12,8 @@ export const useDBStore = defineStore("DB", {
       return new Promise((resolve, reject) => {
         const App = useAppStore();
         this.loadingState = true;
-        window.electron
-          .serverRequest("POST", "/db/sync-models", {
+        api
+          .post("/db/sync-models", {
             user: App.user.username,
           })
           .then((response) => {
@@ -35,8 +36,8 @@ export const useDBStore = defineStore("DB", {
       return new Promise((resolve, reject) => {
         const App = useAppStore();
         this.loadingState = true;
-        window.electron
-          .serverRequest("POST", "/db/empty-day-resume", {
+        api
+          .post("/db/empty-day-resume", {
             user: App.user.username,
           })
           .then((response) => {
@@ -59,8 +60,8 @@ export const useDBStore = defineStore("DB", {
       return new Promise((resolve, reject) => {
         const App = useAppStore();
         this.loadingState = true;
-        window.electron
-          .serverRequest("POST", "/db/empty-day-resume-at-date", {
+        api
+          .post("/db/empty-day-resume-at-date", {
             user: App.user.username,
             date,
           })

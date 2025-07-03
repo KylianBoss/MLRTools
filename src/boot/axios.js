@@ -9,7 +9,7 @@ import axios from "axios";
 // for each client)
 const api = axios.create({
   baseURL: "http://localhost:3000",
-  timeout: 10000,
+  timeout: 60000,
 });
 
 // Configuration des intercepteurs pour la gestion des erreurs

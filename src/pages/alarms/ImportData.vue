@@ -54,7 +54,7 @@
         <span class="text-negative">{{ dataLogStore.importError }}</span>
       </q-card-section>
     </q-card>
-    <q-table
+    <!-- <q-table
       :rows="dataLogStore.alarms"
       row-key="alarmId"
       wrap-cells
@@ -107,7 +107,7 @@
           </q-menu>
         </tr>
       </template>
-    </q-table>
+    </q-table> -->
   </q-page>
 </template>
 
@@ -121,8 +121,8 @@ const $q = useQuasar();
 const dataLogStore = useDataLogStore();
 const selectedFilePath = ref(null);
 const saved = ref(false);
-const date = ref(dayjs().format("YYYY/MM/DD"));
-const filter = ref("");
+// const date = ref(dayjs().format("YYYY/MM/DD"));
+// const filter = ref("");
 const data = ref("");
 const estimatedTimeLeft = ref(0);
 
@@ -237,24 +237,24 @@ const importFile = async () => {
 //   // dataLogStore.initialize();
 // };
 
-const translateAlarm = async (alarmId) => {
-  $q.dialog({
-    title: "Ajouter une traduction",
-    message: "Entrez la traduction de l'alarme",
-    prompt: {
-      model: "",
-      type: "text",
-    },
-    cancel: true,
-    persistent: true,
-  }).onOk(async (data) => {
-    await dataLogStore.translateAlarm(alarmId, data);
-    // dataLogStore.initialize();
-  });
-};
+// const translateAlarm = async (alarmId) => {
+//   $q.dialog({
+//     title: "Ajouter une traduction",
+//     message: "Entrez la traduction de l'alarme",
+//     prompt: {
+//       model: "",
+//       type: "text",
+//     },
+//     cancel: true,
+//     persistent: true,
+//   }).onOk(async (data) => {
+//     await dataLogStore.translateAlarm(alarmId, data);
+//     // dataLogStore.initialize();
+//   });
+// };
 
 onMounted(async () => {
-  dataLogStore.initialize();
+  // dataLogStore.initialize();
   setInterval(() => {
     if (dataLogStore.importing) {
       estimatedTimeLeft.value = estimatedTimeLeft.value - 1;

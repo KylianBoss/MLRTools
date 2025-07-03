@@ -35,11 +35,6 @@ const routes = [
             component: () => import("src/pages/alarms/AlarmList.vue"),
           },
           {
-            path: "excluded-alarms",
-            name: "excluded-alarms",
-            component: () => import("src/pages/alarms/ExcludedAlarms.vue"),
-          },
-          {
             path: "production-data",
             name: "production-data",
             component: () => import("src/pages/alarms/ProductionData.vue"),
