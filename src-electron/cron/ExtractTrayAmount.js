@@ -184,11 +184,6 @@ export const extractTrayAmount = (date) => {
         }
       );
 
-      const startDateInput = await page.$('input[id="inputTimestampPicker_1"]');
-      const endDateInput = await page.$('input[id="inputTimestampPicker_2"]');
-      const addressInput = await page.$('input[id="input_2"]');
-      const messageTypeInput = await page.$('input[id="input_5"]');
-
       for (const group of groups) {
         console.log(`Processing group: ${group.zoneGroupName}`);
         global.sendNotificationToElectron(
@@ -208,6 +203,15 @@ export const extractTrayAmount = (date) => {
           });
           let i = 1;
           for (const split of splits) {
+            const startDateInput = await page.$(
+              'input[id="inputTimestampPicker_1"]'
+            );
+            const endDateInput = await page.$(
+              'input[id="inputTimestampPicker_2"]'
+            );
+            const addressInput = await page.$('input[id="input_2"]');
+            const messageTypeInput = await page.$('input[id="input_5"]');
+
             await clearInput(startDateInput, page);
             await startDateInput.type(
               dayjs(split.start).format("DD.MM.YYYY HH:mm:ss")
