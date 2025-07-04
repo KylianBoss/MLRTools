@@ -201,6 +201,11 @@ export const extractTrayAmount = (date) => {
           lastLog: `Processing group: ${group.zoneGroupName}`,
         });
         for (const address of group.addresses) {
+          await updateJob({
+            actualState: "running",
+            lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+            lastLog: `Processing group: ${group.zoneGroupName} - Address: ${address}`,
+          });
           let i = 1;
           for (const split of splits) {
             await clearInput(startDateInput, page);
