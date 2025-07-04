@@ -177,7 +177,7 @@ export const extractTrayAmount = (date) => {
       await sleep(2000);
 
       await page.goto(
-        "https://10.95.62.134:8443/infosysgtem/protected/report.jspa?method=GET&categorizeable=report.1676549483645&view=&mode=edit",
+        "https://10.95.62.134:8443/infosystem/protected/report.jspa?method=GET&categorizeable=report.1676549483645&view=&mode=edit",
         {
           waitUntil: "networkidle0",
           timeout: 60000,
