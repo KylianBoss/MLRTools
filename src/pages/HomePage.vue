@@ -37,6 +37,16 @@
                   >
                     {{ job.actualState }}
                   </q-chip>
+                  <q-btn
+                    v-if="job.actualState !== 'running'"
+                    color="primary"
+                    icon="mdi-play"
+                    @click="startCron(job.action)"
+                    class="q-mr-sm q-py-none"
+                    dense
+                    round
+                    flat
+                  />
                   <br />
                   Dernière execution: {{ job.lastRun ? new Date(job.lastRun).toLocaleString() : 'N/A' }}<br />
                   Dernier log: {{ job.lastLog ? job.lastLog : 'Aucun log disponible' }}<br />
@@ -130,6 +140,26 @@ const fetchCronStatus = async () => {
     console.error('Error fetching cron status:', error);
     eventSource.close();
   };
+};
+
+// Start a cron job
+const startCron = async (action) => {
+  try {
+    const response = await api.post('/cron/start', { action });
+    const job = response.data;
+    const index = cronJobs.value.findIndex(j => j.action === job.action);
+    if (index !== -1) {
+      cronJobs.value[index] = {
+        ...cronJobs.value[index],
+        jobName: job.jobName,
+        actualState: job.actualState,
+        lastRun: job.lastRun ? new Date(job.lastRun) : null,
+        lastLog: job.lastLog || 'Aucun log disponible'
+      };
+    }
+  } catch (error) {
+    console.error('Error starting cron job:', error);
+  }
 };
 
 

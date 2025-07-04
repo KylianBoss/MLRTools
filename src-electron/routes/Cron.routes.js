@@ -102,5 +102,42 @@ router.get("/status", (req, res) => {
     res.write(`data: ${data}\n\n`);
   });
 });
+// Start manually a cron job
+router.post("/start", async (req, res) => {
+  const { action } = req.body;
+
+  if (!action) {
+    res.status(400).json({ error: "No action provided" });
+    return;
+  }
+
+  try {
+    const cronJob = await db.models.CronJobs.findOne({
+      where: {
+        action,
+      },
+    });
+
+    if (!cronJob) {
+      res.status(404).json({ error: "Cron job not found" });
+      return;
+    }
+
+    // Execute the action based on the cron job
+    switch (cronJob.action) {
+      case "extractTrayAmount":
+        extractTrayAmount(dayjs().subtract(1, "day").format("YYYY-MM-DD"));
+        break;
+      default:
+        res.status(400).json({ error: "Unknown action" });
+        return;
+    }
+
+    res.json({ message: `Cron job ${cronJob.jobName} started successfully` });
+  } catch (error) {
+    console.error("Error starting cron job:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 export default router;
