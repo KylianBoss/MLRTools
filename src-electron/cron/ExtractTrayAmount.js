@@ -11,7 +11,7 @@ export const extractTrayAmount = (date) => {
       const groups = await db.models.ZoneGroups.findAll({
         raw: true,
       });
-      console.log(groups)
+      console.log(groups);
       for (const group of groups) {
         group.addresses = [];
         group.total = 0;
@@ -80,7 +80,10 @@ export const extractTrayAmount = (date) => {
         },
       ];
 
-      global.sendNotificationToElectron("Extract tray amount", "Starting extraction...");
+      global.sendNotificationToElectron(
+        "Extract tray amount",
+        "Starting extraction..."
+      );
 
       // Setup the storage
       if (!fs.existsSync(path.join(process.cwd(), "storage", "downloads")))
@@ -330,10 +333,18 @@ export const extractTrayAmount = (date) => {
         "Extract tray amount",
         "Extraction completed successfully"
       );
-      fs.rmdirSync(
-        path.join(process.cwd(), "storage", "downloads"),
-        { recursive: true }
-      );
+      fs.rmdirSync(path.join(process.cwd(), "storage", "downloads"), {
+        recursive: true,
+      });
+
+      // Save data in DB
+      for (const group of groups) {
+        await db.models.ZoneGroupData.create({
+          zoneGrounName: group.name,
+          date: dayjs(date).format("YYYY-MM-DD"),
+          total: group.total,
+        });
+      }
       resolve(groups);
     } catch (error) {
       console.error("Error extracting tray amount:", error);
