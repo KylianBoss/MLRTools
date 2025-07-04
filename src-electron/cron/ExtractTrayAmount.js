@@ -134,7 +134,7 @@ export const extractTrayAmount = (date) => {
 
       // Setup puppeteer
       const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
@@ -180,7 +180,6 @@ export const extractTrayAmount = (date) => {
         "https://10.95.62.134:8443/infosystem/protected/report.jspa?method=GET&categorizeable=report.1676549483645&view=&mode=edit",
         {
           waitUntil: "networkidle0",
-          timeout: 60000,
         }
       );
 
@@ -239,7 +238,6 @@ export const extractTrayAmount = (date) => {
             await Promise.all([
               page.waitForNavigation({
                 waitUntil: "networkidle0",
-                timeout: 60000,
               }),
               page.click('input[name="Search"]'),
             ]);
@@ -416,7 +414,7 @@ export const extractTrayAmount = (date) => {
       // Save data in DB
       for (const group of groups) {
         await db.models.ZoneGroupData.create({
-          zoneGrounName: group.zoneGroupName,
+          zoneGroupName: group.zoneGroupName,
           date: dayjs(date).format("YYYY-MM-DD"),
           total: group.total,
         });
