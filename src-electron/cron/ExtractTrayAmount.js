@@ -243,7 +243,7 @@ export const extractTrayAmount = (date) => {
             ]);
 
             await page.waitForSelector('a[href*=".csv"]', {
-              timeout: 30000,
+              timeout: 120000,
             });
 
             const pageContent = await page.content();
