@@ -255,7 +255,7 @@ export const extractTrayAmount = (date) => {
 
             function download() {
               return new Promise(async (resolve, reject) => {
-                const downloadLink = page.$('a[href*=".csv"]');
+                const downloadLink = await page.$('a[href*=".csv"]');
                 if (downloadLink) {
                   await downloadLink.click();
                   console.log("Start downloading CSV file...");
