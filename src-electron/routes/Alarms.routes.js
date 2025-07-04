@@ -6,7 +6,7 @@ const router = Router();
 
 router.post("/", async (req, res) => {
   try {
-    const alarms = await db.models.Datalog.bulkCreate(req.body, {
+    const alarms = await db.models.Datalog.bulkCreate(req.body.data, {
       updateOnDuplicate: [
         "timeOfOccurence",
         "timeOfAcknowledge",
@@ -37,6 +37,7 @@ router.post("/", async (req, res) => {
         alarmText: alarm.alarmText,
       });
     }
+
     res.sendStatus(201);
   } catch (error) {
     res.status(500).json({ error: error.message });
