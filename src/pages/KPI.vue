@@ -569,12 +569,19 @@ const getData = (filter) => {
     gettingData.value = true;
     chartOptions.series = [];
     dayResume.value = [];
+    let from, to;
     if (typeof filter === "string") {
-      const productionTime = dataLogStore.productionTimes(
-        dayjs(filter).format("YYYY-MM-DD")
-      );
-      const from = dayjs(productionTime.from).format("YYYY-MM-DD");
-      const to = dayjs(productionTime.from).format("YYYY-MM-DD");
+      from = dayjs(filter).format("YYYY-MM-DD");
+      to = dayjs(filter).format("YYYY-MM-DD");
+    } else if (typeof filter === "object") {
+      from = dayjs(filter.from).format("YYYY-MM-DD");
+      to = dayjs(filter.to).format("YYYY-MM-DD");
+    }
+      // const productionTime = dataLogStore.productionTimes(
+      //   dayjs(filter).format("YYYY-MM-DD")
+      // );
+      // const from = dayjs(productionTime.from).format("YYYY-MM-DD");
+      // const to = dayjs(productionTime.from).format("YYYY-MM-DD");
       const kpiTop3Count = await dataLogStore.getKPItop3Count({
         from,
         to,
@@ -718,46 +725,46 @@ const getData = (filter) => {
       $q.loading.hide();
       gettingData.value = false;
       resolve();
-    } else if (typeof filter === typeof {}) {
-      const from = dayjs(filter.from)
-        .set("hour", 0)
-        .set("minute", 0)
-        .set("second", 0)
-        .format("YYYY-MM-DD HH:mm:ss");
-      const to = dayjs(filter.to)
-        .set("hour", 23)
-        .set("minute", 59)
-        .set("second", 59)
-        .format("YYYY-MM-DD HH:mm:ss");
-      const kpiTop3Count = await dataLogStore.getKPItop3Count({
-        from,
-        to,
-        includesExcluded: false,
-      });
-      const kpiTop3Duration = await dataLogStore.getKPItop3Duration({
-        from,
-        to,
-        includesExcluded: false,
-      });
-      for (const dataSource of dataSources) {
-        const alarms = await dataLogStore.getKPItop3CountPerZone({
-          from,
-          to,
-          dataSource,
-          includesExcluded: false,
-        });
-        KPITop3PerZone.value.push({
-          dataSource,
-          alarms,
-        });
-      }
-      dayResume.value = [];
-      KPITop3Number.value = kpiTop3Count;
-      KPITop3Duration.value = kpiTop3Duration;
-      $q.loading.hide();
-      gettingData.value = false;
-      resolve();
-    }
+    // } else if (typeof filter === typeof {}) {
+    //   const from = dayjs(filter.from)
+    //     .set("hour", 0)
+    //     .set("minute", 0)
+    //     .set("second", 0)
+    //     .format("YYYY-MM-DD HH:mm:ss");
+    //   const to = dayjs(filter.to)
+    //     .set("hour", 23)
+    //     .set("minute", 59)
+    //     .set("second", 59)
+    //     .format("YYYY-MM-DD HH:mm:ss");
+    //   const kpiTop3Count = await dataLogStore.getKPItop3Count({
+    //     from,
+    //     to,
+    //     includesExcluded: false,
+    //   });
+    //   const kpiTop3Duration = await dataLogStore.getKPItop3Duration({
+    //     from,
+    //     to,
+    //     includesExcluded: false,
+    //   });
+    //   for (const dataSource of dataSources) {
+    //     const alarms = await dataLogStore.getKPItop3CountPerZone({
+    //       from,
+    //       to,
+    //       dataSource,
+    //       includesExcluded: false,
+    //     });
+    //     KPITop3PerZone.value.push({
+    //       dataSource,
+    //       alarms,
+    //     });
+    //   }
+    //   dayResume.value = [];
+    //   KPITop3Number.value = kpiTop3Count;
+    //   KPITop3Duration.value = kpiTop3Duration;
+    //   $q.loading.hide();
+    //   gettingData.value = false;
+    //   resolve();
+    // }
   });
 };
 
