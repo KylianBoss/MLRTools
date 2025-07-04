@@ -6,9 +6,17 @@
         <q-btn
           color="primary"
           label="Select File"
-          @click="selectFile"
+          @click="triggerFileInput"
           class="full-width q-mb-md"
           v-if="!data.length"
+        />
+        <q-file
+          v-model="selectedFilePath"
+          type="file"
+          accept=".txt,.csv"
+          multiple
+          style="display: none"
+          ref="fileInput"
         />
         <textarea
           v-model="data"
@@ -54,60 +62,6 @@
         <span class="text-negative">{{ dataLogStore.importError }}</span>
       </q-card-section>
     </q-card>
-    <!-- <q-table
-      :rows="dataLogStore.alarms"
-      row-key="alarmId"
-      wrap-cells
-      flat
-      bordered
-      :filter="filter"
-    >
-      <template v-slot:top>
-        <q-input
-          v-model="filter"
-          label="Rechercher"
-          color="primary"
-          dense
-          class="full-width"
-        />
-      </template>
-      <template v-slot:body="props">
-        <tr :props="props">
-          <td>{{ props.row.alarmId }}</td>
-          <td>{{ props.row.dataSource.toUpperCase() }}</td>
-          <td>{{ props.row.alarmArea.toUpperCase() }}</td>
-          <td>{{ props.row.alarmCode.toUpperCase() }}</td>
-          <td>{{ props.row.alarmText }}</td>
-          <td>{{ props.row.lastOccurence }}</td>
-          <q-menu touch-position context-menu>
-            <q-list dense style="min-width: 100px">
-              <q-item
-                clickable
-                v-close-popup
-                @click="dataLogStore.excludeAlarmId(props.row.alarmId)"
-              >
-                <q-item-section>Exclure cette alarme</q-item-section>
-              </q-item>
-              <q-item
-                clickable
-                v-close-popup
-                @click="dataLogStore.excludeAlarmCode(props.row.alarmCode)"
-                v-if="props.row.alarmCode"
-              >
-                <q-item-section>Exclure ce code d'alarme</q-item-section>
-              </q-item>
-              <q-item
-                clickable
-                v-close-popup
-                @click="translateAlarm(props.row.alarmId)"
-              >
-                <q-item-section>Ajouter une traduction</q-item-section>
-              </q-item>
-            </q-list>
-          </q-menu>
-        </tr>
-      </template>
-    </q-table> -->
   </q-page>
 </template>
 
@@ -125,24 +79,37 @@ const saved = ref(false);
 // const filter = ref("");
 const data = ref("");
 const estimatedTimeLeft = ref(0);
+const fileInput = ref(null);
 
-const selectFile = async () => {
-  try {
-    const result = await window.electron.selectFile({
-      name: "Text Files or CSV",
-      extensions: ["txt", "csv"],
-    });
-    if (result.canceled) {
-      return;
-    }
-    selectedFilePath.value = result.filePaths;
-  } catch (error) {
-    console.error("Error selecting file:", error);
+const triggerFileInput = () => {
+  if (fileInput.value) {
+    fileInput.value.pickFiles();
+  } else {
+    console.error("File input reference is not set.");
     $q.notify({
       type: "negative",
-      message: "Error selecting file: " + error.message,
+      message: "File input reference is not set.",
     });
   }
+};
+
+const selectFile = async () => {
+  // try {
+  //   const result = await window.electron.selectFile({
+  //     name: "Text Files or CSV",
+  //     extensions: ["txt", "csv"],
+  //   });
+  //   if (result.canceled) {
+  //     return;
+  //   }
+  //   selectedFilePath.value = result.filePaths;
+  // } catch (error) {
+  //   console.error("Error selecting file:", error);
+  //   $q.notify({
+  //     type: "negative",
+  //     message: "Error selecting file: " + error.message,
+  //   });
+  // }
 };
 
 const importFile = async () => {
@@ -191,28 +158,42 @@ const importFile = async () => {
 
   if (!selectedFilePath.value) return;
 
-  for (const filePath of selectedFilePath.value) {
-    console.log("Importing file:", filePath);
-
+  for (const file of selectedFilePath.value) {
     try {
-      const fileType = filePath.split(".").pop().toLowerCase();
-      const fileContent = await window.electron.readLargeFile(filePath);
+      const fileType = file.name.split(".").pop().toLowerCase();
+      const fileReader = new FileReader();
+      const fileContent = await new Promise((resolve, reject) => {
+        fileReader.onload = (event) => {
+          const content = event.target.result;
+          resolve(
+            content
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
+          );
+        };
+        fileReader.onerror = (error) => reject(error);
+        fileReader.readAsText(file);
+      });
 
-      const totalLines = fileContent.reduce(
-        (acc, chunk) => acc + chunk.length,
-        0
-      );
+      const totalLines = fileContent.length;
       console.log("Total lines:", totalLines);
       dataLogStore.startImport(totalLines);
 
-      for (const chunk of fileContent) {
+      const chunkSize = 1000;
+      const chunks = [];
+      for (let i = 0; i < fileContent.length; i += chunkSize) {
+        chunks.push(fileContent.slice(i, i + chunkSize));
+      }
+
+      for (const chunk of chunks) {
         await dataLogStore.importDataChunk(chunk, fileType);
         estimatedTimeLeft.value = dataLogStore.progression.estimatedTimeLeft;
       }
 
       $q.notify({
         type: "positive",
-        message: `File : ${filePath} imported successfully`,
+        message: `File : ${file.name} imported successfully`,
         actions: [{ icon: "close", color: "white" }],
         timeout: 0,
       });
