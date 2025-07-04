@@ -13,6 +13,7 @@
 import VueApexCharts from "vue3-apexcharts";
 import dayjs from "dayjs";
 import { ref, watch } from "vue";
+import { api } from "boot/axios";
 
 const props = defineProps({
   from: {
@@ -76,8 +77,8 @@ const getData = () => {
         "DD.MM.YYYY"
       )} au ${dayjs(props.to).format("DD.MM.YYYY")}`;
   chartSeries.value = [];
-  window.electron
-    .serverRequest("GET", `/charts/production/volume/${props.from}/${props.to}`)
+  api
+    .get(`/charts/production/volume/${props.from}/${props.to}`)
     .then((response) => {
       chartSeries.value.push({
         name: "Volume de production [caisses]",
@@ -103,7 +104,10 @@ const getData = () => {
       // Add median line series
       chartSeries.value.push({
         name: "Médiane",
-        data: data.map((item) => [dayjs(item.date).valueOf(), median.toFixed(0)]),
+        data: data.map((item) => [
+          dayjs(item.date).valueOf(),
+          median.toFixed(0),
+        ]),
         type: "line",
         color: "#2E93fA",
         dashArray: 3,
@@ -125,7 +129,10 @@ const getData = () => {
       const intercept = (sumY - slope * sumX) / n;
 
       // Création des points de la ligne de tendance
-      const trendLineData = xValues.map((x) => [x, (slope * x + intercept).toFixed(0)]);
+      const trendLineData = xValues.map((x) => [
+        x,
+        (slope * x + intercept).toFixed(0),
+      ]);
 
       // Ajout de la série de ligne de tendance
       chartSeries.value.push({

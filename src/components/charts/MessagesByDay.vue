@@ -13,6 +13,7 @@
 import VueApexCharts from "vue3-apexcharts";
 import dayjs from "dayjs";
 import { ref, watch } from "vue";
+import { api } from "boot/axios";
 
 const props = defineProps({
   from: {
@@ -72,9 +73,7 @@ const getData = () => {
         "DD.MM.YYYY"
       )} au ${dayjs(props.to).format("DD.MM.YYYY")}`;
   chartSeries.value = [];
-  window.electron
-    .serverRequest(
-      "GET",
+  api.get(
       `/charts/messages-count/${dayjs(props.from).format("YYYY-MM-DD")}/${dayjs(
         props.to
       ).format("YYYY-MM-DD")}`

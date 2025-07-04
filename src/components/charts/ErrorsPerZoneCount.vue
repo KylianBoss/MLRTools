@@ -13,6 +13,7 @@
 import VueApexCharts from "vue3-apexcharts";
 import dayjs from "dayjs";
 import { ref, watch } from "vue";
+import { api } from "boot/axios";
 
 const props = defineProps({
   from: {
@@ -82,9 +83,8 @@ const getData = () => {
         props.from
       ).format("DD.MM.YYYY")} au ${dayjs(props.to).format("DD.MM.YYYY")}`;
   chartSeries.value = [];
-  window.electron
-    .serverRequest(
-      "GET",
+  api
+    .get(
       `/charts/messages-per-zone/${dayjs(props.from).format(
         "YYYY-MM-DD"
       )}/${dayjs(props.to).format("YYYY-MM-DD")}`
@@ -93,8 +93,12 @@ const getData = () => {
       chartSeries.value = response.data.map((item) => item.count);
       // Remove everything that is less than 5% of the total but don't change the total
       const total = chartSeries.value.reduce((acc, cur) => acc + cur, 0);
-      chartSeries.value = chartSeries.value.filter((item) => item / total > 0.05);
-      chartOptions.value.labels = response.data.map((item) => item.dataSource).filter((item, index) => chartSeries.value[index] / total > 0.05);
+      chartSeries.value = chartSeries.value.filter(
+        (item) => item / total > 0.05
+      );
+      chartOptions.value.labels = response.data
+        .map((item) => item.dataSource)
+        .filter((item, index) => chartSeries.value[index] / total > 0.05);
       chartVisibility.value = true;
     });
 };
