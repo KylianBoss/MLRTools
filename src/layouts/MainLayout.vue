@@ -24,7 +24,7 @@
       @mouseleave="miniState = true"
       :mini="miniState"
       dense
-      v-if="!App.notConfigured && App.user.autorised && loaded"
+      v-if="!App.notConfigured && App.user.autorised && loaded && !App.isBot"
     >
       <q-scroll-area class="fit">
         <q-list>

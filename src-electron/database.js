@@ -108,8 +108,41 @@ function initDB(config) {
       }
     );
 
-    const zoneGroups = db.define(
-      "zoneGroups",
+    const Zones = db.define(
+      "Zones",
+      {
+        zone: {
+          type: DataTypes.STRING,
+          primaryKey: true,
+          allowNull: false,
+          comment: "Zone identifier, e.g. 'F001', 'F002', etc.",
+        },
+        zoneDescription: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: "Description of the zone, e.g. 'Zone 1', 'Zone 2', etc.",
+        },
+        zoneTransportType: {
+          type: DataTypes.ENUM("tray", "box", "pallet"),
+          allowNull: false,
+          defaultValue: "tray",
+          comment:
+            "Type of transport for the zone, e.g. 'tray', 'box', 'pallet'",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["zone"],
+          },
+        ],
+      }
+    );
+
+    const ZoneGroups = db.define(
+      "ZoneGroups",
       {
         zoneGroupName: {
           type: DataTypes.STRING,
@@ -119,26 +152,19 @@ function initDB(config) {
         zones: {
           type: DataTypes.JSON,
           allowNull: false,
-          get() {
-            return JSON.parse(this.getDataValue("zones"));
-          },
+          // get() {
+          //   return JSON.parse(this.getDataValue("zones"));
+          // },
           set(value) {
             this.setDataValue("zones", JSON.stringify(value));
           },
           comment: "Array of zones in the group, e.g. ['F001', 'F002', ...]",
         },
-      },
-      {
-        timestamps: false,
-      }
-    );
-
-    const ExcludedAlarms = db.define(
-      "ExcludedAlarms",
-      {
-        alarmId: {
-          type: DataTypes.STRING,
-          primaryKey: true,
+        messageType: {
+          type: DataTypes.STRING(10),
+          allowNull: false,
+          defaultValue: "LREP",
+          comment: "Type of message for the group, e.g. 'LREP', '26', etc.",
         },
       },
       {
@@ -146,16 +172,75 @@ function initDB(config) {
       }
     );
 
-    const ExcludedAlarmCodes = db.define(
-      "ExcludedAlarmCodes",
+    const ZoneReadPoints = db.define(
+      "ZoneReadPoints",
       {
-        alarmCode: {
+        zone: {
           type: DataTypes.STRING,
+          allowNull: false,
           primaryKey: true,
+          references: {
+            model: Zones,
+            key: "zone",
+          },
+          comment: "Zone identifier, e.g. 'F001', 'F002', etc.",
+        },
+        readPoints: {
+          type: DataTypes.JSON,
+          allowNull: false,
+          // get() {
+          //   return JSON.parse(this.getDataValue("readPoints"));
+          // },
+          set(value) {
+            this.setDataValue("readPoints", JSON.stringify(value));
+          },
+          comment:
+            "Array of read points for the zone, e.g. ['RP1', 'RP2', ...]",
         },
       },
       {
         timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["zone"],
+          },
+        ],
+      }
+    );
+
+    const ZoneGroupData = db.define(
+      "ZoneGroupData",
+      {
+        zoneGroupName: {
+          type: DataTypes.STRING,
+          references: {
+            model: ZoneGroups,
+            key: "zoneGroupName",
+          },
+          allowNull: false,
+          primaryKey: true,
+        },
+        date: {
+          type: DataTypes.DATEONLY,
+          allowNull: false,
+          primaryKey: true,
+        },
+        total: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "Total number of trays for the group on the date",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["zoneGroupName", "date"],
+          },
+        ],
       }
     );
 
@@ -193,6 +278,12 @@ function initDB(config) {
         autorised: {
           type: DataTypes.BOOLEAN,
           defaultValue: false,
+          comment: "If true, the user is authorized to access the system",
+        },
+        isBot: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+          comment: "If true, the user is a bot and not a real user",
         },
       },
       {
@@ -282,43 +373,6 @@ function initDB(config) {
       },
     });
 
-    const zones = DataTypes.ENUM(
-      "A",
-      "B",
-      "C",
-      "D",
-      "E",
-      "F",
-      "G",
-      "H",
-      "I",
-      "J",
-      "K",
-      "L",
-      "M",
-      "N",
-      "O",
-      "P",
-      "Q",
-      "R",
-      "S",
-      "T",
-      "U",
-      "V",
-      "W",
-      "X",
-      "Y",
-      "Z",
-      "AA",
-      "AB",
-      "AC",
-      "AD",
-      "AE",
-      "AF",
-      "AG",
-      "XX",
-      "SH"
-    );
     const alarmZoneTGWReport = db.define(
       "alarmZoneTGWReport",
       {

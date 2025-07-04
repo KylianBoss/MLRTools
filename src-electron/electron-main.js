@@ -1,18 +1,19 @@
-import { app, BrowserWindow, ipcMain, dialog } from "electron";
+import { app, BrowserWindow, ipcMain, Notification } from "electron";
 import path from "path";
-import express from "express";
 import { startServer, closeServer } from "./server";
 import os from "os";
 import fs from "fs";
-import fsPromises from "fs/promises";
-import readline from "readline";
 import { AutoUpdater } from "./auto-updater.js";
+import { EventSource } from "eventsource";
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
 
+app.setName("MLR Tools");
+
 let mainWindow;
 let httpServer;
+let eventSource;
 
 function createWindow() {
   /**
@@ -47,7 +48,8 @@ function createWindow() {
     startServer()
       .then((server) => {
         httpServer = server;
-        console.log("HTTP server started successfully");
+
+        connectToServer();
 
         mainWindow.loadURL(process.env.APP_URL);
         console.log("Main window URL loaded:", process.env.APP_URL);
@@ -96,7 +98,9 @@ app.on("window-all-closed", () => {
 });
 
 app.on("will-quit", async () => {
-  // Arrêter le serveur si la mainWindow est fermée
+  if (eventSource) {
+    eventSource.close();
+  }
   if (httpServer) {
     console.log("Stopping HTTP server...");
     await closeServer(httpServer)
@@ -109,6 +113,50 @@ app.on("will-quit", async () => {
   }
 });
 
+// Functions
+// Function to show notifications
+function showNotification(title, body) {
+  if (Notification.isSupported()) {
+    new Notification({
+      title: title,
+      body: body,
+      silent: true, // Set to true to avoid sound
+    }).show();
+  }
+}
+// Function to connect to WebSocket server
+function connectToServer() {
+  eventSource = new EventSource("http://localhost:3000/sse");
+
+  eventSource.onopen = () => {
+    console.log("SSE connection opened");
+  };
+
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log("SSE message recieved:", data);
+
+      if (data.type === "notification") {
+        showNotification(data.title, data.body);
+      }
+    } catch (error) {
+      console.error("Error parsing SSE:", error);
+    }
+  };
+
+  eventSource.onerror = (error) => {
+    console.error("Error SSE:", error);
+
+    setTimeout(() => {
+      if (eventSource.readyState === EventSource.CLOSED) {
+        connectToServer();
+      }
+    }, 5000);
+  };
+}
+
+// IPC communication
 // Handle IPC messages for printing
 ipcMain.handle("print-pdf", async (event, pdfUrl) => {
   return new Promise((resolve, reject) => {
@@ -142,15 +190,16 @@ ipcMain.handle("print-pdf", async (event, pdfUrl) => {
     }
   });
 });
+// Handle IPC to show notifications
+ipcMain.handle("show-notification", (event, { title, body }) => {
+  showNotification(title, body);
+});
 
 // Gestion des erreurs non capturées
 process.on("uncaughtException", (error) => {
   console.error("Erreur non capturée:", error);
-  // En mode kiosque, redémarrer l'application
-  if (isKioskMode) {
-    app.relaunch();
-    app.exit();
-  }
+
+  app.exit();
 });
 
 process.on("unhandledRejection", (reason, promise) => {

@@ -9,6 +9,8 @@ export const useAppStore = defineStore("App", {
     notConfigured: true,
     user: null,
     users: [],
+    isBot: false,
+    cronJobsInitialized: false,
     loading: false,
   }),
   getters: {
@@ -33,6 +35,15 @@ export const useAppStore = defineStore("App", {
               this.user.UserAccesses = this.user.UserAccesses.map(
                 (access) => access.menuId
               );
+              this.isBot = response.data.user.isBot || false;
+              if (this.isBot)
+                api
+                  .post("/cron/initialize", {
+                    user: this.user.username,
+                  })
+                  .then(() => {
+                    this.cronJobsInitialized = true;
+                  });
               resolve(true);
             }
           })
