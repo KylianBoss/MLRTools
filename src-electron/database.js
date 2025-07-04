@@ -373,36 +373,36 @@ function initDB(config) {
       },
     });
 
-    const alarmZoneTGWReport = db.define(
-      "alarmZoneTGWReport",
-      {
-        alarmId: {
-          type: DataTypes.STRING,
-          references: {
-            model: Alarms,
-            key: "alarmId",
-          },
-          allowNull: false,
-          primaryKey: true,
-        },
-        zones: {
-          type: DataTypes.JSON,
-          allowNull: false,
-          get() {
-            return JSON.parse(this.getDataValue("zones"));
-          },
-        },
-      },
-      {
-        timestamps: false,
-        indexes: [
-          {
-            unique: true,
-            fields: ["alarmId", "zone"],
-          },
-        ],
-      }
-    );
+    // const alarmZoneTGWReport = db.define(
+    //   "alarmZoneTGWReport",
+    //   {
+    //     alarmId: {
+    //       type: DataTypes.STRING,
+    //       references: {
+    //         model: Alarms,
+    //         key: "alarmId",
+    //       },
+    //       allowNull: false,
+    //       primaryKey: true,
+    //     },
+    //     zones: {
+    //       type: DataTypes.JSON,
+    //       allowNull: false,
+    //       get() {
+    //         return JSON.parse(this.getDataValue("zones"));
+    //       },
+    //     },
+    //   },
+    //   {
+    //     timestamps: false,
+    //     indexes: [
+    //       {
+    //         unique: true,
+    //         fields: ["alarmId", "zone"],
+    //       },
+    //     ],
+    //   }
+    // );
 
     const DayResume = db.define(
       "DayResume",
@@ -453,14 +453,62 @@ function initDB(config) {
       }
     );
 
+    const CronJobs = db.define(
+      "CronJobs",
+      {
+        jobName: {
+          type: DataTypes.STRING,
+          primaryKey: true,
+          comment: "Name of the cron job",
+        },
+        action: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Action to be performed by the cron job",
+        },
+        cronExpression: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Cron expression for the job, e.g. '0 0 * * *' for daily",
+        },
+        lastRun: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          comment: "Last time the job was run",
+        },
+        actualState: {
+          type: DataTypes.ENUM("running", "idle", "error"),
+          allowNull: false,
+          defaultValue: "idle",
+          comment:
+            "Current state of the job, can be 'running', 'idle', or 'error'",
+        },
+        lastLog: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          comment: "Last log message of the job",
+        },
+        enabled: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: true,
+          comment:
+            "If true, the job is enabled and will run according to its schedule",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
     Users.hasMany(UserAccess, {
       foreignKey: "userId",
     });
 
-    Alarms.hasOne(alarmZoneTGWReport, {
-      as: "TGWzone",
-      foreignKey: "alarmId",
-    });
+    // Alarms.hasOne(alarmZoneTGWReport, {
+    //   as: "TGWzone",
+    //   foreignKey: "alarmId",
+    // });
 
     console.log("Database initialized");
     resolve(db);

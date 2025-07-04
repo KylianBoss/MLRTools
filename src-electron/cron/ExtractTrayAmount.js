@@ -5,13 +5,46 @@ import path from "path";
 import puppeteer from "puppeteer";
 import csv from "csv-parser";
 
+const jobName = "extractTrayAmount";
+function updateJob(data = {}) {
+  return new Promise((resolve, reject) => {
+    db.models.CronJobs.findOne({
+      where: {
+        action: jobName,
+      },
+    })
+      .then((job) => {
+        if (job) {
+          job.update({ ...data }).then(() => {
+            resolve(job);
+          });
+        } else {
+          db.models.CronJobs.create({
+            action: jobName,
+            ...data,
+          }).then((job) => {
+            resolve(job);
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error updating job:", error);
+        reject(error);
+      });
+  });
+}
+
 export const extractTrayAmount = (date) => {
   return new Promise(async (resolve, reject) => {
     try {
+      await updateJob({
+        actualState: "running",
+        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        lastLog: `Starting extraction job`,
+      });
       const groups = await db.models.ZoneGroups.findAll({
         raw: true,
       });
-      console.log(groups);
       for (const group of groups) {
         group.addresses = [];
         group.total = 0;
@@ -28,7 +61,6 @@ export const extractTrayAmount = (date) => {
           group.addresses = [...group.addresses, ...readPoints.readPoints];
         }
       }
-      console.log(groups);
       const splits = [
         {
           start: `${date} 00:00:00`,
@@ -84,6 +116,11 @@ export const extractTrayAmount = (date) => {
         "Extract tray amount",
         "Starting extraction..."
       );
+      await updateJob({
+        actualState: "running",
+        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        lastLog: `Starting extraction for date ${date}`,
+      });
 
       // Setup the storage
       if (!fs.existsSync(path.join(process.cwd(), "storage", "downloads")))
@@ -132,6 +169,11 @@ export const extractTrayAmount = (date) => {
         "Extract tray amount",
         "Logged in successfully"
       );
+      await updateJob({
+        actualState: "running",
+        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        lastLog: `Logged in successfully`,
+      });
       await sleep(2000);
 
       await page.goto(
@@ -153,6 +195,11 @@ export const extractTrayAmount = (date) => {
           "Extract tray amount",
           `Processing group: ${group.name}`
         );
+        await updateJob({
+          actualState: "running",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `Processing group: ${group.name}`,
+        });
         for (const address of group.addresses) {
           let i = 1;
           for (const split of splits) {
@@ -261,6 +308,11 @@ export const extractTrayAmount = (date) => {
         "Extract tray amount",
         "All groups downloaded successfully, starting extraction..."
       );
+      await updateJob({
+        actualState: "running",
+        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        lastLog: `All groups downloaded successfully, starting extraction...`,
+      });
       await browser.close();
 
       for (const group of groups) {
@@ -333,6 +385,11 @@ export const extractTrayAmount = (date) => {
         "Extract tray amount",
         "Extraction completed successfully"
       );
+      await updateJob({
+        actualState: "idle",
+        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        lastLog: `Extraction completed successfully`,
+      });
       fs.rmdirSync(path.join(process.cwd(), "storage", "downloads"), {
         recursive: true,
       });
@@ -348,6 +405,15 @@ export const extractTrayAmount = (date) => {
       resolve(groups);
     } catch (error) {
       console.error("Error extracting tray amount:", error);
+      global.sendNotificationToElectron(
+        "Extract tray amount",
+        `Error extracting tray amount: ${error.message}`
+      );
+      await updateJob({
+        actualState: "error",
+        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        lastLog: `Error extracting tray amount: ${error.message}`,
+      });
       reject(error);
     }
   });

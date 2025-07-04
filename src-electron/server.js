@@ -81,49 +81,6 @@ app.get("/extract/:date", (req, res) => {
 });
 app.use(routes);
 
-// === CRON JOBS === //
-app.post("/cron/initialize", async (req, res) => {
-  const { user } = req.body;
-  if (!user) {
-    res.status(400).json({ error: "No user provided" });
-    return;
-  }
-
-  try {
-    // Get the user
-    const user_ = await db.models.Users.findOne({
-      where: {
-        username: user,
-      },
-      include: {
-        model: db.models.UserAccess,
-        attributes: ["menuId"],
-      },
-    });
-    if (!user_) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
-    // Control if the user is a bot
-    if (!user_.isBot) {
-      res.status(403).json({ error: "User not authorized" });
-      return;
-    }
-
-    console.log("Initializing cron jobs for user:", user);
-    // Start the cron job to extract tray amount every day at 05:00
-    cron.schedule("0 8 * * *", () => {
-      console.log("Cron job started: Extracting tray amount");
-      extractTrayAmount(dayjs().subtract(1, "day").format("YYYY-MM-DD"));
-    });
-    console.log("Cron jobs initialized successfully");
-    res.json({ message: "Cron jobs initialized successfully" });
-  } catch (error) {
-    console.error("Error initializing cron jobs:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 app.post("/alarms/zone/:alarmId", async (req, res) => {
   const { zones } = req.body;
   console.log("Updating alarm zone:", req.params.alarmId, zones);

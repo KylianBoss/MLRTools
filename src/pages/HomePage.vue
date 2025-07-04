@@ -26,6 +26,22 @@
               <p class="text-dark q-mb-md">
                 Les tâches planifiées pour la récupération des données sont en cours d'exécution.
               </p>
+
+              <ul>
+                <li v-for="job in cronJobs" :key="job.name">
+                  <strong>{{ job.jobName }}</strong>
+                  <q-chip
+                    :color="job.actualState === 'running' ? 'green' : job.actualState === 'error' ? 'red' : 'grey'"
+                    text-color="white"
+                    class="q-mb-sm"
+                  >
+                    {{ job.actualState }}
+                  </q-chip>
+                  <br />
+                  Dernière execution: {{ job.lastRun ? new Date(job.lastRun).toLocaleString() : 'N/A' }}<br />
+                  Dernier log: {{ job.lastLog ? job.lastLog : 'Aucun log disponible' }}<br />
+                </li>
+              </ul>
             </div>
           </div>
         </q-card-section>
@@ -83,9 +99,49 @@
 </template>
 
 <script setup>
-import { useAppStore } from 'src/stores/app';
+import { useAppStore } from 'stores/app';
+import { api } from 'boot/axios';
+import { ref, onMounted } from 'vue';
+import { EventSource } from 'eventsource';
 
 const App = useAppStore();
+
+const cronJobs = ref([]);
+
+// Fetch status from an SSE endpoint
+const fetchCronStatus = async () => {
+  const eventSource = new EventSource('http://localhost:3000/cron/status');
+  eventSource.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'cronJobStatus' ) {
+      const index = cronJobs.value.findIndex(job => job.action === data.job.action);
+      if (index !== -1) {
+        cronJobs.value[index] = {
+          ...cronJobs.value[index],
+          jobName: data.job.jobName,
+          actualState: data.job.actualState,
+          lastRun: data.job.lastRun ? new Date(data.job.lastRun) : null,
+          lastLog: data.job.lastLog || 'Aucun log disponible'
+        };
+      }
+    }
+  };
+  eventSource.onerror = (error) => {
+    console.error('Error fetching cron status:', error);
+    eventSource.close();
+  };
+};
+
+
+onMounted(async () => {
+  try {
+    const response = await api.get('/cron');
+    cronJobs.value = response.data;
+    fetchCronStatus();
+  } catch (error) {
+    console.error('Error fetching cron jobs:', error);
+  }
+});
 </script>
 
 <style></style>

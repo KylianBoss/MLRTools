@@ -33,10 +33,16 @@ router.post("/sync-models", async (req, res) => {
       res.status(403).json({ error: "User not authorized" });
       return;
     }
-    console.log("Syncing models");
-    await db.sync({ alter: true });
-    console.log("Models synced");
-    res.sendStatus(201);
+    try {
+      console.log("Syncing models");
+      await db.sync({ alter: true, logging: console.log });
+      await db.sync({ logging: false });
+      console.log("Models synced");
+      res.sendStatus(201);
+    } catch (syncError) {
+      console.error("Error syncing models:", syncError);
+      res.status(500).json({ error: "Failed to sync models" });
+    }
   } catch (error) {
     console.error("Error syncing models:", JSON.stringify(error));
     res.status(500).json({ error: error.message });
