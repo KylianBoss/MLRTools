@@ -202,26 +202,26 @@ export const useDataLogStore = defineStore("datalog", {
     },
     async getKPItop3Count(filter) {
       return api
-        .get("/alarms/kpi/count", { params: filter })
+        .get("/kpi/count", { params: filter })
         .then((response) => response.data);
     },
     getKPItop3CountPerZone(filter) {
       return new Promise((resolve) => {
-        api.get("/alarms/kpi/count/zone", { params: filter }).then((data) => {
+        api.get("/kpi/count/zone", { params: filter }).then((data) => {
           resolve(data.data);
         });
       });
     },
     getKPItop3Duration(filter) {
       return new Promise((resolve) => {
-        api.get("/alarms/kpi/duration", { params: filter }).then((data) => {
+        api.get("/kpi/duration", { params: filter }).then((data) => {
           resolve(data.data);
         });
       });
     },
     getDayResume(filter) {
       return new Promise((resolve) => {
-        api.get("/alarms/kpi/resume", { params: filter }).then((response) => {
+        api.get("/kpi/resume", { params: filter }).then((response) => {
           resolve(response.data);
         });
       });
