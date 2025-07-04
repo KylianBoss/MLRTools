@@ -190,15 +190,15 @@ export const extractTrayAmount = (date) => {
       const messageTypeInput = await page.$('input[id="input_5"]');
 
       for (const group of groups) {
-        console.log(`Processing group: ${group.name}`);
+        console.log(`Processing group: ${group.zoneGroupName}`);
         global.sendNotificationToElectron(
           "Extract tray amount",
-          `Processing group: ${group.name}`
+          `Processing group: ${group.zoneGroupName}`
         );
         await updateJob({
           actualState: "running",
           lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          lastLog: `Processing group: ${group.name}`,
+          lastLog: `Processing group: ${group.zoneGroupName}`,
         });
         for (const address of group.addresses) {
           let i = 1;
@@ -232,7 +232,7 @@ export const extractTrayAmount = (date) => {
             const pageContent = await page.content();
             if (pageContent.includes("Aucun jeu de données")) {
               console.warn(
-                `No data found for address ${address} in group ${group.name} for split ${i}`
+                `No data found for address ${address} in group ${group.zoneGroupName} for split ${i}`
               );
               i++;
               continue;
@@ -374,7 +374,7 @@ export const extractTrayAmount = (date) => {
             process.cwd(),
             "storage",
             "archives",
-            `${dayjs(date).format("YYYY_MM_DD")}_${group.name}.json`
+            `${dayjs(date).format("YYYY_MM_DD")}_${group.zoneGroupName}.json`
           ),
           JSON.stringify(groupData, null, 2)
         );
@@ -397,7 +397,7 @@ export const extractTrayAmount = (date) => {
       // Save data in DB
       for (const group of groups) {
         await db.models.ZoneGroupData.create({
-          zoneGrounName: group.name,
+          zoneGrounName: group.zoneGroupName,
           date: dayjs(date).format("YYYY-MM-DD"),
           total: group.total,
         });
