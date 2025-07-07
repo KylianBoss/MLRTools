@@ -166,6 +166,13 @@ function initDB(config) {
           defaultValue: "LREP",
           comment: "Type of message for the group, e.g. 'LREP', '26', etc.",
         },
+        zoneTransportType: {
+          type: DataTypes.ENUM("tray", "box", "pallet"),
+          allowNull: false,
+          defaultValue: "tray",
+          comment:
+            "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
+        },
       },
       {
         timestamps: false,
@@ -345,33 +352,33 @@ function initDB(config) {
       },
     });
 
-    const ignoredAlarms = db.define("ignoredAlarms", {
-      id: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      alarmDbId: {
-        type: DataTypes.INTEGER,
-        references: {
-          model: Datalog,
-          key: "dbId",
-        },
-        allowNull: false,
-      },
-      reason: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      ignoredBy: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        references: {
-          model: Users,
-          key: "id",
-        },
-        allowNull: false,
-      },
-    });
+    // const ignoredAlarms = db.define("ignoredAlarms", {
+    //   id: {
+    //     type: DataTypes.INTEGER.UNSIGNED,
+    //     primaryKey: true,
+    //     autoIncrement: true,
+    //   },
+    //   alarmDbId: {
+    //     type: DataTypes.INTEGER,
+    //     references: {
+    //       model: Datalog,
+    //       key: "dbId",
+    //     },
+    //     allowNull: false,
+    //   },
+    //   reason: {
+    //     type: DataTypes.STRING,
+    //     allowNull: false,
+    //   },
+    //   ignoredBy: {
+    //     type: DataTypes.INTEGER.UNSIGNED,
+    //     references: {
+    //       model: Users,
+    //       key: "id",
+    //     },
+    //     allowNull: false,
+    //   },
+    // });
 
     // const alarmZoneTGWReport = db.define(
     //   "alarmZoneTGWReport",

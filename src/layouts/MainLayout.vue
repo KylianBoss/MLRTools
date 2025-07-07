@@ -65,10 +65,16 @@
             v-if="App.userHaveAccessToOneOf(['charts'])"
           >
             <drawer-item
-              to="charts"
+              to="general-charts"
               autorisation="charts"
               icon="mdi-chart-bell-curve-cumulative"
-              label="Graphiques"
+              label="Graphiques généraux"
+            />
+            <drawer-item
+              to="faillures-charts"
+              autorisation="charts"
+              icon="mdi-chart-bell-curve"
+              label="Graphiques des pannes"
             />
           </q-expansion-item>
           <!-- ALARMS -->

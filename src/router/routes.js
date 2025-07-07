@@ -18,8 +18,18 @@ const routes = [
       },
       {
         path: "charts",
-        name: "charts",
-        component: () => import("src/pages/ChartsPage.vue"),
+        children: [
+          {
+            path: "general",
+            name: "general-charts",
+            component: () => import("src/pages/ChartsPage.vue"),
+          },
+          {
+            path: "faillure",
+            name: "faillures-charts",
+            component: () => import("src/pages/FailluresChartsPage.vue"),
+          },
+        ],
       },
       {
         path: "alarms",
