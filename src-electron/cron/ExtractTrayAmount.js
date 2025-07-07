@@ -378,21 +378,32 @@ export const extractTrayAmount = (date) => {
                 .on("data", (data) => results.push(data))
                 .on("end", () => {
                   results = results.map((d) => {
-                    const date = dayjs.EVENT_TIME.split(" ")[0]
-                      .split(".")
-                      .reverse()
-                      .join("-");
-                    const time = dayjs.EVENT_TIME.split(" ")[1].split(",")[0];
-                    const dateTime = dayjs(`${date} ${time}`).format(
-                      "YYYY-MM-DD HH:mm:ss"
-                    );
+                    const dateRegex =
+                      /(\d{2}\.\d{2}\.\d{4}) (\d{2}:\d{2}:\d{2}),/;
+                    const match = d.EVENT_TIME.match(dateRegex);
+                    let dateTime = "";
+                    if (!match) {
+                      console.warn(
+                        `Invalid date format for address ${address} in group ${group.zoneGroupName} for split ${i}`
+                      );
+                      dateTime = dayjs(split_.start).format(
+                        "YYYY-MM-DD HH:mm:ss"
+                      );
+                    } else {
+                      dateTime = dayjs(
+                        `${match[1]} ${match[2]}`,
+                        "DD.MM.YYYY HH:mm:ss"
+                      ).format("YYYY-MM-DD HH:mm:ss");
+                    }
                     return {
                       timestamp: dateTime,
                       trayId: d.loadCarrierIdentifier,
                       address: d.addressidentifier,
                     };
                   });
-                  console.log(`Extracted ${results.length} records for address ${address} in group ${group.zoneGroupName} for split ${i}`);
+                  console.log(
+                    `Extracted ${results.length} records for address ${address} in group ${group.zoneGroupName} for split ${i}`
+                  );
                   splitGroup = [...splitGroup, ...results];
                   resolve();
                 });
