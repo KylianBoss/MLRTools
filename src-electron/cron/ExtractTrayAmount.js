@@ -123,10 +123,13 @@ export const extractTrayAmount = (date) => {
       });
 
       // Setup the storage
-      if (!fs.existsSync(path.join(process.cwd(), "storage", "downloads")))
-        fs.mkdirSync(path.join(process.cwd(), "storage", "downloads"), {
+      if (fs.existsSync(path.join(process.cwd(), "storage", "downloads")))
+        fs.rmdirSync(path.join(process.cwd(), "storage", "downloads"), {
           recursive: true,
         });
+      fs.mkdirSync(path.join(process.cwd(), "storage", "downloads"), {
+        recursive: true,
+      });
       if (!fs.existsSync(path.join(process.cwd(), "storage", "achrives")))
         fs.mkdirSync(path.join(process.cwd(), "storage", "archives"), {
           recursive: true,
@@ -407,13 +410,10 @@ export const extractTrayAmount = (date) => {
         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         lastLog: `Extraction completed successfully`,
       });
-      fs.rmdirSync(path.join(process.cwd(), "storage", "downloads"), {
-        recursive: true,
-      });
 
       // Save data in DB
       for (const group of groups) {
-        await db.models.ZoneGroupData.create({
+        await db.models.ZoneGroupData.upsert({
           zoneGroupName: group.zoneGroupName,
           date: dayjs(date).format("YYYY-MM-DD"),
           total: group.total,
