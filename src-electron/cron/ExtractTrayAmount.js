@@ -349,18 +349,20 @@ export const extractTrayAmount = (date) => {
                   process.cwd(),
                   "storage",
                   "downloads",
-                  `${address}_${split.start}.csv`
+                  `${address}_${i}.csv`
                 )
               )
-            )
+            ) {
+              i++;
               continue;
+            }
             await new Promise((resolve, reject) => {
               fs.createReadStream(
                 path.join(
                   process.cwd(),
                   "storage",
                   "downloads",
-                  `${address}_${split.start}.csv`
+                  `${address}_${i}.csv`
                 ),
                 "utf8"
               )
