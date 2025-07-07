@@ -242,6 +242,7 @@ export const extractTrayAmount = (date) => {
             await Promise.all([
               page.waitForNavigation({
                 waitUntil: "networkidle0",
+                timeout: 120000,
               }),
               page.click('input[name="Search"]'),
             ]);
