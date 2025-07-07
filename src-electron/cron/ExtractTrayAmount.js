@@ -337,11 +337,16 @@ export const extractTrayAmount = (date) => {
       await browser.close();
 
       for (const group of groups) {
+        console.log(`Extracting data for group: ${group.zoneGroupName}`);
         let groupData = [];
         for (const address of group.addresses) {
+          console.log(`Processing address: ${address}`);
           let i = 1;
           let splitGroup = [];
           for (const split of splits) {
+            console.log(
+              `Processing split ${i} for address ${address} in group ${group.zoneGroupName}`
+            );
             let results = [];
             if (
               !fs.existsSync(
@@ -354,6 +359,9 @@ export const extractTrayAmount = (date) => {
               )
             ) {
               i++;
+              console.warn(
+                `File not found for address ${address} in group ${group.zoneGroupName} for split ${i}`
+              );
               continue;
             }
             await new Promise((resolve, reject) => {
@@ -384,6 +392,7 @@ export const extractTrayAmount = (date) => {
                       address: d.addressidentifier,
                     };
                   });
+                  console.log(`Extracted ${results.length} records for address ${address} in group ${group.zoneGroupName} for split ${i}`);
                   splitGroup = [...splitGroup, ...results];
                   resolve();
                 });
@@ -392,6 +401,9 @@ export const extractTrayAmount = (date) => {
           }
           groupData = [...groupData, ...splitGroup];
         }
+        console.log(
+          `Total records extracted for group ${group.zoneGroupName}: ${groupData.length}`
+        );
         fs.writeFileSync(
           path.join(
             process.cwd(),
