@@ -183,6 +183,7 @@ export const extractTrayAmount = (date) => {
         "https://10.95.62.134:8443/infosystem/protected/report.jspa?method=GET&categorizeable=report.1676549483645&view=&mode=edit",
         {
           waitUntil: "networkidle0",
+          timeout: 120000,
         }
       );
 
