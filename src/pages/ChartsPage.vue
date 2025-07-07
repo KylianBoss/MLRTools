@@ -1,14 +1,6 @@
 <template>
   <q-page padding>
-    <div class="text-h4">Graphiques</div>
-    <!-- <div class="text-h5">Messages d'erreur par zone</div>
-    <vue-apex-charts
-      type="pie"
-      height="350"
-      :options="chartMessagesCountOptions"
-      :series="chartMessagesCountSeries"
-      v-if="chartMessagesCountVisibility"
-    /> -->
+    <div class="text-h4">Graphiques généraux</div>
     <div class="row">
       <div class="col">
         <q-input
