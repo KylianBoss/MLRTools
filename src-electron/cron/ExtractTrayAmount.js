@@ -419,6 +419,16 @@ export const extractTrayAmount = (date) => {
           total: group.total,
         });
       }
+      // Save data in archives
+      fs.writeFileSync(
+        path.join(
+          process.cwd(),
+          "storage",
+          "archives",
+          `${dayjs(date).format("YYYY_MM_DD")}_extract_result.json`
+        ),
+        JSON.stringify(groups, null, 2)
+      );
       resolve(groups);
     } catch (error) {
       console.error("Error extracting tray amount:", error);
