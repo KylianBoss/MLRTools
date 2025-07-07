@@ -165,9 +165,11 @@ const startCron = async (action) => {
 
 onMounted(async () => {
   try {
-    const response = await api.get('/cron');
-    cronJobs.value = response.data;
-    fetchCronStatus();
+    if (App.isBot) {
+      const response = await api.get('/cron');
+      cronJobs.value = response.data;
+      fetchCronStatus();
+    }
   } catch (error) {
     console.error('Error fetching cron jobs:', error);
   }
