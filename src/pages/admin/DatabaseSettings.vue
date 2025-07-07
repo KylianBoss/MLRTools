@@ -37,7 +37,7 @@
     <div class="row q-py-xs">
       <div class="col">
         <q-btn
-          label="Extraire le nombre de trays"
+          label="Extraire le nombre de trays pour une date"
           color="primary"
           @click="extractTrayAmount"
           class="full-width"
