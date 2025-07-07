@@ -231,7 +231,7 @@
         </q-expansion-item>
       </div>
     </div>
-    <div class="row q-pt-xs" v-if="typeof toDisplay == 'string'">
+    <div class="row q-pt-xs">
       <div class="col">
         <q-linear-progress
           v-if="dayResume.map((d) => d.dataSource).length < dataSources.length"
