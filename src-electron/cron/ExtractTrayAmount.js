@@ -343,7 +343,7 @@ export const extractTrayAmount = (date) => {
           console.log(`Processing address: ${address}`);
           let i = 1;
           let splitGroup = [];
-          for (const split of splits) {
+          for (const split_ of splits) {
             console.log(
               `Processing split ${i} for address ${address} in group ${group.zoneGroupName}`
             );
@@ -464,6 +464,7 @@ export const extractTrayAmount = (date) => {
 const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
+
 const clearInput = (input, page) => {
   return new Promise(async (resolve) => {
     await input.focus();
