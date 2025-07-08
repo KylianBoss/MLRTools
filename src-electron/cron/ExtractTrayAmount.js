@@ -201,13 +201,13 @@ export const extractTrayAmount = (date) => {
           lastLog: `Processing group: ${group.zoneGroupName}`,
         });
         for (const address of group.addresses) {
-          await updateJob({
-            actualState: "running",
-            lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-            lastLog: `Processing group: ${group.zoneGroupName} - Address: ${address}`,
-          });
           let i = 1;
           for (const split of splits) {
+            await updateJob({
+              actualState: "running",
+              lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+              lastLog: `Processing group: ${group.zoneGroupName} - Address: ${address} - Split: ${i}`,
+            });
             const startDateInput = await page.$(
               'input[id="inputTimestampPicker_1"]'
             );
@@ -266,6 +266,11 @@ export const extractTrayAmount = (date) => {
                 if (downloadLink) {
                   await downloadLink.click();
                   console.log("Start downloading CSV file...");
+                  await updateJob({
+                    actualState: "running",
+                    lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                    lastLog: `Start downloading CSV file for address ${address} in group ${group.name} for split ${i}`,
+                  });
                 } else {
                   console.warn(
                     `No download link found for address ${address} in group ${group.name} for split ${i}`
@@ -295,6 +300,11 @@ export const extractTrayAmount = (date) => {
                   )
                 );
                 console.log("CSV file downloaded successfully");
+                await updateJob({
+                  actualState: "running",
+                  lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                  lastLog: `CSV file downloaded successfully for address ${address} in group ${group.name} for split ${i}`,
+                });
 
                 fs.renameSync(
                   path.join(
@@ -348,6 +358,11 @@ export const extractTrayAmount = (date) => {
             console.log(
               `Processing split ${i} for address ${address} in group ${group.zoneGroupName}`
             );
+            await updateJob({
+              actualState: "running",
+              lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+              lastLog: `Processing split ${i} for address ${address} in group ${group.zoneGroupName}`,
+            });
             let results = [];
             if (
               !fs.existsSync(
@@ -377,7 +392,7 @@ export const extractTrayAmount = (date) => {
               )
                 .pipe(csv({ separator: ";" }))
                 .on("data", (data) => results.push(data))
-                .on("end", () => {
+                .on("end", async () => {
                   results = results.map((d) => {
                     const dateRegex =
                       /(\d{2}\.\d{2}\.\d{4}) (\d{2}:\d{2}:\d{2}),/;
@@ -405,6 +420,11 @@ export const extractTrayAmount = (date) => {
                   console.log(
                     `Extracted ${results.length} records for address ${address} in group ${group.zoneGroupName} for split ${i}`
                   );
+                  await updateJob({
+                    actualState: "running",
+                    lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                    lastLog: `Extracted ${results.length} records for address ${address} in group ${group.zoneGroupName} for split ${i}`,
+                  });
                   splitGroup = [...splitGroup, ...results];
                   resolve();
                 });
