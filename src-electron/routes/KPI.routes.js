@@ -211,30 +211,29 @@ router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
 });
 router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
   const { groupName } = req.params;
+  const from = dayjs()
+    .subtract(7, "day")
+    .startOf("day")
+    .format("YYYY-MM-DD HH:mm:ss");
+  const to = dayjs().endOf("day").format("YYYY-MM-DD HH:mm:ss");
 
   try {
-    let lastSevenDays = [];
-    for (let i = 0; i < 7; i++) {
-      const alarms = await db.query(
-        "CALL getKPICountByZoneGroup(:from, :to, :groupName, false, 10)",
-        {
-          replacements: {
-            from: dayjs()
-              .subtract(7, "day")
-              .startOf("day")
-              .format("YYYY-MM-DD HH:mm:ss"),
-            to: dayjs().endOf("day").format("YYYY-MM-DD HH:mm:ss"),
-            groupName,
-          },
-        }
-      );
-      lastSevenDays.push({
-        date: dayjs().subtract(i, "day").format("YYYY-MM-DD"),
-        alarms: alarms || [],
-      });
-    }
+    const alarms = await db.query(
+      "CALL getTop10AlarmsWithDailyBreakdown(:from, :to, :groupName, false)",
+      {
+        replacements: {
+          from,
+          to,
+          groupName,
+        },
+      }
+    );
 
-    res.json(lastSevenDays);
+    // if (!alarms || alarms.length === 0) {
+    //   return res.status(404).json({ error: "No alarms found for this group" });
+    // }
+
+    res.json(alarms);
   } catch (error) {
     console.error("Error fetching KPI alarms by group:", error);
     res.status(500).json({ error: error.message });

@@ -13,11 +13,40 @@
     </q-card-section>
     <q-card-section v-if="chartVisibility">
       <q-table
-        :rows="topErrors"
+        :rows="rows"
         :columns="columns"
         :rows-per-page-options="[0]"
         no-data-label="Aucune erreur trouvée"
-      />
+        row-key="alarmId"
+        flat
+        bordered
+        dense
+      >
+        <template v-slot:body-cell="props">
+          <q-td :props="props">
+            <div v-if="props.col.name === 'error'" class="text-weight-medium">
+              {{ props.value }}
+            </div>
+            <div v-else class="text-center" :class="cellFormat(props.value)">
+              {{ props.value }}
+            </div>
+          </q-td>
+        </template>
+
+        <template v-slot:header-cell="props">
+          <q-th :props="props" class="text-weight-bold">
+            {{ props.col.label }}
+          </q-th>
+        </template>
+
+        <!-- Message si pas de données -->
+        <template v-slot:no-data>
+          <div class="full-width row flex-center text-grey q-gutter-sm">
+            <q-icon size="2em" name="warning" />
+            <span>Aucune donnée disponible</span>
+          </div>
+        </template>
+      </q-table>
     </q-card-section>
     <q-card-section v-else>
       <skeleton-table />
@@ -84,19 +113,9 @@ const chartOptions = ref({
   },
 });
 const chartSeries = ref([]);
-const topErrors = ref([]);
+const rows = ref([]);
+const columns = ref([]);
 const chartVisibility = ref(false);
-
-const columns = ref([{ name: "error", label: "Erreur", field: "error" }]);
-for (let i = 1; i <= 7; i++) {
-  columns.value.push({
-    name: `day${i}`,
-    label: dayjs()
-      .subtract(8 - i, "day")
-      .format("DD/MM"),
-    field: `day${i}`,
-  });
-}
 
 const getData = async () => {
   chartSeries.value = [];
@@ -106,10 +125,11 @@ const getData = async () => {
   const errorsFromLastSevenDays = await api.get(
     `/kpi/charts/alarms-by-group/${props.group.groupName}`
   );
-  console.table(errorsFromLastSevenDays.data);
-  topErrors.value = getTop10AlarmsWithDailyBreakdown(
+  const { tableRows, tableColumns } = formatDataForTable(
     errorsFromLastSevenDays.data
   );
+  rows.value = tableRows;
+  columns.value = tableColumns;
 
   chartSeries.value.push(
     {
@@ -176,74 +196,71 @@ const getData = async () => {
   chartVisibility.value = true;
 };
 
-const getTop10AlarmsWithDailyBreakdown = (weeklyData) => {
-  const alarmAggregation = new Map();
+const formatDataForTable = (data) => {
+  const alarmMap = new Map();
+  const dates = new Set();
 
-  // Créer un array des dates pour référence
-  const dates = weeklyData.map((dayData) => dayData.date).sort();
+  data.forEach((row) => {
+    dates.add(row.alarm_date);
 
-  // Première passe : agréger pour identifier le top 10
-  weeklyData.forEach((dayData) => {
-    dayData.alarms.forEach((alarm) => {
-      const alarmId = alarm.alarmId;
+    if (!alarmMap.has(row.alarmId)) {
+      alarmMap.set(row.alarmId, {
+        alarmId: row.alarmId,
+        error: row.alarmText,
+        dailyBreakdown: {},
+      });
+    }
 
-      if (alarmAggregation.has(alarmId)) {
-        const existing = alarmAggregation.get(alarmId);
-        existing.totalCount += alarm.count;
-      } else {
-        alarmAggregation.set(alarmId, {
-          alarmId: alarm.alarmId,
-          alarmText: alarm.alarmText,
-          alarmCode: alarm.alarmCode,
-          alarmArea: alarm.alarmArea,
-          dataSource: alarm.dataSource,
-          totalCount: alarm.count,
-          dailyBreakdown: {},
-        });
-      }
+    alarmMap.get(row.alarmId).dailyBreakdown[row.alarm_date] = row.daily_count;
+  });
+
+  const sortedDates = Array.from(dates).sort();
+
+  const tableColumns = [
+    {
+      name: "error",
+      label: "Erreur",
+      field: "error",
+      align: "left",
+      sortable: false,
+      style: "width: 300px;",
+    },
+  ];
+
+  sortedDates.forEach((date) => {
+    const formattedDate = dayjs(date).format("DD/MM");
+
+    tableColumns.push({
+      name: date,
+      label: formattedDate,
+      field: date,
+      align: "center",
+      sortable: false,
     });
   });
 
-  // Identifier le top 10
-  const top10AlarmIds = Array.from(alarmAggregation.values())
-    .sort((a, b) => b.totalCount - a.totalCount)
-    .slice(0, 10)
-    .map((alarm) => alarm.alarmId);
-
-  // Deuxième passe : créer le breakdown quotidien pour le top 10
-  const result = top10AlarmIds.map((alarmId) => {
-    const alarmInfo = alarmAggregation.get(alarmId);
-
-    // Initialiser tous les jours à 0
-    const dailyBreakdown = {};
-    dates.forEach((date) => {
-      dailyBreakdown[date] = 0;
-    });
-    console.log("dailyBreakdown", dailyBreakdown);
-
-    // Remplir avec les vraies valeurs
-    weeklyData.forEach((dayData) => {
-      const alarmForDay = dayData.alarms.find(
-        (alarm) => alarm.alarmId === alarmId
-      );
-      if (alarmForDay) {
-        dailyBreakdown[dayData.date] = alarmForDay.count;
-        console.log(dailyBreakdown, alarmForDay);
-      }
-    });
-
-    return {
-      alarmId: alarmInfo.alarmId,
-      alarmText: alarmInfo.alarmText,
-      alarmCode: alarmInfo.alarmCode,
-      alarmArea: alarmInfo.alarmArea,
-      dataSource: alarmInfo.dataSource,
-      totalCount: alarmInfo.totalCount,
-      dailyBreakdown: dailyBreakdown,
+  const tableRows = Array.from(alarmMap.values()).map((alarm) => {
+    const row = {
+      alarmId: alarm.alarmId,
+      error: alarm.error,
     };
+
+    sortedDates.forEach((date) => {
+      row[date] = alarm.dailyBreakdown[date] || 0;
+    });
+
+    return row;
   });
 
-  return result;
+  return { tableRows, tableColumns };
+};
+
+const cellFormat = (value) => {
+  if (value === 0) return "text-grey bg-grey";
+  if (value < 5) return "text-dark bg-green";
+  if (value < 10) return "text-dark bg-yellow";
+  if (value < 20) return "text-dark bg-orange";
+  return "text-dark bg-red";
 };
 
 getData();
