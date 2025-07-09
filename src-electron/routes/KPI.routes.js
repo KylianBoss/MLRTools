@@ -120,7 +120,7 @@ router.get("/resume", async (req, res) => {
 router.get("/groups", async (req, res) => {
   try {
     const groups = await db.models.ZoneGroups.findAll({
-      attributes: ["zoneGroupName", "zones"],
+      attributes: ["zoneGroupName", "zones", "zoneTransportType"],
     });
 
     if (!groups || groups.length === 0) {
@@ -142,6 +142,7 @@ router.get("/groups", async (req, res) => {
       return {
         groupName: group.zoneGroupName,
         zones: zoneDetails,
+        transportType: group.zoneTransportType,
       };
     });
 
@@ -228,10 +229,6 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
         },
       }
     );
-
-    // if (!alarms || alarms.length === 0) {
-    //   return res.status(404).json({ error: "No alarms found for this group" });
-    // }
 
     res.json(alarms);
   } catch (error) {

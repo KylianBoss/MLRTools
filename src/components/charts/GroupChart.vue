@@ -27,7 +27,11 @@
             <div v-if="props.col.name === 'error'" class="text-weight-medium">
               {{ props.value }}
             </div>
-            <div v-else class="text-center" :class="cellFormat(props.value)">
+            <div
+              v-else
+              class="text-center"
+              :class="cellFormat(props.value, props.row)"
+            >
               {{ props.value }}
             </div>
           </q-td>
@@ -133,12 +137,18 @@ const getData = async () => {
 
   chartSeries.value.push(
     {
-      name: "Pannes / 1000 trays (nombre)",
+      name:
+        props.group.transportType === "tray"
+          ? "Pannes / 1000 trays (nombre)"
+          : "Pannes / 100 palettes (nombre)",
       type: "column",
       data: errorsByThousand.data.map((item) => item.number.toFixed(2)),
     },
     {
-      name: "Panne / 1000 trays (temps)",
+      name:
+        props.group.transportType === "tray"
+          ? "Pannes / 1000 trays (temps)"
+          : "Pannes / 100 palettes (temps)",
       type: "column",
       data: errorsByThousand.data.map((item) => item.time),
     },
@@ -164,7 +174,10 @@ const getData = async () => {
   };
   chartOptions.value.yaxis = [
     {
-      seriesName: "Pannes / 1000 trays (nombre)",
+      seriesName:
+        props.group.transportType === "tray"
+          ? "Pannes / 1000 trays (nombre)"
+          : "Pannes / 100 palettes (nombre)",
       axisTicks: {
         show: true,
       },
@@ -172,11 +185,17 @@ const getData = async () => {
         show: true,
       },
       title: {
-        text: "Nombre de pannes / 1000 trays",
+        text:
+          props.group.transportType === "tray"
+            ? "Nombre de pannes / 1000 trays"
+            : "Nombre de pannes / 100 palettes",
       },
     },
     {
-      seriesName: "Pannes / 1000 trays (nombre)",
+      seriesName:
+        props.group.transportType === "tray"
+          ? "Pannes / 1000 trays (temps)"
+          : "Pannes / 100 palettes (temps)",
       show: false,
     },
     {
@@ -255,12 +274,27 @@ const formatDataForTable = (data) => {
   return { tableRows, tableColumns };
 };
 
-const cellFormat = (value) => {
+const cellFormat = (value, row) => {
+  if (value === null || value === undefined) return "text-grey bg-grey";
   if (value === 0) return "text-grey bg-grey";
-  if (value < 5) return "text-dark bg-green";
-  if (value < 10) return "text-dark bg-yellow";
-  if (value < 20) return "text-dark bg-orange";
-  return "text-dark bg-red";
+
+  const maxValue = Math.max(
+    ...Object.values(row)
+      .filter((val) => typeof val === "number")
+      .filter((val) => val > 0)
+  );
+  const minValue = Math.min(
+    ...Object.values(row)
+      .filter((val) => typeof val === "number")
+      .filter((val) => val > 0)
+  );
+  const range = maxValue - minValue;
+  const normalizedValue = (value - minValue) / range;
+  if (normalizedValue < 0.1) return "text-dark bg-green"; // Lowest 10%
+  if (normalizedValue < 0.2) return "text-dark bg-yellow"; // Middle 20%
+  if (normalizedValue < 0.5) return "text-dark bg-orange"; // Middle 20% to 50%
+  return "text-dark bg-red"; // Highest 50%
+};
 };
 
 getData();
