@@ -2,6 +2,7 @@
   <q-card>
     <q-card-section v-if="chartVisibility">
       <vue-apex-charts
+        ref="chart"
         height="350"
         :options="chartOptions"
         :series="chartSeries"
@@ -75,6 +76,8 @@ const props = defineProps({
     required: true,
   },
 });
+
+const chart = ref(null);
 const chartOptions = ref({
   chart: {
     height: 350,
@@ -120,6 +123,11 @@ const chartSeries = ref([]);
 const rows = ref([]);
 const columns = ref([]);
 const chartVisibility = ref(false);
+
+defineExpose({
+  getChart: () => getChart(),
+  chart,
+});
 
 const getData = async () => {
   chartSeries.value = [];
@@ -295,6 +303,17 @@ const cellFormat = (value, row) => {
   if (normalizedValue < 0.5) return "text-dark bg-orange"; // Middle 20% to 50%
   return "text-dark bg-red"; // Highest 50%
 };
+
+const getChart = () => {
+  return new Promise((resolve) => {
+    if (chart.value) {
+      chart.value.getChart().then((apexChart) => {
+        resolve(apexChart);
+      });
+    } else {
+      resolve(null);
+    }
+  });
 };
 
 getData();
