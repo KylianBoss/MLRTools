@@ -60,42 +60,69 @@ const chartOptions = ref({
   },
   plotOptions: {
     bar: {
-      columnWidth: "20%"
-    }
+      columnWidth: "20%",
+    },
   },
 });
 const chartSeries = ref([]);
 const topErrors = ref([]);
 const chartVisibility = ref(false);
 
+const emits = defineEmits(["loaded"]);
+
 const columns = ref([{ name: "error", label: "Erreur", field: "error" }]);
 for (let i = 1; i <= 7; i++) {
   columns.value.push({
     name: `day${i}`,
-    label: dayjs().subtract(8 - i, "day").format("DD/MM"),
+    label: dayjs()
+      .subtract(8 - i, "day")
+      .format("DD/MM"),
     field: `day${i}`,
   });
 }
 
-const getData = () => {
+const getData = async () => {
   chartSeries.value = [];
-  chartSeries.value.push({
-    name: "Pannes / 1000 trays",
-    data: [
-      {
-        x: "Global",
-        y: 12,
-        goals: [
-          {
-            name: "Target",
-            value: 0,
-            strokeColor: "#C10015",
-          },
-        ],
-      },
-    ],
-  });
+
+  const data = await api.get(`/kpi/charts/global-last-7-days`);
+  console.log(data);
+
+  chartSeries.value.push(
+    {
+      name: "Nombre de pannes",
+      data: [
+        {
+          x: "Nombre d'erreurs moyen",
+          y: data.data.avg_errors_per_thousand,
+          goals: [
+            {
+              name: "Target",
+              value: 0,
+              strokeColor: "#C10015",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: "Temps de pannes",
+      data: [
+        {
+          x: "Temps de panne moyen",
+          y: data.data.avg_downtime_minutes_per_thousand,
+          goals: [
+            {
+              name: "Target",
+              value: 0,
+              strokeColor: "#C10015",
+            },
+          ],
+        },
+      ],
+    }
+  );
   chartVisibility.value = true;
+  emits("loaded");
   // api.get(
   //     `/charts/last-7-days`
   //   )
