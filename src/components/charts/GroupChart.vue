@@ -63,7 +63,7 @@
 import VueApexCharts from "vue3-apexcharts";
 import SkeletonTable from "../SkeletonTable.vue";
 import dayjs from "dayjs";
-import { ref, watch } from "vue";
+import { ref, onMounted } from "vue";
 import { api } from "boot/axios";
 
 const props = defineProps({
@@ -125,9 +125,9 @@ const columns = ref([]);
 const chartVisibility = ref(false);
 
 defineExpose({
-  getChart: () => getChart(),
   chart,
 });
+const emits = defineEmits(["loaded"]);
 
 const getData = async () => {
   chartSeries.value = [];
@@ -155,10 +155,10 @@ const getData = async () => {
     {
       name:
         props.group.transportType === "tray"
-          ? "Pannes / 1000 trays (temps)"
-          : "Pannes / 100 palettes (temps)",
+          ? "Pannes / 1000 trays (temps [minutes])"
+          : "Pannes / 100 palettes (temps [minutes])",
       type: "column",
-      data: errorsByThousand.data.map((item) => item.time),
+      data: errorsByThousand.data.map((item) => item.time.toFixed(2)),
     },
     {
       name: "Moyenne 7 jours (nombre)",
@@ -200,11 +200,24 @@ const getData = async () => {
       },
     },
     {
+      opposite: true,
       seriesName:
         props.group.transportType === "tray"
-          ? "Pannes / 1000 trays (temps)"
-          : "Pannes / 100 palettes (temps)",
-      show: false,
+          ? "Pannes / 1000 trays (temps [minutes])"
+          : "Pannes / 100 palettes (temps [minutes])",
+      axisTicks: {
+        show: true,
+      },
+      axisBorder: {
+        show: true,
+      },
+      title: {
+        text:
+          props.group.transportType === "tray"
+            ? "Temps de pannes / 1000 trays (minutes)"
+            : "Temps de pannes / 100 palettes (minutes)",
+        rotate: 90,
+      },
     },
     {
       opposite: true,
@@ -218,9 +231,11 @@ const getData = async () => {
       title: {
         text: "Moyenne mobile 7 jours",
       },
+      show: false,
     },
   ];
   chartVisibility.value = true;
+  emits("loaded");
 };
 
 const formatDataForTable = (data) => {
@@ -286,16 +301,12 @@ const cellFormat = (value, row) => {
   if (value === null || value === undefined) return "text-grey bg-grey";
   if (value === 0) return "text-grey bg-grey";
 
-  const maxValue = Math.max(
-    ...Object.values(row)
-      .filter((val) => typeof val === "number")
-      .filter((val) => val > 0)
-  );
-  const minValue = Math.min(
-    ...Object.values(row)
-      .filter((val) => typeof val === "number")
-      .filter((val) => val > 0)
-  );
+  const rowsValues = rows.value
+    .map((r) => Object.values(r).filter((v) => typeof v === "number"))
+    .flat()
+    .filter((v) => v > 0);
+  const maxValue = Math.max(...rowsValues);
+  const minValue = Math.min(...rowsValues);
   const range = maxValue - minValue;
   const normalizedValue = (value - minValue) / range;
   if (normalizedValue < 0.1) return "text-dark bg-green"; // Lowest 10%
@@ -304,19 +315,9 @@ const cellFormat = (value, row) => {
   return "text-dark bg-red"; // Highest 50%
 };
 
-const getChart = () => {
-  return new Promise((resolve) => {
-    if (chart.value) {
-      chart.value.getChart().then((apexChart) => {
-        resolve(apexChart);
-      });
-    } else {
-      resolve(null);
-    }
-  });
-};
-
-getData();
+onMounted(() => {
+  getData();
+});
 </script>
 
 <style></style>
