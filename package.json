@@ -1,6 +1,6 @@
 {
   "name": "mlr-tool",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "Tools for MLR",
   "productName": "MLR Tools",
   "author": "Kylian Boss <kylian.boss@bossconcepts.ch>",
@@ -29,6 +29,7 @@
     "dotenv": "^16.4.5",
     "eventsource": "^4.0.0",
     "express": "^4.21.2",
+    "html-pdf-node": "^1.0.8",
     "mariadb": "^3.4.0",
     "node-cron": "^3.0.3",
     "pdfkit": "^0.15.1",

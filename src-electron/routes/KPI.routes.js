@@ -2,7 +2,6 @@ import { Router } from "express";
 import { db } from "../database.js";
 import dayjs from "dayjs";
 import { Op } from "sequelize";
-import html_to_pdf from "html-pdf-node";
 
 const router = Router();
 
@@ -224,7 +223,9 @@ router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
 });
 router.get("/charts/global-last-7-days", async (req, res) => {
   try {
-    const results = await db.query("CALL getAverageErrorsAndDowntimeLast7Days()");
+    const results = await db.query(
+      "CALL getAverageErrorsAndDowntimeLast7Days()"
+    );
     if (!results || results.length === 0) {
       return res
         .status(404)
@@ -264,26 +265,7 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
   }
 });
 router.post("/charts/print", async (req, res) => {
-  const { html } = req.body;
-
-  if (!html) return res.status(400).json({ error: "No HTML provided" });
-
-  const options = { format: "A4" };
-  const file = { content: html };
-
-  try {
-    html_to_pdf.generatePdf(file, options).then((pdfBuffer) => {
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": 'attachment; filename="report.pdf"',
-      });
-      // Send the PDF buffer in base64 format
-      res.send(pdfBuffer.toString("base64"));
-    });
-  } catch (error) {
-    console.error("Error generating PDF:", error);
-    res.status(500).json({ error: "Failed to generate PDF" });
-  }
+  res.send("PDF generation is not implemented yet.");
 });
 
 export default router;
