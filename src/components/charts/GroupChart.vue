@@ -25,7 +25,13 @@
       >
         <template v-slot:body-cell="props">
           <q-td :props="props">
-            <div v-if="props.col.name === 'error'" class="text-weight-medium">
+            <div v-if="props.col.name === 'dataSource'" class="text-weight-medium">
+              {{ props.value }}
+            </div>
+            <div v-else-if="props.col.name === 'alarmArea'" class="text-weight-medium">
+              {{ props.value }}
+            </div>
+            <div v-else-if="props.col.name === 'error'" class="text-weight-medium">
               {{ props.value }}
             </div>
             <div
@@ -247,6 +253,8 @@ const formatDataForTable = (data) => {
 
     if (!alarmMap.has(row.alarmId)) {
       alarmMap.set(row.alarmId, {
+        dataSource: row.dataSource,
+        alarmArea: row.alarmArea,
         alarmId: row.alarmId,
         error: row.alarmText,
         dailyBreakdown: {},
@@ -259,6 +267,20 @@ const formatDataForTable = (data) => {
   const sortedDates = Array.from(dates).sort();
 
   const tableColumns = [
+    {
+      name: "dataSource",
+      label: "Source",
+      field: "dataSource",
+      align: "left",
+      sortable: false,
+    },
+    {
+      name: "alarmArea",
+      label: "Module",
+      field: "alarmArea",
+      align: "left",
+      sortable: false,
+    },
     {
       name: "error",
       label: "Erreur",
@@ -284,6 +306,8 @@ const formatDataForTable = (data) => {
   const tableRows = Array.from(alarmMap.values()).map((alarm) => {
     const row = {
       alarmId: alarm.alarmId,
+      dataSource: alarm.dataSource,
+      alarmArea: alarm.alarmArea,
       error: alarm.error,
     };
 

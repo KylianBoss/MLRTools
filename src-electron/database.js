@@ -145,7 +145,7 @@ function initDB(config) {
       "ZoneGroups",
       {
         zoneGroupName: {
-          type: DataTypes.STRING,
+          type: DataTypes.STRING(30),
           primaryKey: true,
           comment: "Name of the zone group",
         },
@@ -172,6 +172,12 @@ function initDB(config) {
           defaultValue: "tray",
           comment:
             "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
+        },
+        order: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "Order of the group in the list, used for sorting",
         },
       },
       {

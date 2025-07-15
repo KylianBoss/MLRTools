@@ -121,6 +121,7 @@ router.get("/groups", async (req, res) => {
   try {
     const groups = await db.models.ZoneGroups.findAll({
       attributes: ["zoneGroupName", "zones", "zoneTransportType"],
+      order: [["order", "ASC"]],
     });
 
     if (!groups || groups.length === 0) {
@@ -235,6 +236,31 @@ router.get("/charts/global-last-7-days", async (req, res) => {
     res.json(results[0]);
   } catch (error) {
     console.error("Error fetching global KPI charts:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+router.get("/charts/global-last-7-days/top-10", async (req, res) => {
+  const from = dayjs()
+    .subtract(7, "day")
+    .startOf("day")
+    .format("YYYY-MM-DD HH:mm:ss");
+  const to = dayjs().endOf("day").format("YYYY-MM-DD HH:mm:ss");
+
+  try {
+    const alarms = await db.query(
+      "CALL getTop10AlarmsWithDailyBreakdown(:from, :to, :groupName, false)",
+      {
+        replacements: {
+          from,
+          to,
+          groupName: "*",
+        },
+      }
+    );
+
+    res.json(alarms);
+  } catch (error) {
+    console.error("Error fetching alarms globals for the last 7 days:", error);
     res.status(500).json({ error: error.message });
   }
 });

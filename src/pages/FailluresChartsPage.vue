@@ -9,6 +9,7 @@
           class="full-width"
           label="Imprimer en PDF"
           @click="printPDF"
+          v-if="false"
         />
       </div>
     </div>
