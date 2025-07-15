@@ -25,13 +25,22 @@
       >
         <template v-slot:body-cell="props">
           <q-td :props="props">
-            <div v-if="props.col.name === 'dataSource'" class="text-weight-medium">
+            <div
+              v-if="props.col.name === 'dataSource'"
+              class="text-weight-medium"
+            >
               {{ props.value }}
             </div>
-            <div v-else-if="props.col.name === 'alarmArea'" class="text-weight-medium">
+            <div
+              v-else-if="props.col.name === 'alarmArea'"
+              class="text-weight-medium"
+            >
               {{ props.value }}
             </div>
-            <div v-else-if="props.col.name === 'error'" class="text-weight-medium">
+            <div
+              v-else-if="props.col.name === 'error'"
+              class="text-weight-medium"
+            >
               {{ props.value }}
             </div>
             <div
@@ -171,6 +180,12 @@ const getData = async () => {
       type: "line",
       data: errorsByThousand.data.map((item) => item.movingAverage),
       color: "#C10015",
+    },
+    {
+      name: "Quantité de trays",
+      type: "column",
+      data: errorsByThousand.data.map((item) => item.trayAmount),
+      color: "#00C100",
     }
   );
   chartOptions.value.xaxis = {
@@ -236,6 +251,20 @@ const getData = async () => {
       },
       title: {
         text: "Moyenne mobile 7 jours",
+      },
+      show: false,
+    },
+    {
+      opposite: true,
+      seriesName: "Quantité de trays",
+      axisTicks: {
+        show: true,
+      },
+      axisBorder: {
+        show: true,
+      },
+      title: {
+        text: "Quantité de trays",
       },
       show: false,
     },

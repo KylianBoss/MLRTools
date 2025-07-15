@@ -2,8 +2,11 @@ import { Router } from "express";
 import { db } from "../database.js";
 import dayjs from "dayjs";
 import { Op } from "sequelize";
+import { v4 as uuid } from "uuid";
+import PDFDocument from "pdfkit";
 
 const router = Router();
+const printPDF = {};
 
 router.get("/count", async (req, res) => {
   const { from, to, includesExcluded = false } = req.query;
@@ -197,6 +200,7 @@ router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
         date: dayjs(item.date).format("YYYY-MM-DD"),
         number: dataNumber[0].result || 0,
         time: dataTime[0].result || 0,
+        trayAmount: dataNumber[0].trayAmount || 0,
       };
     });
     const results = await Promise.all(formattedData);
@@ -290,8 +294,56 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-router.post("/charts/print", async (req, res) => {
-  res.send("PDF generation is not implemented yet.");
+router.get("/charts/print", async (req, res) => {
+  const id = uuid();
+  printPDF[id] = [];
+  res.json({ id });
+});
+router.post("/charts/print/:id", async (req, res) => {
+  const { id } = req.params;
+  const { image } = req.body;
+
+  if (!printPDF[id]) {
+    return res.status(404).json({ error: "Print session not found" });
+  }
+
+  printPDF[id].push(image);
+
+  res.json({ status: "Image added to print session" });
+});
+router.get("/charts/print/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (!printPDF[id]) {
+    return res.status(404).json({ error: "Print session not found" });
+  }
+
+  const images = printPDF[id];
+  if (images.length === 0) {
+    return res.status(404).json({ error: "No images in print session" });
+  }
+  const doc = new PDFDocument({
+    autoFirstPage: false,
+    layout: "landscape",
+    margin: 36,
+  });
+  const buffers = [];
+  doc.on("data", (buffer) => buffers.push(buffer));
+  doc.on("end", () => {
+    const pdfData = Buffer.concat(buffers);
+    delete printPDF[id]; // Clear the session after fetching
+    res.setHeader("Content-Type", "application/pdf");
+    res.send(pdfData);
+  });
+  images.forEach((image) => {
+    doc.addPage();
+    doc.image(image, {
+      fit: [doc.page.width - 72, doc.page.height - 72],
+      align: "center",
+      valign: "center",
+    });
+  });
+  doc.end();
 });
 
 export default router;
