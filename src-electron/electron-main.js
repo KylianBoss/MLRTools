@@ -27,7 +27,6 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,
-      nodeIntegration: true,
       enableRemoteModule: false,
       preload: path.resolve(__dirname, process.env.QUASAR_ELECTRON_PRELOAD),
     },
