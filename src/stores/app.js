@@ -9,7 +9,6 @@ export const useAppStore = defineStore("App", {
     notConfigured: true,
     user: null,
     users: [],
-    isBot: false,
     cronJobsInitialized: false,
     loading: false,
   }),
@@ -20,6 +19,18 @@ export const useAppStore = defineStore("App", {
     },
     userHaveAccessToOneOf: (state) => (menuIds) => {
       return state.user.UserAccesses.some((access) => menuIds.includes(access));
+    },
+    userId: (state) => {
+      return state.user ? state.user.id : null;
+    },
+    isBot: (state) => {
+      return state.user && state.user.isBot;
+    },
+    isAdmin: (state) => {
+      return state.user && state.user.isAdmin;
+    },
+    isTechnician: (state) => {
+      return state.user && state.user.isTechnician;
     },
   },
   actions: {
@@ -35,7 +46,6 @@ export const useAppStore = defineStore("App", {
               this.user.UserAccesses = this.user.UserAccesses.map(
                 (access) => access.menuId
               );
-              this.isBot = response.data.user.isBot || false;
               if (this.isBot)
                 api
                   .post("/cron/initialize", {
