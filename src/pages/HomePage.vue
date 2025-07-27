@@ -169,9 +169,9 @@ onMounted(async () => {
       const response = await api.get('/cron');
       cronJobs.value = response.data;
       fetchCronStatus();
-      await api.post('/bot/active', { userId: App.user.id });
+      await api.post('/bot/active', { userId: App.userId });
       setInterval(async () => {
-        await api.post('/bot/active', { userId: App.user.id });
+        await api.post('/bot/active', { userId: App.userId });
       }, 60000); // every minute
     }
   } catch (error) {

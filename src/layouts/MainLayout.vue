@@ -9,13 +9,25 @@
           {{ App.user ? App.user.fullname : null }}<br />
           {{ pack.version }}
         </span>
+        <q-btn
+          flat
+          dense
+          icon="mdi-alert"
+          v-if="App.isAdmin"
+          @click="rightDrawerOpen = !rightDrawerOpen"
+          class="q-ml-sm"
+        >
+          <q-badge color="red" floating v-if="errors.length > 0">
+            {{ errors.length }}
+          </q-badge>
+        </q-btn>
       </q-toolbar>
       <update-checker v-if="loaded" />
     </q-header>
 
     <!-- MENU -->
     <q-drawer
-      v-model="rightDrawerOpen"
+      v-model="leftDrawerOpen"
       :breakpoint="500"
       bordered
       side="left"
@@ -172,6 +184,35 @@
       </q-scroll-area>
     </q-drawer>
 
+    <!-- ERRORS -->
+    <q-drawer
+      v-model="rightDrawerOpen"
+      :breakpoint="500"
+      bordered
+      side="right"
+      dense
+      overlay
+    >
+      <q-scroll-area class="fit q-pa-sm">
+        <q-list>
+          <q-item-label class="text-h6 q-mb-md">Erreurs</q-item-label>
+          <q-item v-for="(error, index) in errors" :key="index" class="-mb-sm">
+            <q-item-section avatar>
+              <q-icon
+                v-if="error.type === 'error'"
+                name="mdi-alert"
+                color="red"
+              />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ error.message }}</q-item-label>
+            </q-item-section>
+            <q-separator v-if="index < errors.length - 1" class="q-mt-sm" />
+          </q-item>
+        </q-list>
+      </q-scroll-area>
+    </q-drawer>
+
     <q-page-container>
       <!-- Information banners -->
       <div
@@ -229,17 +270,17 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount } from "vue";
+import { ref, watch, onMounted } from "vue";
 import pack from "../../package.json";
 import { useAppStore } from "stores/app";
-import { useQuasar, QSpinnerFacebook } from "quasar";
 import UpdateChecker from "components/UpdateChecker.vue";
 import { useDataLogStore } from "src/stores/datalog";
 import DrawerItem from "components/navigation/DrawerItem.vue";
+import { api } from "boot/axios";
 
 const App = useAppStore();
-const $q = useQuasar();
-const rightDrawerOpen = ref(true);
+const leftDrawerOpen = ref(true);
+const rightDrawerOpen = ref(false);
 const miniState = ref(true);
 const drawers = ref([]);
 const loaded = ref(false);
@@ -252,26 +293,50 @@ const closeDrawers = () => {
   drawers.value = [];
 };
 
+const errors = ref([]);
+
 watch(miniState, (value) => {
   if (value) closeDrawers();
 });
+
+const getBotsStatus = async () => {
+  try {
+    const response = await api.get("/bot/status");
+    if (response.data && response.data.length === 0) {
+      errors.value.push({
+        message: "Aucun bot programmé",
+        type: "error",
+      });
+    } else if (response.data && response.data.length > 0) {
+      let isOneBotActive = false;
+      response.data.forEach((bot) => {
+        if (!!bot.isActive) {
+          isOneBotActive = true;
+        }
+      });
+      if (!isOneBotActive) {
+        errors.value.push({
+          message: "Aucun bot actif",
+          type: "error",
+        });
+      }
+    } else {
+      errors.value = [];
+    }
+  } catch (error) {
+    console.error("Error fetching bot status:", error);
+  }
+};
 
 onMounted(async () => {
   await App.init();
   await dataLogStore.initialize();
   loaded.value = true;
+  if (App.isAdmin) {
+    getBotsStatus();
+    setInterval(getBotsStatus, 60000); // every minute
+  }
 });
-
-const showLoading = () => {
-  $q.loading.show({
-    spinner: QSpinnerFacebook,
-    spinnerColor: "primary",
-    spinnerSize: 160,
-    backgroundColor: "dark",
-    message: "Chargement...",
-    messageColor: "white",
-  });
-};
 </script>
 
 <style>
