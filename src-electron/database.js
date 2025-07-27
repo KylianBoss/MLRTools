@@ -288,15 +288,43 @@ function initDB(config) {
           type: DataTypes.STRING,
           defaultValue: "Unknown",
         },
+        email: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          validate: {
+            isEmail: true,
+          },
+          comment: "Email address of the user",
+        },
+        recieveDailyReport: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+          comment: "If true, the user will receive daily reports",
+        },
         autorised: {
           type: DataTypes.BOOLEAN,
           defaultValue: false,
           comment: "If true, the user is authorized to access the system",
         },
+        isTechnician: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+          comment: "If true, the user is a technician with special permissions",
+        },
+        isAdmin: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+          comment: "If true, the user is an admin with full permissions",
+        },
         isBot: {
           type: DataTypes.BOOLEAN,
           defaultValue: false,
           comment: "If true, the user is a bot and not a real user",
+        },
+        isBotActive: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          comment: "If isBot is true, this field indicates the last active time of the bot",
         },
       },
       {
