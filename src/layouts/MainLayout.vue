@@ -209,6 +209,11 @@
             </q-item-section>
             <q-separator v-if="index < errors.length - 1" class="q-mt-sm" />
           </q-item>
+          <q-item v-if="errors.length === 0">
+            <q-item-section>
+              <q-item-label class="text-center">Aucune erreur</q-item-label>
+            </q-item-section>
+          </q-item>
         </q-list>
       </q-scroll-area>
     </q-drawer>
