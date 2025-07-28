@@ -173,6 +173,9 @@ export class AutoUpdater {
         headers: {
           Accept: "application/vnd.github.v3+json",
         },
+        httpsAgent: new (require("https").Agent)({
+          rejectUnauthorized: false,
+        }),
       });
       this.console.info("Update downloaded successfully");
       const downloadPath = path.join(app.getPath("temp"), "update.zip");
