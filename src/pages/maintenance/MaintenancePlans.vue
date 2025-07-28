@@ -21,6 +21,16 @@
           </template>
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
+              <!-- DUPLICATE -->
+              <q-btn
+                color="dark"
+                icon="mdi-content-copy"
+                round
+                flat
+                dense
+                @click="duplocatePlan(props.row.id)"
+              />
+              <!-- VIEW -->
               <q-btn
                 color="primary"
                 icon="mdi-eye"

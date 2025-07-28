@@ -813,12 +813,6 @@ function initDB(config) {
       },
       {
         timestamps: false,
-        indexes: [
-          {
-            unique: true,
-            fields: ["description"],
-          },
-        ],
       }
     );
 

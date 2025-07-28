@@ -12,7 +12,7 @@ router.post("/upload", async (req, res) => {
 
     // Create a new image record in the database
     const imageRecord = await db.models.Images.create({
-      data: Buffer.from(image, "base64"), // Assuming image is base64 encoded
+      data: image,
       name: `image-${Date.now()}.jpg`, // Generate a unique filename
     });
     res.json({ id: imageRecord.id });
@@ -21,14 +21,14 @@ router.post("/upload", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-router.get("/image/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const image = await db.models.Images.findByPk(id);
     if (!image) {
       return res.status(404).json({ error: "Image not found" });
     }
-    res.setHeader("Content-Type", "image/jpeg");
+
     res.send(image.data);
   } catch (error) {
     console.error("Error fetching image:", error);

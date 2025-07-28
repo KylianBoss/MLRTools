@@ -1,5 +1,12 @@
 <template>
   <q-page padding v-if="maintenancePlan">
+    <q-btn
+      icon="mdi-arrow-left"
+      label="Retour"
+      flat
+      dense
+      :to="{ name: 'maintenance-plans' }"
+    />
     <div class="text-h4">Plans de maintenance</div>
     <div class="row">
       <div class="col">
@@ -65,14 +72,37 @@
                     <q-item-label>{{ step.description }}</q-item-label>
                   </q-item-section>
                   <q-item-section side>
-                    <q-btn
-                      color="primary"
-                      icon="mdi-pencil"
-                      round
-                      flat
-                      dense
-                      @click="editStep(index)"
-                    />
+                    <div class="row">
+                      <div class="col">
+                        <!-- DUPLICATE -->
+                        <q-btn
+                          color="dark"
+                          icon="mdi-content-copy"
+                          round
+                          flat
+                          dense
+                          @click="copy(index)"
+                        />
+                        <!-- EDIT -->
+                        <q-btn
+                          color="primary"
+                          icon="mdi-pencil"
+                          round
+                          flat
+                          dense
+                          @click="editStep(index)"
+                        />
+                        <!-- DELETE -->
+                        <q-btn
+                          color="negative"
+                          icon="mdi-delete"
+                          round
+                          flat
+                          dense
+                          @click="deleteStep(index)"
+                        />
+                      </div>
+                    </div>
                   </q-item-section>
                 </q-item>
               </vue-draggable>
@@ -165,12 +195,12 @@
           class="q-mb-md"
         />
         <q-img
-          v-if="imagePreview"
-          :src="imagePreview"
+          v-if="stepData.image"
+          :src="stepData.image"
           class="q-mb-md"
-          style="max-height: 200px; max-width: 100%"
+          style="max-width: 100%"
           contain
-          spinner-color="white"
+          spinner-color="dark"
         >
           <template v-slot:placeholder>
             <q-spinner color="grey" />
@@ -217,13 +247,11 @@ import { ref, onMounted } from "vue";
 import { api } from "boot/axios";
 import { useAppStore } from "stores/app";
 import { VueDraggable } from "vue-draggable-plus";
-import { useQuasar } from "quasar";
 
 const App = useAppStore();
 const route = useRoute();
 const maintenancePlan = ref(null);
 const steps = ref([]);
-const $q = useQuasar();
 const stepDialog = ref(false);
 const stepData = ref({
   id: null,
@@ -235,7 +263,6 @@ const stepData = ref({
   linkedImage: null,
   notesPlaceholder: "",
 });
-const imagePreview = ref(null);
 
 const fetchMaintenancePlan = async () => {
   try {
@@ -281,10 +308,37 @@ const addStep = () => {
   stepDialog.value = true;
 };
 
-const editStep = (index) => {
+const editStep = async (index) => {
   const step = maintenancePlan.value.steps[index];
+  const imageResponse = await api.get(`/images/${step.linkedImage}`);
   stepData.value = {
     id: step.id,
+    description: step.description,
+    defect: step.defect,
+    fixing: step.fixing,
+    answerType: step.answerType,
+    goodAnswer: step.goodAnswer,
+    linkedImage: step.linkedImage || null,
+    image: imageResponse.data,
+    notesPlaceholder: step.notesPlaceholder || "",
+  };
+  stepDialog.value = true;
+};
+
+const deleteStep = async (index) => {
+  const step = maintenancePlan.value.steps[index];
+  try {
+    await api.delete(`/maintenance/plans/steps/${step.id}`);
+    maintenancePlan.value.steps.splice(index, 1);
+  } catch (error) {
+    console.error("Error deleting step:", error);
+  }
+};
+
+const copy = (index) => {
+  const step = { ...maintenancePlan.value.steps[index] };
+  stepData.value = {
+    id: null,
     description: step.description,
     defect: step.defect,
     fixing: step.fixing,
@@ -307,7 +361,6 @@ const saveStep = async () => {
           })
           .then(async (response) => {
             stepData.value.linkedImage = response.data.id;
-            imagePreview.value = e.target.result;
 
             if (stepData.value.id) {
               await api.put(
