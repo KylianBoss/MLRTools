@@ -1,5 +1,6 @@
 import { Sequelize, DataTypes } from "sequelize";
 import dotenv from "dotenv";
+import dayjs from "dayjs";
 
 dotenv.config();
 
@@ -324,7 +325,8 @@ function initDB(config) {
         isBotActive: {
           type: DataTypes.DATE,
           allowNull: true,
-          comment: "If isBot is true, this field indicates the last active time of the bot",
+          comment:
+            "If isBot is true, this field indicates the last active time of the bot",
         },
       },
       {
@@ -539,6 +541,371 @@ function initDB(config) {
       },
       {
         timestamps: false,
+      }
+    );
+
+    // Maintenance
+    const MaintenancePlan = db.define(
+      "MaintenancePlan",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        location: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Location of the maintenance",
+        },
+        type: {
+          type: DataTypes.ENUM("A", "B", "C"),
+          allowNull: false,
+          comment:
+            "Type of maintenance, can be 'A', 'B', 'C'. A = Every 2 months, B = Every 4 months, C = Every 8 months",
+        },
+        description: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Description of the maintenance plan",
+        },
+        lastMaintenance: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Last time the maintenance was performed",
+        },
+        nextMaintenance: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Next scheduled maintenance time",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["location", "type"],
+          },
+        ],
+        hooks: {
+          // If the lastMaintenance is updated, update the nextMaintenance
+          afterUpdate: (maintenance) => {
+            if (maintenance.changed("lastMaintenance")) {
+              const now = dayjs(maintenance.lastMaintenance);
+              switch (maintenance.type) {
+                case "A":
+                  maintenance.nextMaintenance = now.add(2, "month").toDate();
+                  break;
+                case "B":
+                  maintenance.nextMaintenance = now.add(4, "month").toDate();
+                  break;
+                case "C":
+                  maintenance.nextMaintenance = now.add(8, "month").toDate();
+                  break;
+              }
+            }
+          },
+        },
+      }
+    );
+
+    const MaintenanceSchedule = db.define(
+      "MaintenanceSchedule",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        maintenancePlanId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          references: {
+            model: MaintenancePlan,
+            key: "id",
+          },
+          allowNull: false,
+          comment: "ID of the maintenance plan",
+        },
+        scheduledTime: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          comment: "Scheduled time for the maintenance",
+        },
+        status: {
+          type: DataTypes.ENUM(
+            "scheduled",
+            "assigned",
+            "in_progress",
+            "completed",
+            "cancelled"
+          ),
+          allowNull: false,
+          defaultValue: "scheduled",
+          comment:
+            "Status of the maintenance schedule, can be 'scheduled', 'assigned', 'completed', or 'cancelled'",
+        },
+        assignedTo: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          references: {
+            model: Users,
+            key: "id",
+          },
+          comment: "User assigned to perform the maintenance",
+        },
+        notes: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Notes about the maintenance schedule",
+        },
+        actualMaintenanceLogId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          comment: "ID of the actual maintenance log, if any",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["maintenancePlanId", "scheduledTime"],
+          },
+        ],
+        hooks: {
+          beforeCreate: (schedule) => {
+            if (!schedule.scheduledTime) {
+              schedule.scheduledTime = dayjs().add(1, "day").toDate();
+            }
+          },
+        },
+      }
+    );
+
+    const Maintenance = db.define(
+      "Maintenance",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        maintenancePlanId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          references: {
+            model: MaintenancePlan,
+            key: "id",
+          },
+          allowNull: false,
+        },
+        performedBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: Users,
+            key: "id",
+          },
+          comment: "User who performed the maintenance",
+        },
+        startTime: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Start time of the maintenance",
+        },
+        endTime: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "End time of the maintenance",
+        },
+        duration: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Duration of the maintenance in seconds",
+        },
+        notes: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Notes about the maintenance",
+        },
+        report: {
+          type: DataTypes.JSON,
+          allowNull: true,
+          defaultValue: null,
+          get() {
+            return JSON.parse(this.getDataValue("report"));
+          },
+          set(value) {
+            this.setDataValue("report", JSON.stringify(value));
+          },
+          comment:
+            "Report of the maintenance, can contain details about the steps performed",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
+    const MaintenanceSteps = db.define(
+      "MaintenanceSteps",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        description: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Description of the maintenance step",
+        },
+        defect: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          defaultValue: null,
+          comment:
+            "Explaination of things that means that the step has to be marked as defect",
+        },
+        fixing: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          defaultValue: null,
+          comment:
+            "Explaination of things that means that the step has to be marked as fixing",
+        },
+        answerType: {
+          type: DataTypes.ENUM("boolean", "value"),
+          allowNull: false,
+          defaultValue: "boolean",
+          comment: "Type of answer for the step, can be 'boolean' or 'value'",
+        },
+        goodAnswer: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          defaultValue: null,
+          comment:
+            "Good answer for the step, can be 'yes', 'no', or a specific value",
+        },
+        notesPlaceholder: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          defaultValue: null,
+          comment:
+            "Placeholder for notes in the step, can be used to provide additional information",
+        },
+        linkedImage: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          references: {
+            model: "Images",
+            key: "id",
+          },
+          comment: "ID of the linked image for the step",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["description"],
+          },
+        ],
+      }
+    );
+
+    const MaintenancePlanSteps = db.define(
+      "MaintenancePlanSteps",
+      {
+        maintenancePlanId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          primaryKey: true,
+          references: {
+            model: MaintenancePlan,
+            key: "id",
+          },
+          comment: "ID of the maintenance plan",
+        },
+        stepId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          primaryKey: true,
+          references: {
+            model: MaintenanceSteps,
+            key: "id",
+          },
+          comment: "ID of the maintenance step",
+        },
+        order: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "Order of the step in the plan",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["maintenancePlanId", "stepId"],
+          },
+        ],
+      }
+    );
+
+    // Maintenance associations
+    // MaintenancePlan.hasMany(Maintenance, {
+    //   foreignKey: "maintenancePlanId",
+    //   as: "maintenances",
+    // });
+    // Maintenance.belongsTo(MaintenancePlan, {
+    //   foreignKey: "maintenancePlanId",
+    //   as: "maintenancePlan",
+    // });
+    // MaintenanceSteps.belongsToMany(Maintenance, {
+    //   through: "MaintenanceStepsMaintenance",
+    //   foreignKey: "stepId",
+    //   otherKey: "maintenanceId",
+    //   as: "maintenances",
+    // });
+
+    const Images = db.define(
+      "Images",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        name: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Name of the image file",
+        },
+        data: {
+          type: DataTypes.BLOB("long"),
+          allowNull: false,
+          comment: "Image data in binary format",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["name"],
+          },
+        ],
       }
     );
 

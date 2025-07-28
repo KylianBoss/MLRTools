@@ -67,6 +67,45 @@ const routes = [
         ],
       },
       {
+        path: "maintenance",
+        children: [
+          {
+            path: "scheduled",
+            name: "maintenances-scheduled",
+            component: () =>
+              import("src/pages/maintenance/MaintenancesScheduled.vue"),
+          },
+          {
+            path: "actual/:maintenanceId",
+            name: "maintenance-actual",
+            beforeEnter: (to, from, next) => {
+              if (to.params.maintenanceId) {
+                next();
+              }
+            },
+            component: () =>
+              import("src/pages/maintenance/MaintenanceView.vue"),
+          },
+          {
+            path: "plans",
+            name: "maintenance-plans",
+            component: () =>
+              import("src/pages/maintenance/MaintenancePlans.vue"),
+          },
+          {
+            path: "plans/:planId",
+            name: "maintenance-plan-details",
+            beforeEnter: (to, from, next) => {
+              if (to.params.planId) {
+                next();
+              }
+            },
+            component: () =>
+              import("src/pages/maintenance/MaintenancePlanDetails.vue"),
+          },
+        ],
+      },
+      {
         path: "admin",
         beforeEnter: (to, from, next) => {
           const App = useAppStore();

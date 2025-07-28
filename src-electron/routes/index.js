@@ -7,6 +7,8 @@ import AlarmsRouter from "./Alarms.routes.js";
 import KPIRouter from "./KPI.routes.js";
 import CronRouter from "./Cron.routes.js";
 import BotRouter from "./Bot.routes.js";
+import MaintenanceRouter from "./Maintenance.routes.js";
+import ImageRouter from "./Image.routes.js";
 
 const router = Router();
 
@@ -17,5 +19,7 @@ router.use("/alarms", AlarmsRouter);
 router.use("/kpi", KPIRouter);
 router.use("/cron", CronRouter);
 router.use("/bot", BotRouter);
+router.use("/maintenance", MaintenanceRouter);
+router.use("/images", ImageRouter);
 
 export default router;

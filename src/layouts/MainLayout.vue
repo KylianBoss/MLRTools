@@ -159,6 +159,39 @@
               label="Lieux suspects"
             />
           </q-expansion-item>
+          <!-- MAINTENANCE -->
+          <q-expansion-item
+            expand-separator
+            icon="mdi-wrench"
+            label="Maintenance"
+            v-model="drawers[4]"
+            v-if="App.isTechnician || App.isAdmin"
+          >
+            <drawer-item
+              to="maintenances-scheduled"
+              autorisation="*"
+              icon="mdi-timetable"
+              label="Maintenances plannifiées"
+            />
+            <drawer-item
+              to="maintenance-plans"
+              autorisation="*"
+              icon="mdi-format-list-checks"
+              label="Plans de maintenance"
+            />
+            <drawer-item
+              to="maintenance-steps"
+              autorisation="*"
+              icon="mdi-content-paste"
+              label="Étapes de maintenance"
+            />
+            <drawer-item
+              to="maintenance-logs"
+              autorisation="*"
+              icon="mdi-file-document-outline"
+              label="Logs de maintenance"
+            />
+          </q-expansion-item>
           <!-- ADMINISTRATION -->
           <q-expansion-item
             expand-separator
