@@ -222,6 +222,13 @@
             <q-icon name="mdi-image" />
           </template>
         </q-file>
+        <q-btn
+          color="primary"
+          label="Sélectionner une image existante"
+          flat
+          dense
+          @click="imageListDialog = true"
+        />
       </q-card-section>
       <q-card-actions>
         <q-btn label="Annuler" @click="stepDialog = false" flat />
@@ -238,6 +245,30 @@
             !stepData.goodAnswer
           "
         />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+  <q-dialog v-model="imageListDialog" persistent>
+    <q-card style="min-width: 80vw">
+      <q-card-section>
+        <div class="text-h6">Sélectionner une image</div>
+      </q-card-section>
+      <q-card-section>
+        <q-list dense>
+          <q-item
+            v-for="image in imageList"
+            :key="getImage(image)"
+            clickable
+            @click="selectImageFromList(image)"
+          >
+            <q-item-section avatar>
+              <q-img :src="image.data" style="width: 300px; height: 400px" />
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-card-section>
+      <q-card-actions>
+        <q-btn label="Fermer" @click="imageListDialog = false" flat />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -265,6 +296,8 @@ const stepData = ref({
   linkedImage: null,
   notesPlaceholder: "",
 });
+const imageList = ref([]);
+const imageListDialog = ref(false);
 
 const fetchMaintenancePlan = async () => {
   try {
@@ -312,7 +345,6 @@ const addStep = () => {
 
 const editStep = async (index) => {
   const step = maintenancePlan.value.steps[index];
-  const imageResponse = await api.get(`/images/${step.linkedImage}`);
   stepData.value = {
     id: step.id,
     description: step.description,
@@ -321,9 +353,27 @@ const editStep = async (index) => {
     answerType: step.answerType,
     goodAnswer: step.goodAnswer,
     linkedImage: step.linkedImage || null,
-    image: imageResponse.data,
+    image: null,
     notesPlaceholder: step.notesPlaceholder || "",
   };
+  if (step.linkedImage) {
+    try {
+      const imageResponse = await api.get(`/images/${step.linkedImage}`);
+      stepData.value.image = imageResponse.data;
+    } catch (error) {
+      console.error("Error fetching step image:", error);
+    }
+  } else {
+    stepData.value.image = null; // Reset image if no linked image
+  }
+  api
+    .get("/images/list")
+    .then((response) => {
+      imageList.value = response.data;
+    })
+    .catch((error) => {
+      console.error("Error fetching image list:", error);
+    });
   stepDialog.value = true;
 };
 
@@ -401,6 +451,24 @@ const saveStep = async () => {
   } catch (error) {
     console.error("Error saving step:", error);
   }
+};
+
+const getImage = (img) => {
+  api
+    .get(`/images/${img.id}`)
+    .then((response) => {
+      img.data = response.data;
+    })
+    .catch((error) => {
+      console.error("Error fetching image:", error);
+      return null;
+    });
+};
+
+const selectImageFromList = (image) => {
+  stepData.value.linkedImage = image.id;
+  stepData.value.image = image.data;
+  imageListDialog.value = false;
 };
 
 onMounted(() => {

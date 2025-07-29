@@ -21,6 +21,17 @@ router.post("/upload", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+router.get("/list", async (req, res) => {
+  try {
+    const images = await db.models.Images.findAll({
+      attributes: ["id", "name"],
+    });
+    res.json(images);
+  } catch (error) {
+    console.error("Error fetching images:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
