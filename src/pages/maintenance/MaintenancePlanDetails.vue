@@ -194,18 +194,20 @@
           dense
           class="q-mb-md"
         />
-        <q-img
-          v-if="stepData.image"
-          :src="stepData.image"
-          class="q-mb-md"
-          style="max-width: 100%"
-          contain
-          spinner-color="dark"
-        >
-          <template v-slot:placeholder>
-            <q-spinner color="grey" />
-          </template>
-        </q-img>
+        <div class="text-center">
+          <q-img
+            v-if="stepData.image"
+            :src="stepData.image"
+            class="q-mb-md"
+            style="max-width: 50%"
+            contain
+            spinner-color="dark"
+          >
+            <template v-slot:placeholder>
+              <q-spinner color="grey" />
+            </template>
+          </q-img>
+        </div>
         <q-file
           v-model="stepData.linkedImage"
           label="Image liée à l'étape"

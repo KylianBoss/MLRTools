@@ -99,7 +99,7 @@ onMounted(async () => {
         `/maintenance/resume/${route.params.maintenanceId}`
       );
       report.value = resume.data.report || [];
-      activeStep.value = resume.data.report.length;
+      activeStep.value = resume.data.report?.length || 0;
     } catch (error) {
       console.error("Error fetching maintenance data:", error);
     }

@@ -3,28 +3,35 @@
     <q-card-section>
       <div class="text-subtitle2">Étape : {{ progress }} / {{ total }}</div>
     </q-card-section>
-    <q-card-section v-if="step?.linkedImage">
+    <q-card-section
+      v-if="props.step && props.step.linkedImage"
+      class="text-center"
+    >
       <q-img
-        :src="step.linkedImage"
-        :alt="`Image for step ${step.id}`"
+        :src="image"
         class="q-mb-md"
-      />
+        style="max-width: 50%"
+        contain
+        spinner-color="dark"
+      >
+        <template v-slot:placeholder>
+          <q-spinner color="grey" />
+        </template>
+      </q-img>
     </q-card-section>
     <q-card-section>
       <q-markup-table flat separator="cell" wrap-cells>
-        <thead>
+        <thead class="text-center bg-grey-2">
           <tr>
-            <th class="text-bold text-center">Description</th>
-            <th class="text-center">
-              Constat d'écart par rapport à l'état de consigne
-            </th>
-            <th class="text-center">Réponse</th>
+            <th>Description</th>
+            <th>Constat d'écart par rapport à l'état de consigne</th>
+            <th>Réponse</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>{{ step.description }}</td>
-            <td>{{ step.defect }}</td>
+            <td v-html="step.description.replace('\r\n', '<br/>')"></td>
+            <td v-html="step.defect.replace('\r\n', '<br/>')"></td>
             <td v-if="step.answerType === 'boolean'">
               <q-checkbox
                 :model-value="answer === 'yes'"
@@ -62,7 +69,7 @@
             @click="back"
             label="Retour"
             flat
-            v-if="progress > 0"
+            v-if="progress > 1"
           />
         </div>
         <div class="col text-right">
@@ -79,7 +86,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
+import { api } from "boot/axios";
 
 const props = defineProps({
   step: {
@@ -111,6 +119,7 @@ const fullStep = computed(() => {
     passed: answer.value == props.step.goodAnswer,
   };
 });
+const image = ref(null);
 
 const next = () => {
   if (answer.value) {
@@ -139,6 +148,27 @@ watch(
   },
   { immediate: true }
 );
+watch(
+  () => props.step,
+  (newStep) => {
+    if (newStep && newStep.linkedImage) {
+      api.get(`/images/${props.step.linkedImage}`).then((response) => {
+        image.value = response.data;
+      });
+    } else {
+      image.value = null; // Reset image if no linked image
+    }
+  },
+  { immediate: true }
+);
+
+onMounted(() => {
+  if (props.step && props.step.linkedImage) {
+    api.get(`/images/${props.step.linkedImage}`).then((response) => {
+      image.value = response.data;
+    });
+  }
+});
 </script>
 
 <style></style>
