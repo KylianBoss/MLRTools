@@ -52,7 +52,7 @@
           </q-card-section>
           <q-card-section>
             <div class="text-subtitle2">Étapes de maintenance</div>
-            <q-list dense separator>
+            <q-list dense>
               <vue-draggable
                 v-model="maintenancePlan.steps"
                 ref="stepsList"
@@ -64,6 +64,7 @@
                 <q-item
                   v-for="(step, index) in maintenancePlan.steps"
                   :key="index"
+                  style="border-bottom: 1px solid #ccc"
                 >
                   <q-item-section avatar style="cursor: move">
                     <q-icon name="mdi-drag" color="grey" />
