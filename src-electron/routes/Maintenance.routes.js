@@ -289,6 +289,31 @@ router.put("/plans/steps/:stepId", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+router.delete("/plans/steps/:stepId", async (req, res) => {
+  const { stepId } = req.params;
+  try {
+    const step = await db.models.MaintenanceSteps.findByPk(stepId);
+    if (!step) {
+      return res.status(404).json({ error: "Step not found" });
+    }
+
+    // Delete the step from the MaintenancePlanSteps table
+    await db.models.MaintenancePlanSteps.destroy({
+      where: { stepId: step.id },
+    });
+
+    // Delete the step itself
+    await step.destroy();
+
+    res.json({
+      success: true,
+      message: "Step deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting maintenance step:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 router.get("/:maintenanceId", async (req, res) => {
   const { maintenanceId } = req.params;
   try {
