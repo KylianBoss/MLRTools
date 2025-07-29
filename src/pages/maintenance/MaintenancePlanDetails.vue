@@ -58,8 +58,10 @@
                 ref="stepsList"
                 @end="onEndDrag"
                 direction="vertical"
-                dragClass="bg-grey-2"
-                animation="ease"
+                drag-class="bg-grey-2"
+                ghost-class="bg-grey-3"
+                easing="ease-in-out"
+                animation="200"
               >
                 <q-item
                   v-for="(step, index) in maintenancePlan.steps"
@@ -376,6 +378,7 @@ const editStep = async (index) => {
       console.error("Error fetching image list:", error);
     });
   stepDialog.value = true;
+  fetchMaintenancePlan();
 };
 
 const deleteStep = async (index) => {
