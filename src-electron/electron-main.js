@@ -80,8 +80,14 @@ function createWindow() {
 app.whenReady().then(async () => {
   createWindow();
 
-  // Initialize auto-updater
-  new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
+  // Initialize auto-updater only if not in development mode
+  if (process.env.NODE_ENV !== "development") {
+    try {
+      new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
+    } catch (error) {
+      console.error("Error initializing auto-updater:", error);
+    }
+  }
 
   app.on("activate", () => {
     if (mainWindow === null) {

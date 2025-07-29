@@ -382,6 +382,18 @@ const deleteStep = async (index) => {
   try {
     await api.delete(`/maintenance/plans/steps/${step.id}`);
     maintenancePlan.value.steps.splice(index, 1);
+    let index = 0;
+    const newStepData = [];
+    for (const step of maintenancePlan.value.steps) {
+      step.order = index;
+      newStepData.push({
+        maintenancePlanId: maintenancePlan.value.id,
+        stepId: step.id,
+        order: index,
+      });
+      index++;
+    }
+    await api.post("/maintenance/plans/steps-reorder", { newStepData });
   } catch (error) {
     console.error("Error deleting step:", error);
   }
