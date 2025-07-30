@@ -782,10 +782,10 @@ function initDB(config) {
             "Explaination of things that means that the step has to be marked as fixing",
         },
         answerType: {
-          type: DataTypes.ENUM("boolean", "value"),
+          type: DataTypes.ENUM("boolean", "value", "replace"),
           allowNull: false,
           defaultValue: "boolean",
-          comment: "Type of answer for the step, can be 'boolean' or 'value'",
+          comment: "Type of answer for the step, can be 'boolean', 'value' or 'replace'",
         },
         goodAnswer: {
           type: DataTypes.STRING,
@@ -900,6 +900,66 @@ function initDB(config) {
             fields: ["name"],
           },
         ],
+      }
+    );
+
+    const stingrays = db.define(
+      "Stingrays",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        state: {
+          type: DataTypes.ENUM("active", "broken", "ready", "testing"),
+          allowNull: false,
+          defaultValue: "ready",
+          comment: "State of the stingray, can be 'active' or 'inactive'",
+        },
+        location: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          defaultValue: null,
+          comment:
+            "Location of the stingray, e.g. 'W001-01', 'W001-02', 'Maintenance', etc.",
+        },
+        lastLocationChange: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Last time the stingray was moved to a new location",
+        },
+        lastStateChange: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Last time the state of the stingray was changed",
+        },
+        lastMaintenance: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Last time the stingray was maintained",
+        },
+        nextMaintenance: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Next scheduled maintenance time for the stingray",
+        },
+        lastUpdateBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          references: {
+            model: Users,
+            key: "id",
+          },
+          comment: "User who last updated the stingray",
+        },
+      },
+      {
+        timestamps: false,
       }
     );
 

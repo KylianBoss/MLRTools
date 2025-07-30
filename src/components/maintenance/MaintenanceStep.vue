@@ -48,6 +48,32 @@
                 class="q-mr-sm text-bold"
               />
             </td>
+            <td v-else-if="step.answerType === 'value'">
+              <q-input
+                v-model="answer"
+                type="number"
+                label="Valeur"
+                class="q-mr-sm text-bold"
+                :placeholder="step.answerPlaceholder || 'Entrez une valeur...'"
+              />
+            </td>
+            <td v-else-if="step.answerType === 'replace'">
+              <div class="text-bold">La pièce à été remplacée ?</div>
+              <q-checkbox
+                :model-value="answer === 'yes'"
+                @update:model-value="answer = $event ? 'yes' : 'no'"
+                color="primary"
+                label="Oui"
+                class="q-mr-sm text-bold"
+              />
+              <q-checkbox
+                :model-value="answer === 'no'"
+                @update:model-value="answer = $event ? 'no' : 'yes'"
+                color="primary"
+                label="Non"
+                class="q-mr-sm text-bold"
+              />
+            </td>
           </tr>
         </tbody>
       </q-markup-table>

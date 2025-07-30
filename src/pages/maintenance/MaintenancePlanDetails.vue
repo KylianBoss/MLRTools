@@ -162,7 +162,9 @@
         />
         <q-select
           v-model="stepData.answerType"
-          :options="['boolean', 'value']"
+          :options="answerTypes"
+          map-options
+          emit-value
           label="Type de réponse"
           filled
           dense
@@ -301,6 +303,11 @@ const stepData = ref({
 });
 const imageList = ref([]);
 const imageListDialog = ref(false);
+const answerTypes = ref([
+  { label: "Oui/Non", value: "boolean" },
+  { label: "Valeur", value: "value" },
+  { label: "Remplacement", value: "replace" },
+]);
 
 const fetchMaintenancePlan = async () => {
   try {
@@ -420,6 +427,7 @@ const copy = (index) => {
 
 const saveStep = async () => {
   try {
+    stepData.value.goodAnswer = stepData.value.goodAnswer || "*";
     if (stepData.value.linkedImage instanceof File) {
       const fileReader = new FileReader();
       fileReader.onload = async (e) => {
@@ -429,7 +437,6 @@ const saveStep = async () => {
           })
           .then(async (response) => {
             stepData.value.linkedImage = response.data.id;
-
             if (stepData.value.id) {
               await api.put(
                 `/maintenance/plans/steps/${stepData.value.id}`,
