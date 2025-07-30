@@ -243,18 +243,14 @@
           :label="stepData.id ? 'Enregistrer' : 'Ajouter'"
           @click="saveStep"
           :disable="
-            !stepData.description ||
-            !stepData.defect ||
-            !stepData.fixing ||
-            !stepData.answerType ||
-            !stepData.goodAnswer
+            !stepData.description || !stepData.defect || !stepData.answerType
           "
         />
       </q-card-actions>
     </q-card>
   </q-dialog>
   <q-dialog v-model="imageListDialog" persistent>
-    <q-card style="min-width: 80vw">
+    <q-card style="min-width: 500px">
       <q-card-section>
         <div class="text-h6">Sélectionner une image</div>
       </q-card-section>
@@ -267,7 +263,7 @@
             @click="selectImageFromList(image)"
           >
             <q-item-section avatar>
-              <q-img :src="image.data" style="width: 300px; height: 400px" />
+              <q-img :src="image.data" style="width: 500px; height: 500px" />
             </q-item-section>
           </q-item>
         </q-list>
