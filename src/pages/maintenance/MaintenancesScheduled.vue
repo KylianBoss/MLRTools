@@ -174,7 +174,7 @@ const filter = ref("");
 const startMaintenance = async (data) => {
   try {
     const response = await api.post("/maintenance/start", {
-      id: maintenanceScheduleId,
+      id: data.id,
       userId: App.user.id,
     });
     if (response.data.success) {

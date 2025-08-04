@@ -191,6 +191,14 @@ export const useAppStore = defineStore("App", {
         timeout: 3000,
       });
     },
+    notify(message, type = "info") {
+      Notify.create({
+        message: message,
+        type: type,
+        position: "top",
+        timeout: 3000,
+      });
+    }
   },
   persist: false,
 });
