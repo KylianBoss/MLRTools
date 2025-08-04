@@ -31,7 +31,7 @@
               <q-btn
                 color="positive"
                 icon="mdi-play"
-                @click="startMaintenance(props.row.id)"
+                @click="startMaintenance(props.row)"
                 flat
                 round
                 title="Démarrer la maintenance"
@@ -47,7 +47,7 @@
               <q-btn
                 color="warning"
                 icon="mdi-play"
-                @click="continueMaintenance(props.row.id)"
+                @click="continueMaintenance(props.row)"
                 flat
                 round
                 title="Continuer la maintenance"
@@ -171,21 +171,17 @@ const columns = [
 ];
 const filter = ref("");
 
-const startMaintenance = async (maintenanceId) => {
-  // router.push({
-  //   name: "maintenance-actual",
-  //   params: { maintenanceId },
-  // });
+const startMaintenance = async (data) => {
   try {
     const response = await api.post("/maintenance/start", {
-      id: maintenanceId,
+      id: maintenanceScheduleId,
       userId: App.user.id,
     });
     if (response.data.success) {
       fetchMaintenances();
       router.push({
         name: "maintenance-actual",
-        params: { maintenanceId: response.data.maintenance.maintenancePlanId },
+        params: { maintenanceId: data.id },
       });
     } else {
       App.notify("Erreur lors du démarrage de la maintenance", "negative");
@@ -195,11 +191,12 @@ const startMaintenance = async (maintenanceId) => {
     App.notify("Erreur lors du démarrage de la maintenance", "negative");
   }
 };
-const continueMaintenance = async (maintenanceId) => {
+const continueMaintenance = async (data) => {
+  console.log(data);
   try {
     router.push({
       name: "maintenance-actual",
-      params: { maintenanceId },
+      params: { maintenanceId: data.id },
     });
   } catch (error) {
     console.error("Error continuing maintenance:", error);

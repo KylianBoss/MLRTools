@@ -179,18 +179,18 @@
               icon="mdi-format-list-checks"
               label="Plans de maintenance"
             />
-            <drawer-item
+            <!-- <drawer-item
               to="maintenance-steps"
               autorisation="*"
               icon="mdi-content-paste"
               label="Étapes de maintenance"
-            />
-            <drawer-item
+            /> -->
+            <!-- <drawer-item
               to="maintenance-logs"
               autorisation="*"
               icon="mdi-file-document-outline"
               label="Logs de maintenance"
-            />
+            /> -->
           </q-expansion-item>
           <!-- ADMINISTRATION -->
           <q-expansion-item

@@ -109,6 +109,7 @@ const columns = [
 const filter = ref("");
 
 const goToPlanDetails = (planId) => {
+  console.log("Navigating to plan details for ID:", planId);
   router.push({
     name: "maintenance-plan-details",
     params: { planId },

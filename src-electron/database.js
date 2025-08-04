@@ -762,20 +762,34 @@ function initDB(config) {
           primaryKey: true,
           autoIncrement: true,
         },
+        activityType: {
+          type: DataTypes.ENUM("preventive", "corrective", "inspection"),
+          allowNull: false,
+          defaultValue: "preventive",
+          comment:
+            "Type of activity for the step, can be 'preventive', 'corrective', or 'inspection'",
+        },
         description: {
-          type: DataTypes.STRING,
+          type: DataTypes.TEXT,
           allowNull: false,
           comment: "Description of the maintenance step",
         },
         defect: {
-          type: DataTypes.STRING,
+          type: DataTypes.TEXT,
           allowNull: true,
           defaultValue: null,
           comment:
             "Explaination of things that means that the step has to be marked as defect",
         },
+        process: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          defaultValue: null,
+          comment:
+            "Explaination of the process when this is an inspection step",
+        },
         fixing: {
-          type: DataTypes.STRING,
+          type: DataTypes.TEXT,
           allowNull: true,
           defaultValue: null,
           comment:
@@ -785,7 +799,8 @@ function initDB(config) {
           type: DataTypes.ENUM("boolean", "value", "replace"),
           allowNull: false,
           defaultValue: "boolean",
-          comment: "Type of answer for the step, can be 'boolean', 'value' or 'replace'",
+          comment:
+            "Type of answer for the step, can be 'boolean', 'value' or 'replace'",
         },
         goodAnswer: {
           type: DataTypes.STRING,
@@ -795,11 +810,17 @@ function initDB(config) {
             "Good answer for the step, can be 'yes', 'no', or a specific value",
         },
         notesPlaceholder: {
-          type: DataTypes.STRING,
+          type: DataTypes.TEXT,
           allowNull: true,
           defaultValue: null,
           comment:
             "Placeholder for notes in the step, can be used to provide additional information",
+        },
+        doneButton: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+          comment: "If true, the step has a done button to mark it as done",
         },
         linkedImage: {
           type: DataTypes.INTEGER.UNSIGNED,

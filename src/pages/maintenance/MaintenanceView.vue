@@ -6,14 +6,14 @@
         {{ maintenance?.location }} - {{ maintenance?.description }}
       </div>
     </div>
-    <div class="row" v-if="!terminated">
+    <div class="row" v-if="!terminated && maintenance">
       <div class="col">
         <maintenance-step
-          :step="maintenance?.steps[activeStep]"
+          :step="maintenance.steps[activeStep]"
           @next="nextStep"
           @back="activeStep--"
           :progress="activeStep + 1"
-          :total="maintenance?.steps.length"
+          :total="maintenance.steps.length"
           :data="report[activeStep] || {}"
         />
       </div>
@@ -23,10 +23,43 @@
         <q-card-section>
           <div class="text-h6">Maintenance terminée</div>
           <div class="text-subtitle2">Rapport de maintenance :</div>
+        </q-card-section>
+        <q-card-section>
+          <q-list dense separator>
+            <q-item v-for="(step, index) in report" :key="index">
+              <q-item-section avatar>
+                <q-avatar color="primary" text-color="white" size="sm">{{ index + 1 }}</q-avatar>
+              </q-item-section>
+              <q-item-section>
+                <div class="text-subtitle2">{{ step.description }}</div>
+                <!-- <div class="text-caption">{{ step.defect }}</div> -->
+              </q-item-section>
+              <q-item-section side>
+                <q-icon name="mdi-check" color="green" v-if="step.passed" />
+                <q-icon name="mdi-close" color="red" v-else />
+              </q-item-section>
+            </q-item>
+          </q-list>
           <pre>{{ report }}</pre>
         </q-card-section>
         <q-card-section>
           <div class="row">
+            <div class="col">
+              <q-btn
+                color="secondary"
+                @click="activeStep = 0, terminated = false"
+                label="Retour au début"
+                flat
+              />
+            </div>
+            <div class="col">
+              <q-btn
+                color="negative"
+                @click="activeStep = 0, report = [], terminated = false"
+                label="Réinitialiser la maintenance"
+                flat
+              />
+            </div>
             <div class="col text-right">
               <q-btn
                 color="primary"
@@ -80,7 +113,7 @@ const confirm = async () => {
 const save = async () => {
   try {
     await api.post(`/maintenance/save`, {
-      id: maintenance.value.id,
+      id: route.params.maintenanceId,
       report: report.value,
     });
   } catch (error) {
@@ -95,11 +128,16 @@ onMounted(async () => {
         `/maintenance/${route.params.maintenanceId}`
       );
       maintenance.value = response.data;
-      const resume = await api.get(
-        `/maintenance/resume/${route.params.maintenanceId}`
-      );
-      report.value = resume.data.report || [];
-      activeStep.value = resume.data.report?.length || 0;
+      api
+        .get(`/maintenance/resume/${route.params.maintenanceId}`)
+        .then((resume) => {
+          report.value = resume.data.report || [];
+          activeStep.value = Number(resume.data.report?.length || 0);
+          if (activeStep.value >= maintenance.value.steps.length) {
+            terminated.value = true;
+          }
+        })
+        .catch(() => null);
     } catch (error) {
       console.error("Error fetching maintenance data:", error);
     }

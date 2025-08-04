@@ -317,13 +317,18 @@ router.delete("/plans/steps/:stepId", async (req, res) => {
 router.get("/:maintenanceId", async (req, res) => {
   const { maintenanceId } = req.params;
   try {
-    const maintenance = await db.models.MaintenancePlan.findByPk(maintenanceId);
+    const maintenanceSchedule = await db.models.MaintenanceSchedule.findByPk(maintenanceId);
+    if (!maintenanceSchedule) {
+      return res.status(404).json({ error: "Maintenance schedule not found" });
+    }
+
+    const maintenance = await db.models.MaintenancePlan.findByPk(maintenanceSchedule.maintenancePlanId);
     if (!maintenance) {
       return res.status(404).json({ error: "Maintenance not found" });
     }
 
     const s = await db.models.MaintenancePlanSteps.findAll({
-      where: { maintenancePlanId: maintenanceId },
+      where: { maintenancePlanId: maintenance.id },
       order: [["order", "ASC"]],
     });
 

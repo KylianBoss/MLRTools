@@ -10,7 +10,8 @@
     <div class="text-h4">Plans de maintenance</div>
     <div class="row">
       <div class="col">
-        {{ maintenancePlan.location }} - {{ maintenancePlan.description }}
+        {{ maintenancePlan.location }} - {{ maintenancePlan.description }} -
+        {{ maintenancePlan.type }}
       </div>
     </div>
     <div class="row q-pt-md">
@@ -72,7 +73,19 @@
                     <q-icon name="mdi-drag" color="grey" />
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label>{{ step.description }}</q-item-label>
+                    <q-item-label>
+                      <q-icon
+                        :name="
+                          step.activityType === 'preventive'
+                            ? 'mdi-wrench'
+                            : step.activityType === 'corrective'
+                            ? 'mdi-hammer-screwdriver'
+                            : 'mdi-eye'
+                        "
+                        class="q-mr-sm"
+                      />
+                      {{ step.description }}
+                    </q-item-label>
                   </q-item-section>
                   <q-item-section side>
                     <div class="row">
@@ -135,6 +148,16 @@
         </div>
       </q-card-section>
       <q-card-section>
+        <q-select
+          v-model="stepData.activityType"
+          :options="activityTypes"
+          map-options
+          emit-value
+          label="Type d'activité"
+          filled
+          dense
+          class="q-mb-md"
+        />
         <q-input
           v-model="stepData.description"
           label="Description"
@@ -145,6 +168,7 @@
           class="q-mb-md"
         />
         <q-input
+          v-if="stepData.activityType !== 'inspection'"
           v-model="stepData.defect"
           label="Défaut"
           filled
@@ -153,6 +177,16 @@
           class="q-mb-md"
         />
         <q-input
+          v-if="stepData.activityType == 'inspection'"
+          v-model="stepData.process"
+          label="Procédure"
+          filled
+          dense
+          autogrow
+          class="q-mb-md"
+        />
+        <q-input
+          v-if="stepData.activityType !== 'inspection'"
           v-model="stepData.fixing"
           label="Réparation"
           filled
@@ -186,15 +220,22 @@
         />
         <q-input
           v-if="stepData.answerType === 'value'"
-          type="number"
           v-model="stepData.goodAnswer"
           label="Réponse pour que l'étape soit compté bonne"
           filled
           dense
+          class="q-mb-md"
         />
         <q-input
           v-model="stepData.notesPlaceholder"
           label="Placeholder pour les notes"
+          filled
+          dense
+          class="q-mb-md"
+        />
+        <q-toggle
+          v-model="stepData.doneButton"
+          label="Bouton 'Fait' visible"
           filled
           dense
           class="q-mb-md"
@@ -242,9 +283,7 @@
           color="primary"
           :label="stepData.id ? 'Enregistrer' : 'Ajouter'"
           @click="saveStep"
-          :disable="
-            !stepData.description || !stepData.defect || !stepData.answerType
-          "
+          :disable="!stepData.description || !stepData.answerType"
         />
       </q-card-actions>
     </q-card>
@@ -289,13 +328,16 @@ const steps = ref([]);
 const stepDialog = ref(false);
 const stepData = ref({
   id: null,
-  description: "",
-  defect: "",
-  fixing: "",
-  answerType: "",
-  goodAnswer: "",
+  description: null,
+  process: null,
+  defect: null,
+  fixing: null,
+  answerType: null,
+  goodAnswer: null,
   linkedImage: null,
-  notesPlaceholder: "",
+  notesPlaceholder: null,
+  activityType: null,
+  doneButton: false,
 });
 const imageList = ref([]);
 const imageListDialog = ref(false);
@@ -303,6 +345,11 @@ const answerTypes = ref([
   { label: "Oui/Non", value: "boolean" },
   { label: "Valeur", value: "value" },
   { label: "Remplacement", value: "replace" },
+]);
+const activityTypes = ref([
+  { label: "Maintenance préventive", value: "preventive" },
+  { label: "Maintenance corrective", value: "corrective" },
+  { label: "Inspection", value: "inspection" },
 ]);
 
 const fetchMaintenancePlan = async () => {
@@ -338,13 +385,16 @@ const onEndDrag = async (event) => {
 const addStep = () => {
   stepData.value = {
     id: null,
-    description: "",
-    defect: "",
-    fixing: "",
+    description: null,
+    process: null,
+    defect: null,
+    fixing: null,
     answerType: "boolean",
-    goodAnswer: "",
+    goodAnswer: null,
     linkedImage: null,
-    notesPlaceholder: "",
+    notesPlaceholder: null,
+    activityType: "preventive",
+    doneButton: false,
   };
   stepDialog.value = true;
 };
@@ -353,14 +403,17 @@ const editStep = async (index) => {
   const step = maintenancePlan.value.steps[index];
   stepData.value = {
     id: step.id,
-    description: step.description,
-    defect: step.defect,
-    fixing: step.fixing,
-    answerType: step.answerType,
-    goodAnswer: step.goodAnswer,
+    description: step.description || null,
+    process: step.process || null,
+    defect: step.defect || null,
+    fixing: step.fixing || null,
+    answerType: step.answerType || "boolean",
+    goodAnswer: step.goodAnswer || null,
     linkedImage: step.linkedImage || null,
     image: null,
-    notesPlaceholder: step.notesPlaceholder || "",
+    notesPlaceholder: step.notesPlaceholder || null,
+    activityType: step.activityType || "preventive",
+    doneButton: step.doneButton || false,
   };
   if (step.linkedImage) {
     try {
@@ -410,20 +463,22 @@ const copy = (index) => {
   const step = { ...maintenancePlan.value.steps[index] };
   stepData.value = {
     id: null,
-    description: step.description,
-    defect: step.defect,
-    fixing: step.fixing,
-    answerType: step.answerType,
-    goodAnswer: step.goodAnswer,
+    description: step.description || null,
+    process: step.process || null,
+    defect: step.defect || null,
+    fixing: step.fixing || null,
+    answerType: step.answerType || "boolean",
+    goodAnswer: step.goodAnswer || null,
     linkedImage: step.linkedImage || null,
     notesPlaceholder: step.notesPlaceholder || "",
+    activityType: step.activityType || "preventive",
+    doneButton: step.doneButton || false,
   };
   stepDialog.value = true;
 };
 
 const saveStep = async () => {
   try {
-    stepData.value.goodAnswer = stepData.value.goodAnswer || "*";
     if (stepData.value.linkedImage instanceof File) {
       const fileReader = new FileReader();
       fileReader.onload = async (e) => {
