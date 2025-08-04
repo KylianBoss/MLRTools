@@ -40,7 +40,6 @@
               </q-item-section>
             </q-item>
           </q-list>
-          <pre>{{ report }}</pre>
         </q-card-section>
         <q-card-section>
           <div class="row">
@@ -101,7 +100,7 @@ const nextStep = (step) => {
 const confirm = async () => {
   try {
     await api.post(`/maintenance/complete`, {
-      id: maintenance.value.id,
+      id: route.params.maintenanceId,
       report: report.value,
     });
     router.push({ name: "maintenances-scheduled" });

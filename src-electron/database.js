@@ -559,10 +559,10 @@ function initDB(config) {
           comment: "Location of the maintenance",
         },
         type: {
-          type: DataTypes.ENUM("A", "B", "C"),
+          type: DataTypes.ENUM("A", "B", "C", "D"),
           allowNull: false,
           comment:
-            "Type of maintenance, can be 'A', 'B', 'C'. A = Every 2 months, B = Every 4 months, C = Every 8 months",
+            "Type of maintenance, can be 'A', 'B', 'C'. A = Every 3 months, B = Every 6 months, C = Every 9 months, D = Every year",
         },
         description: {
           type: DataTypes.STRING,
@@ -581,6 +581,13 @@ function initDB(config) {
           defaultValue: null,
           comment: "Next scheduled maintenance time",
         },
+        linkedTo: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          defaultValue: null,
+          comment:
+            "If the maintenance plan is linked to a specific device or system, this field contains the identifier",
+        },
       },
       {
         timestamps: false,
@@ -597,15 +604,19 @@ function initDB(config) {
               const now = dayjs(maintenance.lastMaintenance);
               switch (maintenance.type) {
                 case "A":
-                  maintenance.nextMaintenance = now.add(2, "month").toDate();
+                  maintenance.nextMaintenance = now.add(3, "month").toDate();
                   break;
                 case "B":
-                  maintenance.nextMaintenance = now.add(4, "month").toDate();
+                  maintenance.nextMaintenance = now.add(6, "month").toDate();
                   break;
                 case "C":
-                  maintenance.nextMaintenance = now.add(8, "month").toDate();
+                  maintenance.nextMaintenance = now.add(9, "month").toDate();
+                  break;
+                default:
+                  maintenance.nextMaintenance = now.add(1, "year").toDate();
                   break;
               }
+              maintenance.save();
             }
           },
         },
@@ -924,7 +935,7 @@ function initDB(config) {
       }
     );
 
-    const stingrays = db.define(
+    const Stingrays = db.define(
       "Stingrays",
       {
         id: {
