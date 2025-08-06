@@ -25,13 +25,25 @@ router.get("/", async (req, res) => {
   }
 });
 router.put("/", async (req, res) => {
-  const { id, username, fullname, autorised, UserAccesses } = req.body;
+  const {
+    id,
+    username,
+    fullname,
+    autorised,
+    UserAccesses,
+    isBot,
+    recieveDailyReport,
+    isTechnician,
+  } = req.body;
   try {
     const user = await db.models.Users.update(
       {
         username,
         fullname,
         autorised,
+        isBot,
+        recieveDailyReport,
+        isTechnician,
       },
       {
         where: {

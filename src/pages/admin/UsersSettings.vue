@@ -30,6 +30,19 @@
             @update:model-value="App.updateUser(props.row)"
             style="max-width: 200px; overflow: hidden"
           >
+            <!-- <template v-slot:selected-item="scope">
+              <q-chip
+                removable
+                dense
+                @remove="scope.removeAtIndex(scope.index)"
+                :tabindex="scope.tabindex"
+                :label="scope.opt.label"
+                :disable="scope.opt.disabled && !scope.selected"
+              />
+            </template> -->
+            <template v-slot:selected>
+              {{ props.row.UserAccesses.length }} accès
+            </template>
             <template
               v-slot:option="{ itemProps, opt, selected, toggleOption }"
             >
@@ -47,6 +60,33 @@
               </q-item>
             </template>
           </q-select>
+        </td>
+      </template>
+      <template v-slot:body-cell-isBot="props">
+        <td class="text-center">
+          <q-toggle
+            v-model="props.row.isBot"
+            color="primary"
+            @update:model-value="App.updateUser(props.row)"
+          />
+        </td>
+      </template>
+      <template v-slot:body-cell-recieveDailyReport="props">
+        <td class="text-center">
+          <q-toggle
+            v-model="props.row.recieveDailyReport"
+            color="primary"
+            @update:model-value="App.updateUser(props.row)"
+          />
+        </td>
+      </template>
+      <template v-slot:body-cell-isTechnician="props">
+        <td class="text-center">
+          <q-toggle
+            v-model="props.row.isTechnician"
+            color="primary"
+            @update:model-value="App.updateUser(props.row)"
+          />
         </td>
       </template>
     </q-table>
@@ -86,19 +126,35 @@ const columns = [
     align: "center",
     field: "UserAccesses",
   },
+  {
+    name: "isBot",
+    label: "BOT",
+    align: "center",
+    field: "isBot",
+    sortable: true,
+  },
+  {
+    name: "email",
+    label: "EMAIL",
+    align: "left",
+    field: "email",
+    sortable: false,
+  },
+  {
+    name: "recieveDailyReport",
+    label: "DAILY REPORT",
+    align: "center",
+    field: "recieveDailyReport",
+    sortable: true,
+  },
+  {
+    name: "isTechnician",
+    label: "TECHNICIAN",
+    align: "center",
+    field: "isTechnician",
+    sortable: true,
+  },
 ];
-// type: DataTypes.ENUM(
-//   "kpi",
-//   "searchMessages",
-//   "charts",
-//   "importMessages",
-//   "excludedAlarms",
-//   "tgwReportAlarms",
-//   "suspiciousPlaces",
-//   "admin",
-//   "admin-db",
-//   "admin-users"
-// ),
 const access = [
   { label: "KPI", value: "kpi" },
   { label: "Search Messages", value: "searchMessages" },
