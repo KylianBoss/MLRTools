@@ -77,11 +77,15 @@
           </q-card-section>
           <q-card-section>
             <div class="text-h6">Rapport :</div>
+            <q-separator />
             <q-list separator>
               <q-item
                 v-for="(step, index) in maintenanceReport?.report"
                 :key="index"
-                :class="step.passed ? '' : 'bg-red-1'"
+                :class="{
+                  'bg-red-1': !step.passed,
+                  'page-break': [5, 15, 25, 35, 45].includes(index),
+                }"
                 clickable
               >
                 <q-item-section avatar>
@@ -128,6 +132,15 @@
                       {{ goodAnswerData(step).unit }}
                     </step>
                   </div>
+                  <div
+                    class="text-caption q-pl-sm"
+                    v-if="step.answerType === 'replace'"
+                  >
+                    Remplacement de pièce :
+                    <span class="text-bold">
+                      {{ step.answer === "yes" ? "Oui" : "Non" }}
+                    </span>
+                  </div>
                 </q-item-section>
                 <q-item-section side>
                   <div>
@@ -151,7 +164,6 @@
                 </q-item-section>
               </q-item>
             </q-list>
-            <q-separator />
           </q-card-section>
         </q-card>
         <q-btn
@@ -174,6 +186,7 @@ import { useAppStore } from "stores/app";
 import { api } from "boot/axios";
 import { useRoute } from "vue-router";
 import dayjs from "dayjs";
+import html2pdf from "html2pdf.js";
 
 const App = useAppStore();
 const route = useRoute();
@@ -189,6 +202,29 @@ const goodAnswerData = (step) => {
     data[key.trim()] = value.trim();
   });
   return data;
+};
+
+const printReport = () => {
+  const element = document.getElementById("maintenance-report-card");
+  const opt = {
+    margin: 0,
+    filename: `rapport-maintenance-${
+      maintenanceReport.value.plan.description
+    }-${maintenanceReport.value.plan.location}-${dayjs(
+      maintenanceReport.value.startTime
+    ).format("YYYY-MM-DD")}.pdf`,
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+    pagebreak: { after: ".page-break" },
+  };
+  html2pdf()
+    .from(element)
+    .set(opt)
+    .save()
+    .catch((error) => {
+      console.error("Error generating PDF:", error);
+    });
 };
 
 onMounted(async () => {
