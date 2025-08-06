@@ -215,6 +215,48 @@ router.get("/plans/:planId", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+router.post("/plans/:planId/duplicate", async (req, res) => {
+  const { planId } = req.params;
+  const { location } = req.body;
+
+  if (!planId || !location) {
+    return res.status(400).json({ error: "Plan ID and location are required" });
+  }
+
+  try {
+    const originalPlan = await db.models.MaintenancePlan.findByPk(planId);
+    if (!originalPlan) {
+      return res.status(404).json({ error: "Maintenance plan not found" });
+    }
+    const newPlan = await db.models.MaintenancePlan.create({
+      location: location,
+      type: originalPlan.type,
+      description: originalPlan.description,
+    });
+
+    const originalSteps = await db.models.MaintenancePlanSteps.findAll({
+      where: { maintenancePlanId: originalPlan.id },
+      order: [["order", "ASC"]],
+    });
+
+    for (const step of originalSteps) {
+      await db.models.MaintenancePlanSteps.create({
+        maintenancePlanId: newPlan.id,
+        stepId: step.stepId,
+        order: step.order,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Maintenance plan duplicated successfully",
+      newPlan: newPlan.toJSON(),
+    });
+  } catch (error) {
+    console.error("Error duplicating maintenance plan:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 router.post("/plans/steps-reorder", async (req, res) => {
   const { newStepData } = req.body;
   console.log(newStepData);

@@ -28,7 +28,7 @@
                 round
                 flat
                 dense
-                @click="duplocatePlan(props.row.id)"
+                @click="duplicatePlan(props.row.id)"
               />
               <!-- VIEW -->
               <q-btn
@@ -42,7 +42,6 @@
             </q-td>
           </template>
         </q-table>
-        <pre>{{ maintenancePlans }}</pre>
       </div>
     </div>
   </q-page>
@@ -54,9 +53,11 @@ import { useAppStore } from "stores/app";
 import { api } from "boot/axios";
 import dayjs from "dayjs";
 import { useRouter } from "vue-router";
+import { useQuasar } from "quasar";
 
 const App = useAppStore();
 const router = useRouter();
+const $q = useQuasar();
 const maintenancePlans = ref([]);
 const columns = [
   {
@@ -114,6 +115,45 @@ const goToPlanDetails = (planId) => {
     name: "maintenance-plan-details",
     params: { planId },
   });
+};
+
+const duplicatePlan = async (planId) => {
+  try {
+    $q.dialog({
+      title: "Duplication du plan de maintenance",
+      message:
+        "Veuillez entrer l'emplacement pour le nouveau plan de maintenance.",
+      prompt: {
+        model: "",
+        type: "text",
+        placeholder: "Emplacement du nouveau plan",
+      },
+      cancel: true,
+      persistent: true,
+    })
+      .onOk(async (data) => {
+        if (!data || !data.trim()) {
+          App.notify("L'emplacement ne peut pas être vide.", "error");
+          return;
+        }
+        // Call the API to duplicate the plan
+        const response = await api.post(
+          `/maintenance/plans/${planId}/duplicate`,
+          {
+            location: data.trim(),
+          }
+        );
+        App.notify("Plan dupliqué avec succès !", "positive");
+        fetchMaintenancePlans();
+      })
+      .onCancel(() => {
+        console.log("Duplication cancelled");
+      });
+    fetchMaintenancePlans();
+  } catch (error) {
+    console.error("Error duplicating plan:", error);
+    App.notify("Erreur lors de la duplication du plan.", "error");
+  }
 };
 
 const fetchMaintenancePlans = async () => {
