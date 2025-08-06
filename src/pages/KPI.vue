@@ -254,7 +254,14 @@
             :key="chartOptions.series.length"
             v-if="getData"
           />
+          <q-btn
+            flat
+            @click="exportImage('dayResumeTable')"
+            icon="mdi-file-download"
+            label="Exporter le tableau"
+          />
           <q-table
+            id="dayResumeTable"
             :rows="dayResume"
             :columns="[
               {
@@ -352,6 +359,7 @@ import { useDataLogStore } from "stores/datalog";
 import MessagesByDay from "src/components/charts/MessagesByDay.vue";
 import ErrorsPerZoneCount from "src/components/charts/ErrorsPerZoneCount.vue";
 import VueApexCharts from "vue3-apexcharts";
+import html2canvas from "html2canvas";
 
 dayjs.extend(isBetween);
 dayjs.extend(utc);
@@ -577,154 +585,154 @@ const getData = (filter) => {
       from = dayjs(filter.from).format("YYYY-MM-DD");
       to = dayjs(filter.to).format("YYYY-MM-DD");
     }
-      // const productionTime = dataLogStore.productionTimes(
-      //   dayjs(filter).format("YYYY-MM-DD")
-      // );
-      // const from = dayjs(productionTime.from).format("YYYY-MM-DD");
-      // const to = dayjs(productionTime.from).format("YYYY-MM-DD");
-      const kpiTop3Count = await dataLogStore.getKPItop3Count({
+    // const productionTime = dataLogStore.productionTimes(
+    //   dayjs(filter).format("YYYY-MM-DD")
+    // );
+    // const from = dayjs(productionTime.from).format("YYYY-MM-DD");
+    // const to = dayjs(productionTime.from).format("YYYY-MM-DD");
+    const kpiTop3Count = await dataLogStore.getKPItop3Count({
+      from,
+      to,
+      includesExcluded: false,
+    });
+    const kpiTop3Duration = await dataLogStore.getKPItop3Duration({
+      from,
+      to,
+      includesExcluded: false,
+    });
+    const promises = [];
+    for (const dataSource of dataSources) {
+      const alarms = await dataLogStore.getKPItop3CountPerZone({
         from,
         to,
+        dataSource,
         includesExcluded: false,
       });
-      const kpiTop3Duration = await dataLogStore.getKPItop3Duration({
-        from,
-        to,
-        includesExcluded: false,
+      KPITop3PerZone.value.push({
+        dataSource,
+        alarms,
       });
-      const promises = [];
-      for (const dataSource of dataSources) {
-        const alarms = await dataLogStore.getKPItop3CountPerZone({
+      showLoading(`Chargement ou calcul des données pour ${dataSource}...`);
+      allLoaded.value[dataSource] = false;
+      const d = dataLogStore
+        .getDayResume({
           from,
           to,
           dataSource,
-          includesExcluded: false,
-        });
-        KPITop3PerZone.value.push({
-          dataSource,
-          alarms,
-        });
-        showLoading(`Chargement ou calcul des données pour ${dataSource}...`);
-        allLoaded.value[dataSource] = false;
-        const d = dataLogStore
-          .getDayResume({
-            from,
-            to,
-            dataSource,
-          })
-          .then((day) => {
-            if (day.length === 0) return;
-            const totalTimeInSeconds = dayjs(
-              day[day.length - 1].timeOfAcknowledge
-            ).diff(day[0].timeOfOccurence, "second");
+        })
+        .then((day) => {
+          if (day.length === 0) return;
+          const totalTimeInSeconds = dayjs(
+            day[day.length - 1].timeOfAcknowledge
+          ).diff(day[0].timeOfOccurence, "second");
 
-            const runtime = totalTimeInSeconds / 60;
-            const stoptime =
-              day.reduce((acc, message) => {
-                if (message.alarmCode == 0) return acc;
-                return acc + message.duration;
-              }, 0) / 60;
-            const nbFaillures = day.reduce((acc, message) => {
+          const runtime = totalTimeInSeconds / 60;
+          const stoptime =
+            day.reduce((acc, message) => {
               if (message.alarmCode == 0) return acc;
-              return acc + 1;
-            }, 0);
-            const MTTR = stoptime / Math.max(nbFaillures, 1);
-            const MTBF = runtime / Math.max(nbFaillures, 1);
-            const dispo = MTBF / (MTBF + MTTR);
-            dayResume.value.push({
-              dataSource,
-              runtime,
-              stoptime,
-              nbFaillures,
-              MTBF,
-              MTTR,
-              dispo,
-              data: day.map((message) => {
-                return {
-                  id: message.group_id,
-                  state: message.alarmCode,
-                  alarmText: message.alarmText,
-                  startTime: dayjs(message.timeOfOccurence).format(
-                    "YYYY-MM-DD HH:mm:ss"
-                  ),
-                  endTime: dayjs(message.timeOfAcknowledge).format(
-                    "YYYY-MM-DD HH:mm:ss"
-                  ),
-                  duration: mapValue(
-                    message.duration,
-                    0,
-                    totalTimeInSeconds,
-                    0,
-                    100
-                  ),
-                };
-              }),
-            });
-            allLoaded.value[dataSource] = true;
-            chartOptions.series.push({
-              name: dataSource,
-              data: day.map((message) => {
-                return {
-                  x: dataSource,
-                  y: [
-                    dayjs(message.timeOfOccurence).valueOf(),
-                    dayjs(message.timeOfAcknowledge).valueOf(),
-                  ],
-                  start: dayjs(message.timeOfOccurence).valueOf(),
-                  end: dayjs(message.timeOfAcknowledge).valueOf(),
-                  fillColor: message.alarmText == "Running" ? "green" : "red",
-                  errorText: message.alarmText,
-                };
-              }),
-            });
-          })
-          .catch((error) => {
-            console.error("Error getting day resume:", error);
+              return acc + message.duration;
+            }, 0) / 60;
+          const nbFaillures = day.reduce((acc, message) => {
+            if (message.alarmCode == 0) return acc;
+            return acc + 1;
+          }, 0);
+          const MTTR = stoptime / Math.max(nbFaillures, 1);
+          const MTBF = runtime / Math.max(nbFaillures, 1);
+          const dispo = MTBF / (MTBF + MTTR);
+          dayResume.value.push({
+            dataSource,
+            runtime,
+            stoptime,
+            nbFaillures,
+            MTBF,
+            MTTR,
+            dispo,
+            data: day.map((message) => {
+              return {
+                id: message.group_id,
+                state: message.alarmCode,
+                alarmText: message.alarmText,
+                startTime: dayjs(message.timeOfOccurence).format(
+                  "YYYY-MM-DD HH:mm:ss"
+                ),
+                endTime: dayjs(message.timeOfAcknowledge).format(
+                  "YYYY-MM-DD HH:mm:ss"
+                ),
+                duration: mapValue(
+                  message.duration,
+                  0,
+                  totalTimeInSeconds,
+                  0,
+                  100
+                ),
+              };
+            }),
           });
-        promises.push(d);
-      }
-      await Promise.all(promises);
-      dayResume.value.sort((a, b) => {
-        return a.dataSource.localeCompare(b.dataSource);
-      });
-      chartOptions.series.sort((a, b) => {
-        return a.name.localeCompare(b.name);
-      });
-      KPITop3Number.value = kpiTop3Count;
-      KPITop3Duration.value = kpiTop3Duration;
-      // $q.loading.hide();
-      // Add total at the end of the table
-      dayResume.value.push({
-        dataSource: "Total",
-        runtime:
-          dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
-          dayResume.value.length,
-        stoptime: dayResume.value.reduce((acc, day) => acc + day.stoptime, 0),
-        nbFaillures: dayResume.value.reduce(
-          (acc, day) => acc + day.nbFaillures,
-          0
-        ),
-        MTBF:
-          dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
+          allLoaded.value[dataSource] = true;
+          chartOptions.series.push({
+            name: dataSource,
+            data: day.map((message) => {
+              return {
+                x: dataSource,
+                y: [
+                  dayjs(message.timeOfOccurence).valueOf(),
+                  dayjs(message.timeOfAcknowledge).valueOf(),
+                ],
+                start: dayjs(message.timeOfOccurence).valueOf(),
+                end: dayjs(message.timeOfAcknowledge).valueOf(),
+                fillColor: message.alarmText == "Running" ? "green" : "red",
+                errorText: message.alarmText,
+              };
+            }),
+          });
+        })
+        .catch((error) => {
+          console.error("Error getting day resume:", error);
+        });
+      promises.push(d);
+    }
+    await Promise.all(promises);
+    dayResume.value.sort((a, b) => {
+      return a.dataSource.localeCompare(b.dataSource);
+    });
+    chartOptions.series.sort((a, b) => {
+      return a.name.localeCompare(b.name);
+    });
+    KPITop3Number.value = kpiTop3Count;
+    KPITop3Duration.value = kpiTop3Duration;
+    // $q.loading.hide();
+    // Add total at the end of the table
+    dayResume.value.push({
+      dataSource: "Total",
+      runtime:
+        dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
+        dayResume.value.length,
+      stoptime: dayResume.value.reduce((acc, day) => acc + day.stoptime, 0),
+      nbFaillures: dayResume.value.reduce(
+        (acc, day) => acc + day.nbFaillures,
+        0
+      ),
+      MTBF:
+        dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
+        dayResume.value.length /
+        dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0),
+      MTTR:
+        dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
+        dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0),
+      dispo:
+        dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
+        dayResume.value.length /
+        dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0) /
+        (dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
           dayResume.value.length /
-          dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0),
-        MTTR:
+          dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0) +
           dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
-          dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0),
-        dispo:
-          dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
-          dayResume.value.length /
-          dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0) /
-          (dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
-            dayResume.value.length /
-            dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0) +
-            dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
-              dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0)),
-      });
-      console.info("All data received");
-      $q.loading.hide();
-      gettingData.value = false;
-      resolve();
+            dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0)),
+    });
+    console.info("All data received");
+    $q.loading.hide();
+    gettingData.value = false;
+    resolve();
     // } else if (typeof filter === typeof {}) {
     //   const from = dayjs(filter.from)
     //     .set("hour", 0)
@@ -797,6 +805,25 @@ const getAlarmsByUser = async () => {
       }),
     },
   ];
+};
+
+const exportImage = (id) => {
+  const element = document.getElementById(id);
+  if (!element) {
+    return;
+  }
+  html2canvas(element, {
+    backgroundColor: "#ffffff",
+    allowTaint: true,
+    useCORS: true,
+    scale: 2, // Augmente la résolution de l'image
+    logging: false, // Pour le débogage
+  }).then((canvas) => {
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `${id}.png`;
+    link.click();
+  });
 };
 
 onMounted(async () => {
