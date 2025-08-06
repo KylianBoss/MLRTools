@@ -314,15 +314,76 @@ router.delete("/plans/steps/:stepId", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+router.get("/reports", async (req, res) => {
+  try {
+    const reports = await db.models.Maintenance.findAll({
+      order: [["startTime", "DESC"]],
+      attributes: [
+        "id",
+        "maintenancePlanId",
+        "performedBy",
+        "startTime",
+        "endTime",
+        "duration",
+      ],
+    });
+    const reportDetails = await Promise.all(
+      reports.map(async (report) => {
+        const plan = await db.models.MaintenancePlan.findByPk(
+          report.maintenancePlanId
+        );
+        const user = await db.models.Users.findByPk(report.performedBy, {
+          attributes: ["id", "fullname"],
+        });
+        return {
+          ...report.toJSON(),
+          plan: plan ? plan.toJSON() : null,
+          performedBy: user ? user.toJSON() : null,
+        };
+      })
+    );
+    res.json(reportDetails);
+  } catch (error) {
+    console.error("Error fetching maintenance reports:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.get("/reports/:reportId", async (req, res) => {
+  const { reportId } = req.params;
+  try {
+    const report = await db.models.Maintenance.findByPk(reportId);
+    if (!report) {
+      return res.status(404).json({ error: "Maintenance report not found" });
+    }
+    const plan = await db.models.MaintenancePlan.findByPk(
+      report.maintenancePlanId
+    );
+    const user = await db.models.Users.findByPk(report.performedBy, {
+      attributes: ["id", "fullname"],
+    });
+    res.json({
+      ...report.toJSON(),
+      plan: plan ? plan.toJSON() : null,
+      performedBy: user ? user.toJSON() : null,
+    });
+  } catch (error) {
+    console.error("Error fetching maintenance report:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 router.get("/:maintenanceId", async (req, res) => {
   const { maintenanceId } = req.params;
   try {
-    const maintenanceSchedule = await db.models.MaintenanceSchedule.findByPk(maintenanceId);
+    const maintenanceSchedule = await db.models.MaintenanceSchedule.findByPk(
+      maintenanceId
+    );
     if (!maintenanceSchedule) {
       return res.status(404).json({ error: "Maintenance schedule not found" });
     }
 
-    const maintenance = await db.models.MaintenancePlan.findByPk(maintenanceSchedule.maintenancePlanId);
+    const maintenance = await db.models.MaintenancePlan.findByPk(
+      maintenanceSchedule.maintenancePlanId
+    );
     if (!maintenance) {
       return res.status(404).json({ error: "Maintenance not found" });
     }

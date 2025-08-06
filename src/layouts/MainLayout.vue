@@ -185,12 +185,12 @@
               icon="mdi-content-paste"
               label="Étapes de maintenance"
             /> -->
-            <!-- <drawer-item
-              to="maintenance-logs"
+            <drawer-item
+              to="maintenance-reports"
               autorisation="*"
               icon="mdi-file-document-outline"
-              label="Logs de maintenance"
-            /> -->
+              label="Rapports de maintenance"
+            />
           </q-expansion-item>
           <!-- ADMINISTRATION -->
           <q-expansion-item

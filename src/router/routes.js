@@ -5,17 +5,20 @@ const routes = [
     path: "/",
     component: () => import("layouts/MainLayout.vue"),
     children: [
+      // === HOME === //
       {
         path: "",
         name: "home",
         component: () => import("pages/HomePage.vue"),
       },
+      // === KPI === //
       { path: "kpi", name: "kpi", component: () => import("pages/KPI.vue") },
       {
         path: "search",
         name: "search",
         component: () => import("pages/SearchMessages.vue"),
       },
+      // === CHARTS === //
       {
         path: "charts",
         children: [
@@ -31,6 +34,7 @@ const routes = [
           },
         ],
       },
+      // === ALARMS === //
       {
         path: "alarms",
         children: [
@@ -56,6 +60,7 @@ const routes = [
           },
         ],
       },
+      // === TOOLS === //
       {
         path: "tools",
         children: [
@@ -66,6 +71,7 @@ const routes = [
           },
         ],
       },
+      // === MAINTENANCE === //
       {
         path: "maintenance",
         children: [
@@ -86,25 +92,55 @@ const routes = [
             component: () =>
               import("src/pages/maintenance/MaintenanceView.vue"),
           },
+          // === MAINTENANCE PLANS === //
           {
             path: "plans",
-            name: "maintenance-plans",
-            component: () =>
-              import("src/pages/maintenance/MaintenancePlans.vue"),
+            children: [
+              {
+                path: "",
+                name: "maintenance-plans",
+                component: () =>
+                  import("src/pages/maintenance/MaintenancePlans.vue"),
+              },
+              {
+                path: ":planId",
+                name: "maintenance-plan-details",
+                beforeEnter: (to, from, next) => {
+                  if (to.params.planId) {
+                    next();
+                  }
+                },
+                component: () =>
+                  import("src/pages/maintenance/MaintenancePlanDetails.vue"),
+              },
+            ],
           },
+          // === MAINTENANCE REPORTS === //
           {
-            path: "plans/:planId",
-            name: "maintenance-plan-details",
-            beforeEnter: (to, from, next) => {
-              if (to.params.planId) {
-                next();
-              }
-            },
+            path: "reports",
+            children: [
+              {
+                path: "",
+                name: "maintenance-reports",
             component: () =>
-              import("src/pages/maintenance/MaintenancePlanDetails.vue"),
+              import("src/pages/maintenance/MaintenanceReports.vue"),
+              },
+              {
+                path: ":reportId",
+                name: "maintenance-report-details",
+                beforeEnter: (to, from, next) => {
+                  if (to.params.reportId) {
+                    return next();
+                  }
+                },
+                component: () =>
+                  import("src/pages/maintenance/MaintenanceReportDetails.vue"),
+              },
+            ],
           },
         ],
       },
+      // === ADMINISTRATION === //
       {
         path: "admin",
         beforeEnter: (to, from, next) => {
