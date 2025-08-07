@@ -171,6 +171,34 @@ router.post("/complete", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+router.post("/assign", async (req, res) => {
+  const { maintenanceId, userId } = req.body;
+
+  try {
+    const maintenance = await db.models.MaintenanceSchedule.findByPk(
+      maintenanceId
+    );
+    if (!maintenance) {
+      return res.status(404).json({ error: "Maintenance not found" });
+    }
+    const user = await db.models.Users.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    maintenance.assignedTo = userId;
+    maintenance.status = "assigned";
+    await maintenance.save();
+
+    res.json({
+      success: true,
+      message: "Maintenance assigned successfully",
+      maintenance: maintenance.toJSON(),
+    });
+  } catch (error) {
+    console.error("Error assigning maintenance:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 router.get("/plans", async (req, res) => {
   try {
     const plans = await db.models.MaintenancePlan.findAll({
@@ -372,7 +400,7 @@ router.get("/reports", async (req, res) => {
       where: {
         endTime: {
           [Op.ne]: null, // Only fetch completed reports
-        }
+        },
       },
     });
     const reportDetails = await Promise.all(

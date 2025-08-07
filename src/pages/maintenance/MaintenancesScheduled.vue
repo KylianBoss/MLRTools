@@ -74,6 +74,33 @@
         </q-table>
       </div>
     </div>
+    <q-dialog v-model="assignUserDialog" persistent>
+      <q-card style="min-width: 500px">
+        <q-card-section class="text-h6">
+          Assigner la maintenance de {{ selectedMaintenance.plan.location }}
+        </q-card-section>
+        <q-card-section>
+          <q-select
+            v-model="selectedUser"
+            :options="users"
+            option-label="fullname"
+            option-value="id"
+            label="Sélectionnez un utilisateur"
+            emit-value
+            map-options
+            filled
+          />
+        </q-card-section>
+        <q-card-actions>
+          <q-btn
+            color="primary"
+            label="Assigner"
+            @click="assignSelectedUser"
+          />
+          <q-btn flat label="Annuler" @click="assignUserDialog = false" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -89,6 +116,10 @@ const App = useAppStore();
 const router = useRouter();
 const $q = useQuasar();
 const maintenances = ref([]);
+const users = ref([]);
+const selectedUser = ref(null);
+const selectedMaintenance = ref(null);
+const assignUserDialog = ref(false);
 const columns = [
   {
     name: "location",
@@ -201,6 +232,46 @@ const startMaintenance = async (data) => {
     }
   });
 };
+
+const assignMaintenance = async (data) => {
+  selectedUser.value = null;
+  assignUserDialog.value = true;
+  selectedMaintenance.value = data;
+  try {
+    const response = await api.get("/users");
+    users.value = response.data.map((user) => ({
+      id: user.id,
+      fullname: user.fullname,
+    }));
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    App.notify("Erreur lors de la récupération des utilisateurs", "negative");
+  }
+};
+
+const assignSelectedUser = async () => {
+  if (!selectedUser.value) {
+    App.notify("Veuillez sélectionner un utilisateur", "warning");
+    return;
+  }
+  try {
+    const response = await api.post("/maintenance/assign", {
+      maintenanceId: selectedMaintenance.value.id,
+      userId: selectedUser.value,
+    });
+    if (response.data.success) {
+      App.notify("Maintenance assignée avec succès", "positive");
+      fetchMaintenances();
+      assignUserDialog.value = false;
+    } else {
+      App.notify("Erreur lors de l'assignation de la maintenance", "negative");
+    }
+  } catch (error) {
+    console.error("Error assigning maintenance:", error);
+    App.notify("Erreur lors de l'assignation de la maintenance", "negative");
+  }
+};
+
 const continueMaintenance = async (data) => {
   console.log(data);
   try {
@@ -212,6 +283,7 @@ const continueMaintenance = async (data) => {
     console.error("Error continuing maintenance:", error);
   }
 };
+
 const fetchMaintenances = async () => {
   try {
     const response = await api.get("/maintenance/planned");
