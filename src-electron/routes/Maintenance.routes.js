@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db } from "../database.js";
+import { Op } from "sequelize";
 
 const router = Router();
 
@@ -368,6 +369,11 @@ router.get("/reports", async (req, res) => {
         "endTime",
         "duration",
       ],
+      where: {
+        endTime: {
+          [Op.ne]: null, // Only fetch completed reports
+        }
+      },
     });
     const reportDetails = await Promise.all(
       reports.map(async (report) => {
