@@ -175,7 +175,7 @@
             />
             <drawer-item
               to="maintenance-plans"
-              autorisation="*"
+              autorisation="maintenance-plans"
               icon="mdi-format-list-checks"
               label="Plans de maintenance"
             />
@@ -187,7 +187,7 @@
             /> -->
             <drawer-item
               to="maintenance-reports"
-              autorisation="*"
+              autorisation="maintenance-reports"
               icon="mdi-file-document-outline"
               label="Rapports de maintenance"
             />

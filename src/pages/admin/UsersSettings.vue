@@ -169,6 +169,9 @@ const access = [
   { label: "Admin DB", value: "admin-db" },
   { label: "Admin Users", value: "admin-users" },
   { label: "Données de production", value: "productionData" },
+  { label: "Maintenance Plans", value: "maintenance-plans" },
+  { label: "Maintenance Reports", value: "maintenance-reports" },
+  { label: "Peut démarrer maintenance", value: "canStartMaintenance" },
 ];
 
 onMounted(() => {

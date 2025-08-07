@@ -36,8 +36,9 @@
                 round
                 title="Démarrer la maintenance"
                 :disable="
-                  props.row.assignedTo &&
-                  props.row.assignedTo.id !== App.user.id
+                  (props.row.assignedTo &&
+                    props.row.assignedTo.id !== App.user.id) ||
+                  App.userHasAccess('canStartMaintenance') === false
                 "
                 v-if="
                   props.row.status === 'scheduled' ||
@@ -82,9 +83,11 @@ import { api } from "boot/axios";
 import dayjs from "dayjs";
 import { useAppStore } from "stores/app";
 import { useRouter } from "vue-router";
+import { useQuasar } from "quasar";
 
 const App = useAppStore();
 const router = useRouter();
+const $q = useQuasar();
 const maintenances = ref([]);
 const columns = [
   {
@@ -172,24 +175,31 @@ const columns = [
 const filter = ref("");
 
 const startMaintenance = async (data) => {
-  try {
-    const response = await api.post("/maintenance/start", {
-      id: data.id,
-      userId: App.user.id,
-    });
-    if (response.data.success) {
-      fetchMaintenances();
-      router.push({
-        name: "maintenance-actual",
-        params: { maintenanceId: data.id },
+  $q.dialog({
+    title: "Démarrer la maintenance",
+    message: `Êtes-vous sûr de vouloir démarrer la maintenance pour ${data.plan.location}?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      const response = await api.post("/maintenance/start", {
+        id: data.id,
+        userId: App.user.id,
       });
-    } else {
+      if (response.data.success) {
+        fetchMaintenances();
+        router.push({
+          name: "maintenance-actual",
+          params: { maintenanceId: data.id },
+        });
+      } else {
+        App.notify("Erreur lors du démarrage de la maintenance", "negative");
+      }
+    } catch (error) {
+      console.error("Error starting maintenance:", error);
       App.notify("Erreur lors du démarrage de la maintenance", "negative");
     }
-  } catch (error) {
-    console.error("Error starting maintenance:", error);
-    App.notify("Erreur lors du démarrage de la maintenance", "negative");
-  }
+  });
 };
 const continueMaintenance = async (data) => {
   console.log(data);

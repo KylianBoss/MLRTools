@@ -353,7 +353,10 @@ function initDB(config) {
             "suspiciousPlaces",
             "admin",
             "admin-db",
-            "admin-users"
+            "admin-users",
+            "maintenance-plans",
+            "maintenance-reports",
+            "canStartMaintenance",
           ),
         },
       },
