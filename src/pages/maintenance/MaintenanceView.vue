@@ -28,7 +28,9 @@
           <q-list dense separator>
             <q-item v-for="(step, index) in report" :key="index">
               <q-item-section avatar>
-                <q-avatar color="primary" text-color="white" size="sm">{{ index + 1 }}</q-avatar>
+                <q-avatar color="primary" text-color="white" size="sm">{{
+                  index + 1
+                }}</q-avatar>
               </q-item-section>
               <q-item-section>
                 <div class="text-subtitle2">{{ step.description }}</div>
@@ -46,7 +48,7 @@
             <div class="col">
               <q-btn
                 color="secondary"
-                @click="activeStep = 0, terminated = false"
+                @click="(activeStep = 0), (terminated = false)"
                 label="Retour au début"
                 flat
               />
@@ -54,7 +56,7 @@
             <div class="col">
               <q-btn
                 color="negative"
-                @click="activeStep = 0, report = [], terminated = false"
+                @click="(activeStep = 0), (report = []), (terminated = false)"
                 label="Réinitialiser la maintenance"
                 flat
               />
@@ -79,10 +81,12 @@ import { api } from "boot/axios";
 import { useAppStore } from "stores/app";
 import { useRoute, useRouter } from "vue-router";
 import MaintenanceStep from "components/maintenance/MaintenanceStep.vue";
+import { useConfirmMaintenanceDialog } from "src/plugins/useConfirmMaintenanceDialog";
 
 const App = useAppStore();
 const route = useRoute();
 const router = useRouter();
+const { askForConfirmation } = useConfirmMaintenanceDialog();
 const maintenance = ref(null);
 const activeStep = ref(0);
 const report = ref([]);
@@ -98,15 +102,30 @@ const nextStep = (step) => {
 };
 
 const confirm = async () => {
-  try {
-    await api.post(`/maintenance/complete`, {
-      id: route.params.maintenanceId,
-      report: report.value,
+  api
+    .get(`/maintenance/resume/${route.params.maintenanceId}`)
+    .then((resume) => {
+      api
+        .get(`/maintenance/reports/${resume.data.actualMaintenanceLogId}`)
+        .then((reportData) => {
+          askForConfirmation({
+            ...maintenance.value,
+            ...reportData.data,
+          }).then(async (timings) => {
+            try {
+              await api.post(`/maintenance/complete`, {
+                id: route.params.maintenanceId,
+                report: report.value,
+                startTime: timings.startTime,
+                endTime: timings.endTime,
+              });
+              router.push({ name: "maintenances-scheduled" });
+            } catch (error) {
+              console.error("Error confirming maintenance:", error);
+            }
+          });
+        });
     });
-    router.push({ name: "maintenances-scheduled" });
-  } catch (error) {
-    console.error("Error confirming maintenance:", error);
-  }
 };
 
 const save = async () => {

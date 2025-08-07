@@ -127,7 +127,7 @@ router.post("/save", async (req, res) => {
   }
 });
 router.post("/complete", async (req, res) => {
-  const { id, report } = req.body;
+  const { id, report, startTime, endTime } = req.body;
   try {
     const maintenance = await db.models.MaintenanceSchedule.findByPk(id);
     if (!maintenance) {
@@ -151,7 +151,8 @@ router.post("/complete", async (req, res) => {
     maintenancePlan.lastMaintenance = new Date();
     await maintenancePlan.save();
 
-    maintenanceLog.endTime = new Date();
+    maintenanceLog.startTime = startTime || maintenanceLog.startTime;
+    maintenanceLog.endTime = endTime || new Date();
     maintenanceLog.duration =
       (maintenanceLog.endTime - maintenanceLog.startTime) / 1000; // Duration in seconds
     maintenanceLog.report = report;
@@ -444,6 +445,22 @@ router.get("/reports/:reportId", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching maintenance report:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.get("/scheduled/:maintenanceId", async (req, res) => {
+  const { maintenanceId } = req.params;
+  try {
+    const maintenanceSchedule = await db.models.MaintenanceSchedule.findByPk(
+      maintenanceId
+    );
+    if (!maintenanceSchedule) {
+      return res.status(404).json({ error: "Maintenance schedule not found" });
+    }
+
+    res.json(maintenanceSchedule.toJSON());
+  } catch (error) {
+    console.error("Error fetching maintenance schedule:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
