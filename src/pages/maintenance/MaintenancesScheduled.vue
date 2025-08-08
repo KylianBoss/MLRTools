@@ -15,6 +15,7 @@
           bordered
           dense
           :filter="filter"
+          :rows-per-page-options="[10, 20, 50, 100, 0]"
         >
           <template v-slot:top>
             <q-input
@@ -92,11 +93,7 @@
           />
         </q-card-section>
         <q-card-actions>
-          <q-btn
-            color="primary"
-            label="Assigner"
-            @click="assignSelectedUser"
-          />
+          <q-btn color="primary" label="Assigner" @click="assignSelectedUser" />
           <q-btn flat label="Annuler" @click="assignUserDialog = false" />
         </q-card-actions>
       </q-card>

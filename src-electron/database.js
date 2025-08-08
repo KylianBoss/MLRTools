@@ -643,6 +643,15 @@ function initDB(config) {
           allowNull: false,
           comment: "ID of the maintenance plan",
         },
+        locationId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          references: {
+            model: locations,
+            key: "id",
+          },
+          comment: "ID of the location where the maintenance is scheduled",
+        },
         scheduledTime: {
           type: DataTypes.DATE,
           allowNull: false,
