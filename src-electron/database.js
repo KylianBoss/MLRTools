@@ -646,10 +646,10 @@ function initDB(config) {
         locationId: {
           type: DataTypes.INTEGER.UNSIGNED,
           allowNull: true,
-          references: {
-            model: locations,
-            key: "id",
-          },
+          // references: {
+          //   model: locations,
+          //   key: "id",
+          // },
           comment: "ID of the location where the maintenance is scheduled",
         },
         scheduledTime: {
