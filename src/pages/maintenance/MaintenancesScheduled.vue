@@ -67,7 +67,7 @@
                 @click="assignMaintenance(props.row)"
                 flat
                 round
-                v-if="App.isAdmin && props.row.assignedTo == null"
+                v-if="App.isAdmin"
                 title="Assigner à un utilisateur"
               />
             </q-td>
