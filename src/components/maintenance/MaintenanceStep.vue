@@ -145,6 +145,13 @@
             class="q-mr-sm text-bold"
             v-if="step.doneButton"
           />
+          <q-checkbox
+            v-model="notDone"
+            color="primary"
+            label="Non fait"
+            class="q-mr-sm text-bold"
+            v-if="step.doneButton"
+          />
           <div>Une pièce à été remplacée ?</div>
           <q-checkbox
             :model-value="answer === 'yes'"
@@ -223,6 +230,7 @@ const props = defineProps({
 const emit = defineEmits(["next", "back"]);
 const answer = ref(null);
 const done = ref(false);
+const notDone = ref(false);
 const beforeValue = ref(null);
 const afterValue = ref(null);
 const notes = ref("");
@@ -235,6 +243,7 @@ const fullStep = computed(() => {
     afterValue: afterValue.value,
     passed: isGoodAnswer.value,
     done: done.value,
+    notDone: notDone.value,
   };
 });
 const goodAnswerData = computed(() => {
@@ -264,14 +273,16 @@ const canGoNext = computed(() => {
   return (
     (props.step.activityType == "preventive" &&
       answer.value &&
-      ((props.step.doneButton && done.value) || !props.step.doneButton)) ||
+      ((props.step.doneButton && (done.value || notDone.value)) ||
+        !props.step.doneButton)) ||
     (props.step.activityType == "inspection" &&
       beforeValue.value &&
       afterValue.value &&
-      ((props.step.doneButton && done.value) || !props.step.doneButton)) ||
+      ((props.step.doneButton && (done.value || notDone.value)) ||
+        !props.step.doneButton)) ||
     (props.step.activityType == "inspection" &&
       props.step.answerType == "replace" &&
-      !!done.value &&
+      (done.value || notDone.value) &&
       answer.value)
   );
 });
@@ -334,6 +345,7 @@ watch(
       beforeValue.value = newData.beforeValue || null;
       afterValue.value = newData.afterValue || null;
       done.value = newData.done || false;
+      notDone.value = newData.notDone || false;
     }
   },
   { immediate: true }

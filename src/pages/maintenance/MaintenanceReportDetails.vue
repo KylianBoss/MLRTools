@@ -141,6 +141,13 @@
                       {{ step.answer === "yes" ? "Oui" : "Non" }}
                     </span>
                   </div>
+                  <div
+                    class="text-caption q-pl-sm text-red"
+                    v-if="step.doneButton && step.notDone"
+                  >
+                    <q-icon name="mdi-close" color="red" size="sm" />
+                    Tâche non effectuée
+                  </div>
                 </q-item-section>
                 <q-item-section side>
                   <div>
