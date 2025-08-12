@@ -128,6 +128,11 @@ router.post("/save", async (req, res) => {
 });
 router.post("/complete", async (req, res) => {
   const { id, report, startTime, endTime } = req.body;
+
+  if (!id || !report || !startTime || !endTime) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
   try {
     const maintenance = await db.models.MaintenanceSchedule.findByPk(id);
     if (!maintenance) {
@@ -151,10 +156,9 @@ router.post("/complete", async (req, res) => {
     maintenancePlan.lastMaintenance = new Date();
     await maintenancePlan.save();
 
-    maintenanceLog.startTime = startTime || maintenanceLog.startTime;
-    maintenanceLog.endTime = endTime || new Date();
-    maintenanceLog.duration =
-      (maintenanceLog.endTime - maintenanceLog.startTime) / 1000; // Duration in seconds
+    maintenanceLog.startTime = startTime;
+    maintenanceLog.endTime = endTime;
+    maintenanceLog.duration = (startTime - endTime) / 1000; // Duration in seconds
     maintenanceLog.report = report;
     await maintenanceLog.save();
 
