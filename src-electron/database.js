@@ -161,12 +161,6 @@ function initDB(config) {
           },
           comment: "Array of zones in the group, e.g. ['F001', 'F002', ...]",
         },
-        messageType: {
-          type: DataTypes.STRING(10),
-          allowNull: false,
-          defaultValue: "LREP",
-          comment: "Type of message for the group, e.g. 'LREP', '26', etc.",
-        },
         zoneTransportType: {
           type: DataTypes.ENUM("tray", "box", "pallet"),
           allowNull: false,
@@ -210,6 +204,12 @@ function initDB(config) {
           },
           comment:
             "Array of read points for the zone, e.g. ['RP1', 'RP2', ...]",
+        },
+        messageType: {
+          type: DataTypes.STRING(10),
+          allowNull: false,
+          defaultValue: "LREP",
+          comment: "Type of message for the group, e.g. 'LREP', '26', etc.",
         },
       },
       {
@@ -362,7 +362,7 @@ function initDB(config) {
             "admin-users",
             "maintenance-plans",
             "maintenance-reports",
-            "canStartMaintenance",
+            "canStartMaintenance"
           ),
         },
       },

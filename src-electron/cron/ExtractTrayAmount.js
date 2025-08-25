@@ -58,7 +58,7 @@ export const extractTrayAmount = (date) => {
             );
             continue;
           }
-          group.addresses = [...group.addresses, ...readPoints.readPoints];
+          group.addresses = [...group.addresses, ...readPoints];
         }
       }
       const splits = [
@@ -234,9 +234,9 @@ export const extractTrayAmount = (date) => {
               dayjs(split.end).format("DD.MM.YYYY HH:mm:ss")
             );
             await clearInput(addressInput, page);
-            await addressInput.type(address);
+            await addressInput.type(address.readPoints);
             await clearInput(messageTypeInput, page);
-            await messageTypeInput.type(group.messageType);
+            await messageTypeInput.type(address.messageType);
 
             console.log("Filling form...");
             await Promise.all([
