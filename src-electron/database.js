@@ -328,6 +328,12 @@ function initDB(config) {
           comment:
             "If isBot is true, this field indicates the last active time of the bot",
         },
+        needsRestart: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+          comment:
+            "If true, the bot needs to be restarted. Set to true by the system, and set to false by the bot when it restarts",
+        },
       },
       {
         timestamps: false,
