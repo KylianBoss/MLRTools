@@ -24,11 +24,12 @@
     </div>
     <div class="row q-my-xs" v-for="(group, index) in groups" :key="index">
       <div class="col">
-        {{ groupCharts.filter((gc) => gc).length }}, {{ index }}
         <group-chart
           :locale="locale"
           :group="group"
-          @loaded="groupCharts[index] = true"
+          @loaded="
+            (groupCharts[index] = true), scrollTo(`#group-chart-${index}`)
+          "
           :id="`group-chart-${index}`"
           v-if="groupCharts.filter((gc) => gc).length > index"
         />
@@ -175,6 +176,13 @@ async function captureElement(selector) {
   return canvas.toDataURL("image/png");
   // src.value = canvas.toDataURL("image/png");
 }
+
+const scrollTo = (selector) => {
+  const element = document.querySelector(selector);
+  if (element) {
+    element.scrollIntoView({ behavior: "smooth" });
+  }
+};
 
 onMounted(() => {
   fetchGroups();
