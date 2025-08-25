@@ -394,11 +394,33 @@ export const useDataLogStore = defineStore("datalog", {
       return new Promise((resolve, reject) => {
         api.post("/alarms/secondary", { alarmId }).then((res) => {
           // Update the alarm in the store
-          console.log("Setting secondary alarm", alarmId);
-          console.log(res.data);
           const alarm = this.alarms.find((a) => a.alarmId === alarmId);
           if (alarm) {
             alarm.type = "secondary";
+          }
+          resolve(res.data);
+        });
+      });
+    },
+    async setHuman(alarmId) {
+      return new Promise((resolve, reject) => {
+        api.post("/alarms/human", { alarmId }).then((res) => {
+          // Update the alarm in the store
+          const alarm = this.alarms.find((a) => a.alarmId === alarmId);
+          if (alarm) {
+            alarm.type = "human";
+          }
+          resolve(res.data);
+        });
+      });
+    },
+    async setOther(alarmId) {
+      return new Promise((resolve, reject) => {
+        api.post("/alarms/other", { alarmId }).then((res) => {
+          // Update the alarm in the store
+          const alarm = this.alarms.find((a) => a.alarmId === alarmId);
+          if (alarm) {
+            alarm.type = "other";
           }
           resolve(res.data);
         });

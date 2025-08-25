@@ -97,11 +97,11 @@ function initDB(config) {
           comment: "Text of the alarm, can be translated",
         },
         type: {
-          type: DataTypes.ENUM("primary", "secondary"),
+          type: DataTypes.ENUM("primary", "secondary", "human", "other"),
           defaultValue: null,
           allowNull: true,
           comment:
-            "Type of alarm, can be 'primary' or 'secondary'. Is null at creation",
+            "Type of alarm, can be 'primary', 'secondary', 'human' or 'other'. Default is 'other'",
         },
       },
       {
