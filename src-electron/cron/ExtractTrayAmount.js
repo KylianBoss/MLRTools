@@ -42,25 +42,25 @@ export const extractTrayAmount = (date) => {
         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         lastLog: `Starting extraction job`,
       });
-      const groups = await db.models.ZoneGroups.findAll({
+      const zones = await db.models.ZoneReadPoints.findAll({
         raw: true,
       });
-      for (const group of groups) {
-        group.addresses = [];
-        group.total = 0;
-        for (const zone of group.zones) {
-          const readPoints = await db.models.ZoneReadPoints.findByPk(zone, {
-            raw: true,
-          });
-          if (!readPoints) {
-            console.warn(
-              `No readPoints found for zone ${zone} in group ${group.name}`
-            );
-            continue;
-          }
-          group.addresses = [...group.addresses, ...readPoints];
-        }
-      }
+      // for (const group of groups) {
+      //   group.addresses = [];
+      //   group.total = 0;
+      //   for (const zone of group.zones) {
+      //     const readPoints = await db.models.ZoneReadPoints.findByPk(zone, {
+      //       raw: true,
+      //     });
+      //     if (!readPoints) {
+      //       console.warn(
+      //         `No readPoints found for zone ${zone} in group ${group.name}`
+      //       );
+      //       continue;
+      //     }
+      //     group.addresses = [...group.addresses, ...readPoints];
+      //   }
+      // }
       const splits = [
         {
           start: `${date} 00:00:00`,
@@ -189,24 +189,25 @@ export const extractTrayAmount = (date) => {
 
       await sleep(2000);
 
-      for (const group of groups) {
-        console.log(`Processing group: ${group.zoneGroupName}`);
-        global.sendNotificationToElectron(
-          "Extract tray amount",
-          `Processing group: ${group.zoneGroupName}`
-        );
-        await updateJob({
-          actualState: "running",
-          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          lastLog: `Processing group: ${group.zoneGroupName}`,
-        });
-        for (const address of group.addresses) {
+      // for (const group of groups) {
+      //   console.log(`Processing group: ${group.zoneGroupName}`);
+      //   global.sendNotificationToElectron(
+      //     "Extract tray amount",
+      //     `Processing group: ${group.zoneGroupName}`
+      //   );
+      //   await updateJob({
+      //     actualState: "running",
+      //     lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      //     lastLog: `Processing group: ${group.zoneGroupName}`,
+      //   });
+      for (const zone of zones) {
+        for (const readPoint of zone.readPoints) {
           let i = 1;
           for (const split of splits) {
             await updateJob({
               actualState: "running",
               lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-              lastLog: `Processing group: ${group.zoneGroupName} - Address: ${address} - Split: ${i}`,
+              lastLog: `Processing : ${zone.zone} - ${readPoint} - Split: ${i}`,
             });
             const startDateInput = await page.$(
               'input[id="inputTimestampPicker_1"]'
@@ -234,9 +235,9 @@ export const extractTrayAmount = (date) => {
               dayjs(split.end).format("DD.MM.YYYY HH:mm:ss")
             );
             await clearInput(addressInput, page);
-            await addressInput.type(address.readPoints);
+            await addressInput.type(readPoint);
             await clearInput(messageTypeInput, page);
-            await messageTypeInput.type(address.messageType);
+            await messageTypeInput.type(zone.messageType);
 
             console.log("Filling form...");
             await Promise.all([
@@ -253,9 +254,6 @@ export const extractTrayAmount = (date) => {
 
             const pageContent = await page.content();
             if (pageContent.includes("Aucun jeu de données")) {
-              console.warn(
-                `No data found for address ${address} in group ${group.zoneGroupName} for split ${i}`
-              );
               i++;
               continue;
             }
@@ -269,11 +267,11 @@ export const extractTrayAmount = (date) => {
                   await updateJob({
                     actualState: "running",
                     lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                    lastLog: `Start downloading CSV file for address ${address} in group ${group.name} for split ${i}`,
+                    lastLog: `Start downloading CSV file for address ${readPoint} in group ${zone.zone} for split ${i}`,
                   });
                 } else {
                   console.warn(
-                    `No download link found for address ${address} in group ${group.name} for split ${i}`
+                    `No download link found for address ${readPoint} in group ${zone.zone} for split ${i}`
                   );
                   resolve();
                 }
@@ -285,7 +283,7 @@ export const extractTrayAmount = (date) => {
                   safe++;
                   if (safe > 20) {
                     console.warn(
-                      `Download took too long for address ${address} in group ${group.name} for split ${i}`
+                      `Download took too long for address ${readPoint} in group ${zone.zone} for split ${i}`
                     );
                     return reject();
                   }
@@ -303,7 +301,7 @@ export const extractTrayAmount = (date) => {
                 await updateJob({
                   actualState: "running",
                   lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                  lastLog: `CSV file downloaded successfully for address ${address} in group ${group.name} for split ${i}`,
+                  lastLog: `CSV file downloaded successfully for address ${readPoint} in group ${zone.zone} for split ${i}`,
                 });
 
                 fs.renameSync(
@@ -317,7 +315,7 @@ export const extractTrayAmount = (date) => {
                     process.cwd(),
                     "storage",
                     "downloads",
-                    `${address}_${i}.csv`
+                    `${readPoint}_${i}.csv`
                   )
                 );
                 return resolve();
@@ -335,33 +333,33 @@ export const extractTrayAmount = (date) => {
         }
       }
 
-      console.log("All groups downloaded successfully, starting extraction...");
+      console.log("All readPoints downloaded successfully, starting extraction...");
       global.sendNotificationToElectron(
         "Extract tray amount",
-        "All groups downloaded successfully, starting extraction..."
+        "All readPoints downloaded successfully, starting extraction..."
       );
       await updateJob({
         actualState: "running",
         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        lastLog: `All groups downloaded successfully, starting extraction...`,
+        lastLog: `All readPoints downloaded successfully, starting extraction...`,
       });
       await browser.close();
 
-      for (const group of groups) {
-        console.log(`Extracting data for group: ${group.zoneGroupName}`);
-        let groupData = [];
-        for (const address of group.addresses) {
+      for (const zone of zones) {
+        console.log(`Extracting data for group: ${zone.zone}`);
+        let zoneData = [];
+        for (const readPoint of zone.readPoints) {
           console.log(`Processing address: ${address}`);
           let i = 1;
           let splitGroup = [];
           for (const split_ of splits) {
             console.log(
-              `Processing split ${i} for address ${address} in group ${group.zoneGroupName}`
+              `Processing split ${i} for address ${readPoint} in group ${zone.zone}`
             );
             await updateJob({
               actualState: "running",
               lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-              lastLog: `Processing split ${i} for address ${address} in group ${group.zoneGroupName}`,
+              lastLog: `Processing split ${i} for address ${readPoint} in group ${zone.zone}`,
             });
             let results = [];
             if (
@@ -370,13 +368,13 @@ export const extractTrayAmount = (date) => {
                   process.cwd(),
                   "storage",
                   "downloads",
-                  `${address}_${i}.csv`
+                  `${readPoint}_${i}.csv`
                 )
               )
             ) {
               i++;
               console.warn(
-                `File not found for address ${address} in group ${group.zoneGroupName} for split ${i}`
+                `File not found for address ${readPoint} in group ${zone.zone} for split ${i}`
               );
               continue;
             }
@@ -386,7 +384,7 @@ export const extractTrayAmount = (date) => {
                   process.cwd(),
                   "storage",
                   "downloads",
-                  `${address}_${i}.csv`
+                  `${readPoint}_${i}.csv`
                 ),
                 "utf8"
               )
@@ -400,7 +398,7 @@ export const extractTrayAmount = (date) => {
                     let dateTime = "";
                     if (!match) {
                       console.warn(
-                        `Invalid date format for address ${address} in group ${group.zoneGroupName} for split ${i}`
+                        `Invalid date format for address ${readPoint} in group ${zone.zone} for split ${i}`
                       );
                       dateTime = dayjs(split_.start).format(
                         "YYYY-MM-DD HH:mm:ss"
@@ -418,12 +416,12 @@ export const extractTrayAmount = (date) => {
                     };
                   });
                   console.log(
-                    `Extracted ${results.length} records for address ${address} in group ${group.zoneGroupName} for split ${i}`
+                    `Extracted ${results.length} records for address ${readPoint} in group ${zone.zone} for split ${i}`
                   );
                   await updateJob({
                     actualState: "running",
                     lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                    lastLog: `Extracted ${results.length} records for address ${address} in group ${group.zoneGroupName} for split ${i}`,
+                    lastLog: `Extracted ${results.length} records for address ${readPoint} in group ${zone.zone} for split ${i}`,
                   });
                   splitGroup = [...splitGroup, ...results];
                   resolve();
@@ -431,21 +429,21 @@ export const extractTrayAmount = (date) => {
             });
             i++;
           }
-          groupData = [...groupData, ...splitGroup];
+          zoneData = [...groupData, ...splitGroup];
         }
         console.log(
-          `Total records extracted for group ${group.zoneGroupName}: ${groupData.length}`
+          `Total records extracted for group ${zone.zone}: ${zoneData.length}`
         );
         fs.writeFileSync(
           path.join(
             process.cwd(),
             "storage",
             "archives",
-            `${dayjs(date).format("YYYY_MM_DD")}_${group.zoneGroupName}.json`
+            `${dayjs(date).format("YYYY_MM_DD")}_${zone.zone}.json`
           ),
-          JSON.stringify(groupData, null, 2)
+          JSON.stringify(zoneData, null, 2)
         );
-        group.total = groupData.length;
+        zone.total = zoneData.length;
       }
       console.log("Extraction completed successfully");
       global.sendNotificationToElectron(
@@ -459,11 +457,11 @@ export const extractTrayAmount = (date) => {
       });
 
       // Save data in DB
-      for (const group of groups) {
+      for (const zone of zones) {
         await db.models.ZoneGroupData.upsert({
-          zoneGroupName: group.zoneGroupName,
+          zoneGroupName: zone.zone,
           date: dayjs(date).format("YYYY-MM-DD"),
-          total: group.total,
+          total: zone.total,
         });
       }
       // Save data in archives
@@ -474,9 +472,9 @@ export const extractTrayAmount = (date) => {
           "archives",
           `${dayjs(date).format("YYYY_MM_DD")}_extract_result.json`
         ),
-        JSON.stringify(groups, null, 2)
+        JSON.stringify(zones, null, 2)
       );
-      resolve(groups);
+      resolve(zones);
     } catch (error) {
       console.error("Error extracting tray amount:", error);
       global.sendNotificationToElectron(
