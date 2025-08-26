@@ -111,11 +111,9 @@ export const extractTrayAmount = (date) => {
       // Setup the storage
       if (fs.existsSync(path.join(process.cwd(), "storage", "downloads")))
         if (
-          fs.readdirSync(
-            path.join(process.cwd(), "storage", "downloads").length ===
-              splits.length *
-                zones.map((z) => z.readPoints).flat().length
-          )
+          fs.readdirSync(path.join(process.cwd(), "storage", "downloads"))
+            .length ===
+          splits.length * zones.map((z) => z.readPoints).flat().length
         )
           skipDownload = true;
         else
