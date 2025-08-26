@@ -114,7 +114,7 @@ export const extractTrayAmount = (date) => {
           fs.readdirSync(
             path.join(process.cwd(), "storage", "downloads").length ===
               splits.length *
-                zones.map((z) => z.readPoints.split(",")).flat().length
+                zones.map((z) => z.readPoints).flat().length
           )
         )
           skipDownload = true;
