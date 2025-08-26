@@ -37,7 +37,6 @@ function updateJob(data = {}) {
 export const extractTrayAmount = (date) => {
   return new Promise(async (resolve, reject) => {
     try {
-      let skipDownload = false;
       await updateJob({
         actualState: "running",
         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
@@ -110,16 +109,9 @@ export const extractTrayAmount = (date) => {
 
       // Setup the storage
       if (fs.existsSync(path.join(process.cwd(), "storage", "downloads")))
-        if (
-          fs.readdirSync(path.join(process.cwd(), "storage", "downloads"))
-            .length ===
-          splits.length * zones.map((z) => z.readPoints).flat().length
-        )
-          skipDownload = true;
-        else
-          fs.rmdirSync(path.join(process.cwd(), "storage", "downloads"), {
-            recursive: true,
-          });
+        fs.rmdirSync(path.join(process.cwd(), "storage", "downloads"), {
+          recursive: true,
+        });
       fs.mkdirSync(path.join(process.cwd(), "storage", "downloads"), {
         recursive: true,
       });
@@ -128,210 +120,206 @@ export const extractTrayAmount = (date) => {
           recursive: true,
         });
 
-      if (!skipDownload) {
-        // Setup puppeteer
-        const browser = await puppeteer.launch({
-          headless: true,
-          args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--ignore-certificate-errors",
-            "--ignore-certificate-errors-spki-list",
-            "--ignore-ssl-errors",
-            "--allow-running-insecure-content",
-            "--disable-web-security",
-            "--ignore-ssl-errors-spki-list",
-          ],
-        });
+      // Setup puppeteer
+      // const browser = await puppeteer.launch({
+      //   headless: true,
+      //   args: [
+      //     "--no-sandbox",
+      //     "--disable-setuid-sandbox",
+      //     "--ignore-certificate-errors",
+      //     "--ignore-certificate-errors-spki-list",
+      //     "--ignore-ssl-errors",
+      //     "--allow-running-insecure-content",
+      //     "--disable-web-security",
+      //     "--ignore-ssl-errors-spki-list",
+      //   ],
+      // });
 
-        const page = await browser.newPage();
+      // const page = await browser.newPage();
 
-        const client = await page.createCDPSession();
-        await client.send("Page.setDownloadBehavior", {
-          behavior: "allow",
-          downloadPath: path.join(process.cwd(), "storage", "downloads"),
-        });
+      // const client = await page.createCDPSession();
+      // await client.send("Page.setDownloadBehavior", {
+      //   behavior: "allow",
+      //   downloadPath: path.join(process.cwd(), "storage", "downloads"),
+      // });
 
-        // Navigate to the page
-        await page.goto("https://10.95.62.134:8443/infosystem/login.jspa");
-        await page.type('input[name="j_username"]', "kylian");
-        await page.type('input[name="j_password"]', "1024");
+      // // Navigate to the page
+      // await page.goto("https://10.95.62.134:8443/infosystem/login.jspa");
+      // await page.type('input[name="j_username"]', "kylian");
+      // await page.type('input[name="j_password"]', "1024");
 
-        await Promise.all([
-          page.waitForNavigation(),
-          page.click('input[name="Login"]'),
-        ]);
-        console.log("Logged in successfully");
-        global.sendNotificationToElectron(
-          "Extract tray amount",
-          "Logged in successfully"
-        );
-        await updateJob({
-          actualState: "running",
-          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          lastLog: `Logged in successfully`,
-        });
-        await sleep(2000);
+      // await Promise.all([
+      //   page.waitForNavigation(),
+      //   page.click('input[name="Login"]'),
+      // ]);
+      // console.log("Logged in successfully");
+      // global.sendNotificationToElectron(
+      //   "Extract tray amount",
+      //   "Logged in successfully"
+      // );
+      // await updateJob({
+      //   actualState: "running",
+      //   lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      //   lastLog: `Logged in successfully`,
+      // });
+      // await sleep(2000);
 
-        await page.goto(
-          "https://10.95.62.134:8443/infosystem/protected/report.jspa?method=GET&categorizeable=report.1676549483645&view=&mode=edit",
-          {
-            waitUntil: "networkidle0",
-            timeout: 120000,
-          }
-        );
+      // await page.goto(
+      //   "https://10.95.62.134:8443/infosystem/protected/report.jspa?method=GET&categorizeable=report.1676549483645&view=&mode=edit",
+      //   {
+      //     waitUntil: "networkidle0",
+      //     timeout: 120000,
+      //   }
+      // );
 
-        await sleep(2000);
+      // await sleep(2000);
 
-        for (const zone of zones) {
-          for (const readPoint of zone.readPoints) {
-            let i = 1;
-            for (const split of splits) {
-              await updateJob({
-                actualState: "running",
-                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                lastLog: `Processing : ${zone.zone} - ${readPoint} - Split: ${i}`,
-              });
-              const startDateInput = await page.$(
-                'input[id="inputTimestampPicker_1"]'
-              );
-              const endDateInput = await page.$(
-                'input[id="inputTimestampPicker_2"]'
-              );
-              const addressInput = await page.$('input[id="input_2"]');
-              const messageTypeInput = await page.$('input[id="input_5"]');
-              if (
-                !startDateInput ||
-                !endDateInput ||
-                !addressInput ||
-                !messageTypeInput
-              ) {
-                throw new Error(
-                  "One or more input fields not found on the page"
-                );
-              }
+      // for (const zone of zones) {
+      //   for (const readPoint of zone.readPoints) {
+      //     let i = 1;
+      //     for (const split of splits) {
+      //       await updateJob({
+      //         actualState: "running",
+      //         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      //         lastLog: `Processing : ${zone.zone} - ${readPoint} - Split: ${i}`,
+      //       });
+      //       const startDateInput = await page.$(
+      //         'input[id="inputTimestampPicker_1"]'
+      //       );
+      //       const endDateInput = await page.$(
+      //         'input[id="inputTimestampPicker_2"]'
+      //       );
+      //       const addressInput = await page.$('input[id="input_2"]');
+      //       const messageTypeInput = await page.$('input[id="input_5"]');
+      //       if (
+      //         !startDateInput ||
+      //         !endDateInput ||
+      //         !addressInput ||
+      //         !messageTypeInput
+      //       ) {
+      //         throw new Error("One or more input fields not found on the page");
+      //       }
 
-              await clearInput(startDateInput, page);
-              await startDateInput.type(
-                dayjs(split.start).format("DD.MM.YYYY HH:mm:ss")
-              );
-              await clearInput(endDateInput, page);
-              await endDateInput.type(
-                dayjs(split.end).format("DD.MM.YYYY HH:mm:ss")
-              );
-              await clearInput(addressInput, page);
-              await addressInput.type(readPoint);
-              await clearInput(messageTypeInput, page);
-              await messageTypeInput.type(zone.messageType);
+      //       await clearInput(startDateInput, page);
+      //       await startDateInput.type(
+      //         dayjs(split.start).format("DD.MM.YYYY HH:mm:ss")
+      //       );
+      //       await clearInput(endDateInput, page);
+      //       await endDateInput.type(
+      //         dayjs(split.end).format("DD.MM.YYYY HH:mm:ss")
+      //       );
+      //       await clearInput(addressInput, page);
+      //       await addressInput.type(readPoint);
+      //       await clearInput(messageTypeInput, page);
+      //       await messageTypeInput.type(zone.messageType);
 
-              console.log("Filling form...");
-              await Promise.all([
-                page.waitForNavigation({
-                  waitUntil: "networkidle0",
-                  timeout: 120000,
-                }),
-                page.click('input[name="Search"]'),
-              ]);
+      //       console.log("Filling form...");
+      //       await Promise.all([
+      //         page.waitForNavigation({
+      //           waitUntil: "networkidle0",
+      //           timeout: 120000,
+      //         }),
+      //         page.click('input[name="Search"]'),
+      //       ]);
 
-              await page.waitForSelector('a[href*=".csv"]', {
-                timeout: 120000,
-              });
+      //       await page.waitForSelector('a[href*=".csv"]', {
+      //         timeout: 120000,
+      //       });
 
-              const pageContent = await page.content();
-              if (pageContent.includes("Aucun jeu de données")) {
-                i++;
-                continue;
-              }
+      //       const pageContent = await page.content();
+      //       if (pageContent.includes("Aucun jeu de données")) {
+      //         i++;
+      //         continue;
+      //       }
 
-              function download() {
-                return new Promise(async (resolve, reject) => {
-                  const downloadLink = await page.$('a[href*=".csv"]');
-                  if (downloadLink) {
-                    await downloadLink.click();
-                    console.log("Start downloading CSV file...");
-                    await updateJob({
-                      actualState: "running",
-                      lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                      lastLog: `Start downloading CSV file for address ${readPoint} in group ${zone.zone} for split ${i}`,
-                    });
-                  } else {
-                    console.warn(
-                      `No download link found for address ${readPoint} in group ${zone.zone} for split ${i}`
-                    );
-                    resolve();
-                  }
+      //       function download() {
+      //         return new Promise(async (resolve, reject) => {
+      //           const downloadLink = await page.$('a[href*=".csv"]');
+      //           if (downloadLink) {
+      //             await downloadLink.click();
+      //             console.log("Start downloading CSV file...");
+      //             await updateJob({
+      //               actualState: "running",
+      //               lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      //               lastLog: `Start downloading CSV file for address ${readPoint} in group ${zone.zone} for split ${i}`,
+      //             });
+      //           } else {
+      //             console.warn(
+      //               `No download link found for address ${readPoint} in group ${zone.zone} for split ${i}`
+      //             );
+      //             resolve();
+      //           }
 
-                  let safe = 0;
-                  do {
-                    console.log("Downloading...");
-                    await sleep(3000);
-                    safe++;
-                    if (safe > 20) {
-                      console.warn(
-                        `Download took too long for address ${readPoint} in group ${zone.zone} for split ${i}`
-                      );
-                      return reject();
-                    }
-                  } while (
-                    !fs.existsSync(
-                      path.join(
-                        process.cwd(),
-                        "storage",
-                        "downloads",
-                        "PLC Interface.csv"
-                      )
-                    )
-                  );
-                  console.log("CSV file downloaded successfully");
-                  await updateJob({
-                    actualState: "running",
-                    lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                    lastLog: `CSV file downloaded successfully for address ${readPoint} in group ${zone.zone} for split ${i}`,
-                  });
+      //           let safe = 0;
+      //           do {
+      //             console.log("Downloading...");
+      //             await sleep(3000);
+      //             safe++;
+      //             if (safe > 20) {
+      //               console.warn(
+      //                 `Download took too long for address ${readPoint} in group ${zone.zone} for split ${i}`
+      //               );
+      //               return reject();
+      //             }
+      //           } while (
+      //             !fs.existsSync(
+      //               path.join(
+      //                 process.cwd(),
+      //                 "storage",
+      //                 "downloads",
+      //                 "PLC Interface.csv"
+      //               )
+      //             )
+      //           );
+      //           console.log("CSV file downloaded successfully");
+      //           await updateJob({
+      //             actualState: "running",
+      //             lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      //             lastLog: `CSV file downloaded successfully for address ${readPoint} in group ${zone.zone} for split ${i}`,
+      //           });
 
-                  fs.renameSync(
-                    path.join(
-                      process.cwd(),
-                      "storage",
-                      "downloads",
-                      "PLC Interface.csv"
-                    ),
-                    path.join(
-                      process.cwd(),
-                      "storage",
-                      "downloads",
-                      `${readPoint}_${i}.csv`
-                    )
-                  );
-                  return resolve();
-                });
-              }
+      //           fs.renameSync(
+      //             path.join(
+      //               process.cwd(),
+      //               "storage",
+      //               "downloads",
+      //               "PLC Interface.csv"
+      //             ),
+      //             path.join(
+      //               process.cwd(),
+      //               "storage",
+      //               "downloads",
+      //               `${readPoint}_${i}.csv`
+      //             )
+      //           );
+      //           return resolve();
+      //         });
+      //       }
 
-              let downloaded = false;
-              while (!downloaded) {
-                await download()
-                  .then(() => (downloaded = true))
-                  .catch(() => (downloaded = false));
-              }
-              i++;
-            }
-          }
-        }
+      //       let downloaded = false;
+      //       while (!downloaded) {
+      //         await download()
+      //           .then(() => (downloaded = true))
+      //           .catch(() => (downloaded = false));
+      //       }
+      //       i++;
+      //     }
+      //   }
+      // }
 
-        console.log(
-          "All readPoints downloaded successfully, starting extraction..."
-        );
-        global.sendNotificationToElectron(
-          "Extract tray amount",
-          "All readPoints downloaded successfully, starting extraction..."
-        );
-        await updateJob({
-          actualState: "running",
-          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          lastLog: `All readPoints downloaded successfully, starting extraction...`,
-        });
-        await browser.close();
-      }
+      // console.log(
+      //   "All readPoints downloaded successfully, starting extraction..."
+      // );
+      // global.sendNotificationToElectron(
+      //   "Extract tray amount",
+      //   "All readPoints downloaded successfully, starting extraction..."
+      // );
+      // await updateJob({
+      //   actualState: "running",
+      //   lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      //   lastLog: `All readPoints downloaded successfully, starting extraction...`,
+      // });
+      // await browser.close();
 
       for (const zone of zones) {
         console.log(`Extracting data for group: ${zone.zone}`);
@@ -417,7 +405,7 @@ export const extractTrayAmount = (date) => {
             });
             i++;
           }
-          zoneData = [...groupData, ...splitGroup];
+          zoneData = [...zoneData, ...splitGroup];
         }
         console.log(
           `Total records extracted for group ${zone.zone}: ${zoneData.length}`
