@@ -295,10 +295,10 @@ function initDB(config) {
       }
     );
 
-    const ZoneGroupData = db.define(
-      "ZoneGroupData",
+    const ZoneData = db.define(
+      "ZoneData",
       {
-        zoneGroupName: {
+        zoneName: {
           type: DataTypes.STRING,
           allowNull: false,
           primaryKey: true,
@@ -320,7 +320,7 @@ function initDB(config) {
         indexes: [
           {
             unique: true,
-            fields: ["zoneGroupName", "date"],
+            fields: ["zoneName", "date"],
           },
         ],
       }

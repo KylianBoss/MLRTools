@@ -434,8 +434,8 @@ export const extractTrayAmount = (date) => {
 
       // Save data in DB
       for (const zone of zones) {
-        await db.models.ZoneGroupData.upsert({
-          zoneGroupName: zone.zone,
+        await db.models.ZoneData.upsert({
+          zoneName: zone.zone,
           date: dayjs(date).format("YYYY-MM-DD"),
           total: zone.total,
         });
