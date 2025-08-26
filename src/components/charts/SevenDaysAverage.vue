@@ -22,6 +22,7 @@
         flat
         bordered
         dense
+        hide-bottom
       >
         <template v-slot:body-cell="props">
           <q-td :props="props">
@@ -151,7 +152,7 @@ const getData = async () => {
   const errorsFromLastSevenDays = await api.get(
     `/kpi/charts/global-last-7-days/top-10`
   );
-  const { tableRows, tableColumns } = formatDataForTable(
+  const { tableRows, tableColumns } = await formatDataForTable(
     errorsFromLastSevenDays.data
   );
   rows.value = tableRows;
@@ -223,7 +224,7 @@ const getData = async () => {
   emits("loaded");
 };
 
-const formatDataForTable = (data) => {
+const formatDataForTable = async (data) => {
   const alarmMap = new Map();
   const dates = new Set();
 
@@ -297,14 +298,70 @@ const formatDataForTable = (data) => {
     return row;
   });
 
+  const amountsData = await api.get(`/kpi/charts/amount`);
+  tableRows.unshift({
+    dataSource: "----",
+    alarmArea: "----",
+    error: "Quantité de trays sortie",
+    ...Object.fromEntries(
+      sortedDates.map((date) => {
+        const amountEntry = amountsData.data.find(
+          (t) => t.date === date && t.zoneGroupName === "PALLETIZING"
+        );
+        return [date, amountEntry ? amountEntry.total : 0];
+      })
+    ),
+  });
+  tableRows.unshift({
+    dataSource: "----",
+    alarmArea: "----",
+    error: "Quantité de trays entrée",
+    ...Object.fromEntries(
+      sortedDates.map((date) => {
+        const amountEntry = amountsData.data.find(
+          (t) => t.date === date && t.zoneGroupName === "DEPAL"
+        );
+        return [date, amountEntry ? amountEntry.total : 0];
+      })
+    ),
+  });
+  tableRows.unshift({
+    dataSource: "----",
+    alarmArea: "----",
+    error: "Quantité de palettes sortie",
+    ...Object.fromEntries(
+      sortedDates.map((date) => {
+        const amountEntry = amountsData.data.find(
+          (t) => t.date === date && t.zoneGroupName === "PALLET_AREA"
+        );
+        return [date, amountEntry ? amountEntry.total : 0];
+      })
+    ),
+  });
+  tableRows.unshift({
+    dataSource: "----",
+    alarmArea: "----",
+    error: "Quantité de palettes entrée",
+    ...Object.fromEntries(
+      sortedDates.map((date) => {
+        const amountEntry = amountsData.data.find(
+          (t) => t.date === date && t.zoneGroupName === "ENTREE_PAL"
+        );
+        return [date, amountEntry ? amountEntry.total : 0];
+      })
+    ),
+  });
+
   return { tableRows, tableColumns };
 };
 
 const cellFormat = (value, row) => {
+  if (row.dataSource === "----") return "text-dark text-bold bg-blue-3";
   if (value === null || value === undefined) return "text-grey bg-grey";
   if (value === 0) return "text-grey bg-grey";
 
   const rowsValues = rows.value
+    .slice(4, rows.value.length)
     .map((r) => Object.values(r).filter((v) => typeof v === "number"))
     .flat()
     .filter((v) => v > 0);

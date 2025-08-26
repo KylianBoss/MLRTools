@@ -409,5 +409,49 @@ router.post("/secondary", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+router.post("/human", async (req, res) => {
+  const { alarmId } = req.body;
+
+  if (!alarmId) {
+    res.status(400).json({ error: "Alarm ID is required" });
+    return;
+  }
+
+  try {
+    const alarm = await db.models.Alarms.update(
+      { type: "human" },
+      {
+        where: {
+          alarmId,
+        },
+      }
+    );
+    res.json(alarm);
+  } catch (error) {
+    console.error("Error updating human status:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+router.post("/other", async (req, res) => {
+  const { alarmId } = req.body;
+  if (!alarmId) {
+    res.status(400).json({ error: "Alarm ID is required" });
+    return;
+  }
+  try {
+    const alarm = await db.models.Alarms.update(
+      { type: "other" },
+      {
+        where: {
+          alarmId,
+        },
+      }
+    );
+    res.json(alarm);
+  } catch (error) {
+    console.error("Error updating other status:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 export default router;

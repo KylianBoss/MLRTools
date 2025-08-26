@@ -22,6 +22,7 @@
         flat
         bordered
         dense
+        hide-bottom
       >
         <template v-slot:body-cell="props">
           <q-td :props="props">
@@ -146,14 +147,15 @@ const emits = defineEmits(["loaded"]);
 
 const getData = async () => {
   chartSeries.value = [];
-  const errorsByThousand = await api.get(
-    `/kpi/charts/thousand-trays-number/${props.group.groupName}`
-  );
-  const errorsFromLastSevenDays = await api.get(
-    `/kpi/charts/alarms-by-group/${props.group.groupName}`
-  );
+  const errorsByThousand = await api
+    .get(`/kpi/charts/thousand-trays-number/${props.group.groupName}`)
+    .catch(() => ({ data: [] }));
+  const errorsFromLastSevenDays = await api
+    .get(`/kpi/charts/alarms-by-group/${props.group.groupName}`)
+    .catch(() => ({ data: [] }));
   const { tableRows, tableColumns } = formatDataForTable(
-    errorsFromLastSevenDays.data
+    errorsFromLastSevenDays.data,
+    errorsByThousand.data
   );
   rows.value = tableRows;
   columns.value = tableColumns;
@@ -180,13 +182,13 @@ const getData = async () => {
       type: "line",
       data: errorsByThousand.data.map((item) => item.movingAverage),
       color: "#C10015",
-    },
-    {
-      name: "Quantité de trays",
-      type: "column",
-      data: errorsByThousand.data.map((item) => item.trayAmount),
-      color: "#00C100",
     }
+    // {
+    //   name: "Quantité de trays",
+    //   type: "column",
+    //   data: errorsByThousand.data.map((item) => item.trayAmount),
+    //   color: "#00C100",
+    // }
   );
   chartOptions.value.xaxis = {
     categories: errorsByThousand.data.map((item) =>
@@ -254,26 +256,26 @@ const getData = async () => {
       },
       show: false,
     },
-    {
-      opposite: true,
-      seriesName: "Quantité de trays",
-      axisTicks: {
-        show: true,
-      },
-      axisBorder: {
-        show: true,
-      },
-      title: {
-        text: "Quantité de trays",
-      },
-      show: false,
-    },
+    // {
+    //   opposite: true,
+    //   seriesName: "Quantité de trays",
+    //   axisTicks: {
+    //     show: true,
+    //   },
+    //   axisBorder: {
+    //     show: true,
+    //   },
+    //   title: {
+    //     text: "Quantité de trays",
+    //   },
+    //   show: false,
+    // },
   ];
   chartVisibility.value = true;
   emits("loaded");
 };
 
-const formatDataForTable = (data) => {
+const formatDataForTable = (data, trayData) => {
   const alarmMap = new Map();
   const dates = new Set();
 
@@ -347,14 +349,31 @@ const formatDataForTable = (data) => {
     return row;
   });
 
+  tableRows.unshift({
+    dataSource: "----",
+    alarmArea: "----",
+    error:
+      props.group.transportType === "tray"
+        ? "Quantité de trays"
+        : "Quantité de palettes",
+    ...Object.fromEntries(
+      sortedDates.map((date) => {
+        const trayEntry = trayData.find((t) => t.date === date);
+        return [date, trayEntry ? trayEntry.trayAmount : 0];
+      })
+    ),
+  });
+
   return { tableRows, tableColumns };
 };
 
 const cellFormat = (value, row) => {
+  if (row.dataSource === "----") return "text-dark text-bold bg-blue-3";
   if (value === null || value === undefined) return "text-grey bg-grey";
   if (value === 0) return "text-grey bg-grey";
 
   const rowsValues = rows.value
+    .slice(1, rows.value.length) // Exclude first two rows (headers and tray amounts)
     .map((r) => Object.values(r).filter((v) => typeof v === "number"))
     .flat()
     .filter((v) => v > 0);

@@ -79,11 +79,32 @@
           <td>{{ props.row.alarmId }}</td>
           <td>
             <q-badge
-              :color="props.row.type === 'primary' ? 'red' : 'blue'"
+              color="red"
               class="q-ma-xs"
-              v-if="props.row.type"
+              v-if="props.row.type && props.row.type === 'primary'"
             >
-              {{ props.row.type === "primary" ? "Arrêt" : "Autre" }}
+              Arrêt
+            </q-badge>
+            <q-badge
+              color="blue"
+              class="q-ma-xs"
+              v-else-if="props.row.type && props.row.type === 'secondary'"
+            >
+              Info
+            </q-badge>
+            <q-badge
+              color="primary"
+              class="q-ma-xs"
+              v-else-if="props.row.type && props.row.type === 'human'"
+            >
+              Humain
+            </q-badge>
+            <q-badge
+              color="grey"
+              class="q-ma-xs"
+              v-else-if="props.row.type && props.row.type === 'other'"
+            >
+              Autre
             </q-badge>
             <q-badge color="warning" class="q-ma-xs" v-else>
               Non définit
@@ -110,6 +131,22 @@
                 v-if="props.row.alarmId"
               >
                 <q-item-section>Mettre en "secondary"</q-item-section>
+              </q-item>
+              <q-item
+                clickable
+                v-close-popup
+                @click="dataLogStore.setHuman(props.row.alarmId)"
+                v-if="props.row.alarmId"
+              >
+                <q-item-section>Mettre en "Humain"</q-item-section>
+              </q-item>
+              <q-item
+                clickable
+                v-close-popup
+                @click="dataLogStore.setOther(props.row.alarmId)"
+                v-if="props.row.alarmId"
+              >
+                <q-item-section>Mettre en "Autre"</q-item-section>
               </q-item>
               <q-item
                 clickable

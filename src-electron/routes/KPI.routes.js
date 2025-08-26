@@ -164,6 +164,9 @@ router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
       order: [["date", "ASC"]],
       where: {
         zoneGroupName: groupName,
+        date: {
+          [Op.gte]: dayjs().subtract(15, "day").format("YYYY-MM-DD"),
+        },
       },
       attributes: ["date"],
     });
@@ -344,6 +347,24 @@ router.get("/charts/print/:id", async (req, res) => {
     });
   });
   doc.end();
+});
+router.get("/charts/amount", async (req, res) => {
+  try {
+    const amount = await db.models.ZoneGroupData.findAll({
+      order: [["date", "ASC"]],
+      where: {
+        date: {
+          [Op.gte]: dayjs().subtract(7, "day").format("YYYY-MM-DD"),
+        },
+        zoneGroupName: ["DEPAL", "PALLETIZING", "PALLET_AREA", "ENTREE_PAL"],
+      },
+      attributes: ["date", "zoneGroupName", "total"],
+    });
+    res.json(amount);
+  } catch (error) {
+    console.error("Error fetching tray amount:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 export default router;

@@ -172,6 +172,11 @@ onMounted(async () => {
       await api.post('/bot/active', { userId: App.userId });
       setInterval(async () => {
         await api.post('/bot/active', { userId: App.userId });
+        await api.get('/bot/needs-restart').then(async res => {
+          if (!res.data.needsRestart) return;
+          await api.post('/bot/restart-ack');
+          window.location.reload();
+        });
       }, 60000); // every minute
     }
   } catch (error) {

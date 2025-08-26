@@ -20,10 +20,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { useQuasar } from "quasar";
+import { useAppStore } from "src/stores/app";
 
 const $q = useQuasar();
+const App = useAppStore();
 
 const currentVersion = ref(null);
 const latestVersion = ref(null);
@@ -41,12 +43,25 @@ const checkForUpdates = async () => {
   }
 };
 
+watch(updateAvailable, (newVal) => {
+  if (newVal && App.isBot) {
+    handleUpdate();
+  }
+});
+
 const handleUpdate = async () => {
   try {
     updating.value = true;
 
     // Download the update
     await window.electron.downloadUpdate();
+
+    // Update if is a bot
+    if (App.isBot) {
+      await window.electron.installUpdate();
+      window.electron.restartApp();
+      return;
+    }
 
     // Confirm with user before installing
     $q.dialog({

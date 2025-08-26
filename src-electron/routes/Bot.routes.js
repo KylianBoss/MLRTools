@@ -54,5 +54,34 @@ router.get("/status", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+router.get("/needs-restart", async (req, res) => {
+  try {
+    const bot = await db.models.Users.findOne({
+      where: { isBot: true },
+      attributes: ["id", "fullname", "needsRestart"],
+    });
+    if (!bot) {
+      return res.status(404).json({ error: "Bot not found" });
+    }
+    return res.json({ needsRestart: bot.needsRestart });
+  } catch (error) {
+    console.error("Error checking bot restart status:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.post("/restart-ack", async (req, res) => {
+  try {
+    const bot = await db.models.Users.findOne({ where: { isBot: true } });
+    if (!bot) {
+      return res.status(404).json({ error: "Bot not found" });
+    }
+    bot.needsRestart = false;
+    await bot.save();
+    return res.json({ message: "Bot restart acknowledged" });
+  } catch (error) {
+    console.error("Error acknowledging bot restart:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 export default router;

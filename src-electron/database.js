@@ -169,11 +169,11 @@ function initDB(config) {
           comment: "Text of the alarm, can be translated",
         },
         type: {
-          type: DataTypes.ENUM("primary", "secondary"),
+          type: DataTypes.ENUM("primary", "secondary", "human", "other"),
           defaultValue: null,
           allowNull: true,
           comment:
-            "Type of alarm, can be 'primary' or 'secondary'. Is null at creation",
+            "Type of alarm, can be 'primary', 'secondary', 'human' or 'other'. Default is 'other'",
         },
       },
       {
@@ -233,12 +233,6 @@ function initDB(config) {
           },
           comment: "Array of zones in the group, e.g. ['F001', 'F002', ...]",
         },
-        messageType: {
-          type: DataTypes.STRING(10),
-          allowNull: false,
-          defaultValue: "LREP",
-          comment: "Type of message for the group, e.g. 'LREP', '26', etc.",
-        },
         zoneTransportType: {
           type: DataTypes.ENUM("tray", "box", "pallet"),
           allowNull: false,
@@ -282,6 +276,12 @@ function initDB(config) {
           },
           comment:
             "Array of read points for the zone, e.g. ['RP1', 'RP2', ...]",
+        },
+        messageType: {
+          type: DataTypes.STRING(10),
+          allowNull: false,
+          defaultValue: "LREP",
+          comment: "Type of message for the group, e.g. 'LREP', '26', etc.",
         },
       },
       {
@@ -399,6 +399,12 @@ function initDB(config) {
           allowNull: true,
           comment:
             "If isBot is true, this field indicates the last active time of the bot",
+        },
+        needsRestart: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+          comment:
+            "If true, the bot needs to be restarted. Set to true by the system, and set to false by the bot when it restarts",
         },
       },
       {
