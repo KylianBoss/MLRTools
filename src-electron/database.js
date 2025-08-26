@@ -300,10 +300,6 @@ function initDB(config) {
       {
         zoneGroupName: {
           type: DataTypes.STRING,
-          references: {
-            model: ZoneGroups,
-            key: "zoneGroupName",
-          },
           allowNull: false,
           primaryKey: true,
         },
