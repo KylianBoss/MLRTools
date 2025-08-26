@@ -122,8 +122,8 @@ const routes = [
               {
                 path: "",
                 name: "maintenance-reports",
-            component: () =>
-              import("src/pages/maintenance/MaintenanceReports.vue"),
+                component: () =>
+                  import("src/pages/maintenance/MaintenanceReports.vue"),
               },
               {
                 path: ":reportId",
@@ -137,6 +137,18 @@ const routes = [
                   import("src/pages/maintenance/MaintenanceReportDetails.vue"),
               },
             ],
+          },
+        ],
+      },
+      // === DEFECT HANDLING === //
+      {
+        path: "defect-handling",
+        children: [
+          {
+            path: "",
+            name: "defect-handling",
+            component: () =>
+              import("src/pages/defect-handling/DefectHandling.vue"),
           },
         ],
       },

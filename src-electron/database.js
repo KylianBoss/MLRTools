@@ -24,6 +24,78 @@ function initDB(config) {
       },
     });
 
+    const Element = db.define(
+      "Element",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+          comment: "Unique identifier for the element",
+        },
+        name: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Name of the element, e.g. 'Element 1', 'Element 2', etc.",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["name"],
+          },
+        ],
+      }
+    );
+
+    const Location = db.define(
+      "Location",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+          comment: "Unique identifier for the location",
+        },
+        dataSource: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Data source of the location, e.g. 'F001', 'F002', etc.",
+        },
+        module: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          comment: "Module of the location, e.g. '1131', '1132', etc.",
+        },
+        complement: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          defaultValue: 0,
+          comment: "Complement of the location, e.g. '01', '02', etc.",
+        },
+        element: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          references: {
+            model: Element,
+            key: "id",
+          },
+          comment: "ID of the element associated with the location",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["dataSource", "module", "complement"],
+          },
+        ],
+      }
+    );
+
     const Datalog = db.define(
       "Datalog",
       {
@@ -356,7 +428,7 @@ function initDB(config) {
             "admin-users",
             "maintenance-plans",
             "maintenance-reports",
-            "canStartMaintenance",
+            "canStartMaintenance"
           ),
         },
       },
@@ -646,10 +718,11 @@ function initDB(config) {
         locationId: {
           type: DataTypes.INTEGER.UNSIGNED,
           allowNull: true,
-          // references: {
-          //   model: locations,
-          //   key: "id",
-          // },
+          references: {
+            model: Location,
+            key: "id",
+          },
+          defaultValue: null,
           comment: "ID of the location where the maintenance is scheduled",
         },
         scheduledTime: {
@@ -1000,6 +1073,174 @@ function initDB(config) {
             key: "id",
           },
           comment: "User who last updated the stingray",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
+    const DefectHandling = db.define(
+      "DefectHandling",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        locationId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: Location,
+            key: "id",
+          },
+          comment: "ID of the location where the defect occurred",
+        },
+        activity: {
+          type: DataTypes.ENUM("mecanical", "electrical", "software", "other"),
+          allowNull: false,
+          comment: "Type of activity related to the defect",
+        },
+        priority: {
+          type: DataTypes.ENUM("low", "medium", "high"),
+          allowNull: false,
+          defaultValue: "medium",
+          comment: "Priority of the defect, can be 'low', 'medium', or 'high'",
+        },
+        done: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+          comment: "If true, the defect has been handled",
+        },
+        estimatedInterventionTime: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Estimated time in minutes for the intervention",
+        },
+        description: {
+          type: DataTypes.TEXT,
+          allowNull: false,
+          comment: "Description of the defect",
+        },
+        createdBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: Users,
+            key: "id",
+          },
+          comment: "User who created the defect report",
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+          comment: "Timestamp when the defect report was created",
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Timestamp when the defect report was last updated",
+        },
+      },
+      {
+        timestamps: true,
+        indexes: [
+          {
+            unique: true,
+            fields: ["locationId", "createdAt"],
+          },
+        ],
+      }
+    );
+
+    const DHHistory = db.define(
+      "DHHistory",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        defectId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: DefectHandling,
+            key: "id",
+          },
+          comment: "ID of the defect handling record",
+        },
+        status: {
+          type: DataTypes.ENUM(
+            "created",
+            "in_progress",
+            "updated",
+            "resolved",
+            "closed",
+            "cancelled"
+          ),
+          allowNull: false,
+          defaultValue: "created",
+          comment: "Current status of the defect handling process",
+        },
+        updatedBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: Users,
+            key: "id",
+          },
+          comment: "User who last updated the defect handling record",
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+          comment: "Timestamp when the defect handling record was last updated",
+        },
+      },
+      {
+        timestamps: true,
+      }
+    );
+
+    const DHPieces = db.define(
+      "DHPieces",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        defectId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: DefectHandling,
+            key: "id",
+          },
+          comment: "ID of the defect handling record",
+        },
+        pieceId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          comment: "ID of the piece related to the defect",
+        },
+        pieceName: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Name of the piece related to the defect",
+        },
+        quantity: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          defaultValue: 1,
+          comment: "Quantity of the piece needed for the defect",
         },
       },
       {
