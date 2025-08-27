@@ -37,6 +37,28 @@
     <div class="row q-py-xs">
       <div class="col">
         <q-btn
+          label="Demander au bot d'extraire le nombre de trays pour une date"
+          color="primary"
+          @click="askExtractTrayAmount"
+          class="full-width"
+          :loading="DB.loadingState"
+        />
+      </div>
+    </div>
+    <div class="row q-py-xs">
+      <div class="col">
+        <q-btn
+          label="Demander aux bots de redémarrer"
+          color="primary"
+          @click="askBotToRestart"
+          class="full-width"
+          :loading="DB.loadingState"
+        />
+      </div>
+    </div>
+    <!-- <div class="row q-py-xs">
+      <div class="col">
+        <q-btn
           label="Extraire le nombre de trays pour une date"
           color="primary"
           @click="extractTrayAmount"
@@ -44,7 +66,7 @@
           :loading="DB.loadingState"
         />
       </div>
-    </div>
+    </div> -->
   </q-page>
 </template>
 
@@ -100,6 +122,61 @@ const extractTrayAmount = () => {
             message: "Erreur lors de l'extraction des trays",
           });
         }
+      })
+      .catch((error) => {
+        $q.notify({
+          type: "negative",
+          message: `Erreur: ${error.message}`,
+        });
+      });
+  });
+};
+
+const askExtractTrayAmount = () => {
+  $q.dialog({
+    title: "Demander au bot d'extraire le nombre de trays",
+    message: "Saisir la date pour l'extraction",
+    prompt: {
+      label: "Date",
+      type: "date",
+      mask: "##.##.####",
+      model: null,
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk((data) => {
+    const date = data;
+    api
+      .post(`/bot/ask/extract`, { date })
+      .then((response) => {
+        $q.notify({
+          type: "positive",
+          message: `Le bot a été notifié pour extraire les trays le ${date}`,
+        });
+      })
+      .catch((error) => {
+        $q.notify({
+          type: "negative",
+          message: `Erreur: ${error.message}`,
+        });
+      });
+  });
+};
+
+const askBotToRestart = () => {
+  $q.dialog({
+    title: "Demander aux bots de redémarrer",
+    message: "Êtes-vous sûr de vouloir redémarrer tous les bots ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(() => {
+    api
+      .post(`/bot/ask/restart`)
+      .then((response) => {
+        $q.notify({
+          type: "positive",
+          message: `Les bots ont été notifiés pour redémarrer`,
+        });
       })
       .catch((error) => {
         $q.notify({

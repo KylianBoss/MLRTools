@@ -433,6 +433,7 @@ export const extractTrayAmount = (date) => {
         lastLog: `Extraction completed successfully`,
         endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         args: null,
+        cronExpression: "15 2 * * * "
       });
 
       // Save data in DB
