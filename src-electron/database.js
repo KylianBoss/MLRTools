@@ -233,13 +233,13 @@ function initDB(config) {
           },
           comment: "Array of zones in the group, e.g. ['F001', 'F002', ...]",
         },
-        zoneTransportType: {
-          type: DataTypes.ENUM("tray", "box", "pallet"),
-          allowNull: false,
-          defaultValue: "tray",
-          comment:
-            "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
-        },
+        // zoneTransportType: {
+        //   type: DataTypes.ENUM("tray", "box", "pallet"),
+        //   allowNull: false,
+        //   defaultValue: "tray",
+        //   comment:
+        //     "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
+        // },
         order: {
           type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
