@@ -41,6 +41,7 @@ export const extractTrayAmount = (date) => {
         actualState: "running",
         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         lastLog: `Starting extraction job`,
+        startAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       });
       const zones = await db.models.ZoneReadPoints.findAll({
         raw: true,
@@ -430,6 +431,7 @@ export const extractTrayAmount = (date) => {
         actualState: "idle",
         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         lastLog: `Extraction completed successfully`,
+        endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       });
 
       // Save data in DB

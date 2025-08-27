@@ -465,65 +465,6 @@ function initDB(config) {
       },
     });
 
-    // const ignoredAlarms = db.define("ignoredAlarms", {
-    //   id: {
-    //     type: DataTypes.INTEGER.UNSIGNED,
-    //     primaryKey: true,
-    //     autoIncrement: true,
-    //   },
-    //   alarmDbId: {
-    //     type: DataTypes.INTEGER,
-    //     references: {
-    //       model: Datalog,
-    //       key: "dbId",
-    //     },
-    //     allowNull: false,
-    //   },
-    //   reason: {
-    //     type: DataTypes.STRING,
-    //     allowNull: false,
-    //   },
-    //   ignoredBy: {
-    //     type: DataTypes.INTEGER.UNSIGNED,
-    //     references: {
-    //       model: Users,
-    //       key: "id",
-    //     },
-    //     allowNull: false,
-    //   },
-    // });
-
-    // const alarmZoneTGWReport = db.define(
-    //   "alarmZoneTGWReport",
-    //   {
-    //     alarmId: {
-    //       type: DataTypes.STRING,
-    //       references: {
-    //         model: Alarms,
-    //         key: "alarmId",
-    //       },
-    //       allowNull: false,
-    //       primaryKey: true,
-    //     },
-    //     zones: {
-    //       type: DataTypes.JSON,
-    //       allowNull: false,
-    //       get() {
-    //         return JSON.parse(this.getDataValue("zones"));
-    //       },
-    //     },
-    //   },
-    //   {
-    //     timestamps: false,
-    //     indexes: [
-    //       {
-    //         unique: true,
-    //         fields: ["alarmId", "zone"],
-    //       },
-    //     ],
-    //   }
-    // );
-
     const DayResume = db.define(
       "DayResume",
       {
@@ -607,6 +548,25 @@ function initDB(config) {
           type: DataTypes.TEXT,
           allowNull: true,
           comment: "Last log message of the job",
+        },
+        startAt: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Time when the job last started",
+        },
+        endAt: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          defaultValue: null,
+          comment: "Time when the job last ended",
+        },
+        args: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          defaultValue: null,
+          comment:
+            "Optional arguments for the job, can be a JSON string or comma-separated values",
         },
         enabled: {
           type: DataTypes.BOOLEAN,
