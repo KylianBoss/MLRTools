@@ -158,72 +158,88 @@ router.get("/groups", async (req, res) => {
 });
 router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
   const { groupName } = req.params;
+  const WINDOW = 15;
 
   try {
-    const trayAmount = await db.models.ZoneGroupData.findAll({
-      order: [["date", "ASC"]],
-      where: {
-        zoneGroupName: groupName,
-        date: {
-          [Op.gte]: dayjs().subtract(15, "day").format("YYYY-MM-DD"),
-        },
-      },
-      attributes: ["date"],
-    });
-    if (!trayAmount || trayAmount.length === 0) {
-      return res
-        .status(404)
-        .json({ error: "No tray data found for this group" });
-    }
+    let dataNumbers = [];
+    let dataTimes = [];
 
-    const formattedData = trayAmount.map(async (item) => {
+    for (let i = WINDOW - 1; i >= 0; i--) {
+      const date = dayjs().subtract(i + 1, "day").format("YYYY-MM-DD");
+
       const dataNumber = await db.query(
         "CALL getErrorsByThousand(:from, :to, :groupName)",
         {
           replacements: {
-            from: dayjs(item.date + "00:00:00").format("YYYY-MM-DD HH:mm:ss"),
-            to: dayjs(item.date + "23:59:59").format("YYYY-MM-DD HH:mm:ss"),
+            from: dayjs(date + "00:00:00").format("YYYY-MM-DD HH:mm:ss"),
+            to: dayjs(date + "23:59:59").format("YYYY-MM-DD HH:mm:ss"),
             groupName,
           },
         }
       );
+      dataNumbers.push({
+        date,
+        value: dataNumber[0].result || 0,
+        trayAmount: dataNumber[0].trayAmount || 0,
+        transportType: dataNumber[0].transportType || "unknown",
+      });
 
       const dataTime = await db.query(
         "CALL getDowntimeMinutesByThousand(:from, :to, :groupName)",
         {
           replacements: {
-            from: dayjs(item.date + "00:00:00").format("YYYY-MM-DD HH:mm:ss"),
-            to: dayjs(item.date + "23:59:59").format("YYYY-MM-DD HH:mm:ss"),
+            from: dayjs(date + "00:00:00").format("YYYY-MM-DD HH:mm:ss"),
+            to: dayjs(date + "23:59:59").format("YYYY-MM-DD HH:mm:ss"),
             groupName,
           },
         }
       );
+      dataTimes.push({
+        date,
+        value: dataTime[0].result || 0,
+        trayAmount: dataTime[0].trayAmount || 0,
+        transportType: dataTime[0].transportType || "unknown",
+      });
+    }
 
-      return {
-        date: dayjs(item.date).format("YYYY-MM-DD"),
-        number: dataNumber[0].result || 0,
-        time: dataTime[0].result || 0,
-        trayAmount: dataNumber[0].trayAmount || 0,
-      };
+    const sortedDates = dataNumbers.map((d) => d.date).sort();
+
+    const data = [];
+    sortedDates.forEach((date) => {
+      const numberEntry = dataNumbers.find((d) => d.date === date);
+      const timeEntry = dataTimes.find((d) => d.date === date);
+      data.push({
+        date,
+        number: numberEntry ? numberEntry.value : 0,
+        time: timeEntry ? timeEntry.value : 0,
+        trayAmount: numberEntry ? numberEntry.trayAmount : 0,
+        transportType: numberEntry
+          ? numberEntry.transportType
+          : timeEntry
+          ? timeEntry.transportType
+          : "unknown",
+      });
     });
-    const results = await Promise.all(formattedData);
 
     function calculateMovingAverage(data, windowSize = 7) {
       return data.map((item, index) => {
         const start = Math.max(0, index - windowSize + 1);
         const window = data.slice(start, index + 1);
 
-        const average =
+        const averageNumber =
           window.reduce((sum, point) => sum + point.number, 0) / window.length;
+        const averageTime =
+          window.reduce((sum, point) => sum + point.time, 0) / window.length;
 
         return {
           ...item,
-          movingAverage: Math.round(average * 100) / 100,
+          movingAverageNumber: Math.round(averageNumber * 100) / 100,
+          movingAverageTime: Math.round(averageTime * 100) / 100,
         };
       });
     }
 
-    res.json(calculateMovingAverage(results));
+    res.json(calculateMovingAverage(data));
   } catch (error) {
     console.error("Error fetching KPI charts:", error);
     res.status(500).json({ error: error.message });

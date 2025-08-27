@@ -299,7 +299,6 @@ const formatDataForTable = async (data) => {
   });
 
   const amountsData = await api.get(`/kpi/charts/amount`);
-  console.log(amountsData.data);
   tableRows.unshift({
     dataSource: "----",
     alarmArea: "----",

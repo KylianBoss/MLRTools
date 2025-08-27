@@ -163,7 +163,7 @@ const getData = async () => {
   chartSeries.value.push(
     {
       name:
-        props.group.transportType === "tray"
+        errorsByThousand.data[0].transportType === "tray"
           ? "Pannes / 1000 trays (nombre)"
           : "Pannes / 100 palettes (nombre)",
       type: "column",
@@ -171,7 +171,7 @@ const getData = async () => {
     },
     {
       name:
-        props.group.transportType === "tray"
+        errorsByThousand.data[0].transportType === "tray"
           ? "Pannes / 1000 trays (temps [minutes])"
           : "Pannes / 100 palettes (temps [minutes])",
       type: "column",
@@ -180,7 +180,7 @@ const getData = async () => {
     {
       name: "Moyenne 7 jours (nombre)",
       type: "line",
-      data: errorsByThousand.data.map((item) => item.movingAverage),
+      data: errorsByThousand.data.map((item) => item.movingAverageNumber),
       color: "#C10015",
     }
     // {
@@ -206,7 +206,7 @@ const getData = async () => {
   chartOptions.value.yaxis = [
     {
       seriesName:
-        props.group.transportType === "tray"
+        errorsByThousand.data[0].transportType === "tray"
           ? "Pannes / 1000 trays (nombre)"
           : "Pannes / 100 palettes (nombre)",
       axisTicks: {
@@ -217,7 +217,7 @@ const getData = async () => {
       },
       title: {
         text:
-          props.group.transportType === "tray"
+          errorsByThousand.data[0].transportType === "tray"
             ? "Nombre de pannes / 1000 trays"
             : "Nombre de pannes / 100 palettes",
       },
@@ -225,7 +225,7 @@ const getData = async () => {
     {
       opposite: true,
       seriesName:
-        props.group.transportType === "tray"
+        errorsByThousand.data[0].transportType === "tray"
           ? "Pannes / 1000 trays (temps [minutes])"
           : "Pannes / 100 palettes (temps [minutes])",
       axisTicks: {
@@ -236,7 +236,7 @@ const getData = async () => {
       },
       title: {
         text:
-          props.group.transportType === "tray"
+          errorsByThousand.data[0].transportType === "tray"
             ? "Temps de pannes / 1000 trays (minutes)"
             : "Temps de pannes / 100 palettes (minutes)",
         rotate: 90,
@@ -353,7 +353,7 @@ const formatDataForTable = (data, trayData) => {
     dataSource: "----",
     alarmArea: "----",
     error:
-      props.group.transportType === "tray"
+      trayData[0].transportType === "tray"
         ? "Quantité de trays"
         : "Quantité de palettes",
     ...Object.fromEntries(
