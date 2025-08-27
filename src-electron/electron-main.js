@@ -199,6 +199,12 @@ ipcMain.handle("print-pdf", async (event, pdfUrl) => {
 ipcMain.handle("show-notification", (event, { title, body }) => {
   showNotification(title, body);
 });
+// Minimize app
+ipcMain.handle("minimize-app", () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+  }
+});
 
 // Gestion des erreurs non capturées
 process.on("uncaughtException", (error) => {

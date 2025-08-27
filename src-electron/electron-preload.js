@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld("electron", {
   downloadUpdate: () => ipcRenderer.invoke("download-update"),
   installUpdate: () => ipcRenderer.invoke("install-update"),
   restartApp: () => ipcRenderer.invoke("restart-app"),
+  minimizeApp: () => ipcRenderer.invoke("minimize-app"),
   onUpdateAvailable: (callback) => {
     ipcRenderer.on("update-available", (_event, value) => callback(value));
   },

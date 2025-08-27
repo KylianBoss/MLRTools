@@ -388,6 +388,9 @@ onMounted(async () => {
     getBotsStatus();
     setInterval(getBotsStatus, 60000); // every minute
   }
+  if (App.isBot) {
+    window.electron.minimizeApp();
+  }
 });
 </script>
 
