@@ -54,10 +54,10 @@ router.get("/status", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router.get("/needs-restart", async (req, res) => {
+router.get("/needs-restart/:userId", async (req, res) => {
   try {
     const bot = await db.models.Users.findOne({
-      where: { isBot: true },
+      where: { isBot: true, id: req.params.userId },
       attributes: ["id", "fullname", "needsRestart"],
     });
     if (!bot) {
@@ -69,9 +69,11 @@ router.get("/needs-restart", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router.post("/restart-ack", async (req, res) => {
+router.post("/restart-ack/:userId", async (req, res) => {
   try {
-    const bot = await db.models.Users.findOne({ where: { isBot: true } });
+    const bot = await db.models.Users.findOne({
+      where: { isBot: true, id: req.params.userId },
+    });
     if (!bot) {
       return res.status(404).json({ error: "Bot not found" });
     }

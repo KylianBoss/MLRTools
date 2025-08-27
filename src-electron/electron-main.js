@@ -205,6 +205,11 @@ ipcMain.handle("minimize-app", () => {
     mainWindow.minimize();
   }
 });
+// Restart app
+ipcMain.handle("restart-app", () => {
+  app.relaunch();
+  app.exit(0);
+});
 
 // Gestion des erreurs non capturées
 process.on("uncaughtException", (error) => {
