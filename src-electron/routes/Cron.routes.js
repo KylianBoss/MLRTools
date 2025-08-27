@@ -47,11 +47,9 @@ router.post("/initialize", async (req, res) => {
         switch (job.action) {
           case "extractTrayAmount":
             let date = dayjs().subtract(1, "day").format("YYYY-MM-DD");
-            console.log(job);
             if (job.args) {
               // date: YYYY-MM-DD, runNow: true/false (this is just a string)
               const args = job.args.split(",");
-              console.log(`Cron job args: ${args}`);
               args.forEach((arg) => {
                 const [key, value] = arg.split(":").map((s) => s.trim());
                 if (key === "date") {
@@ -59,9 +57,6 @@ router.post("/initialize", async (req, res) => {
                     date = value;
                     job.lastLog = `Using date from cron job args: ${date}`;
                     job.save();
-                    console.log(
-                      `Using date from cron job args: ${date} for job ${job.jobName}`
-                    );
                   } else {
                     console.warn(
                       `Invalid date format in cron job args: ${value}, using default date ${date}`

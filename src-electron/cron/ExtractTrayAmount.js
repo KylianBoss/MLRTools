@@ -432,6 +432,7 @@ export const extractTrayAmount = (date) => {
         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         lastLog: `Extraction completed successfully`,
         endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        args: null,
       });
 
       // Save data in DB
