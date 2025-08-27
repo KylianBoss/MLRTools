@@ -350,15 +350,27 @@ router.get("/charts/print/:id", async (req, res) => {
 });
 router.get("/charts/amount", async (req, res) => {
   try {
-    const amount = await db.models.ZoneGroupData.findAll({
+    const amount = await db.models.ZoneData.findAll({
       order: [["date", "ASC"]],
       where: {
         date: {
           [Op.gte]: dayjs().subtract(7, "day").format("YYYY-MM-DD"),
         },
-        zoneGroupName: ["DEPAL", "PALLETIZING", "PALLET_AREA", "ENTREE_PAL"],
+        zoneName: [
+          "X001",
+          "X002",
+          "X003",
+          "X101",
+          "X102",
+          "X103",
+          "X104",
+          "X001_PAL",
+          "X002_PAL",
+          "X003_PAL",
+          "F013",
+        ],
       },
-      attributes: ["date", "zoneGroupName", "total"],
+      attributes: ["date", "zoneName", "total"],
     });
     res.json(amount);
   } catch (error) {

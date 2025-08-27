@@ -299,29 +299,30 @@ const formatDataForTable = async (data) => {
   });
 
   const amountsData = await api.get(`/kpi/charts/amount`);
+  console.log(amountsData.data);
   tableRows.unshift({
     dataSource: "----",
     alarmArea: "----",
-    error: "Quantité de trays sortie",
+    error: "Quantité de trays sortie (entrée palletiseurs)",
     ...Object.fromEntries(
       sortedDates.map((date) => {
-        const amountEntry = amountsData.data.find(
-          (t) => t.date === date && t.zoneGroupName === "PALLETIZING"
-        );
-        return [date, amountEntry ? amountEntry.total : 0];
+        const amountEntry = amountsData.data.filter(
+          (t) => t.date === date && ["X101", "X102", "X103", "X104"].includes(t.zoneName)
+        ).reduce((sum, curr) => sum + curr.total, 0);
+        return [date, amountEntry];
       })
     ),
   });
   tableRows.unshift({
     dataSource: "----",
     alarmArea: "----",
-    error: "Quantité de trays entrée",
+    error: "Quantité de trays entrée (sortie dépalettiseurs)",
     ...Object.fromEntries(
       sortedDates.map((date) => {
-        const amountEntry = amountsData.data.find(
-          (t) => t.date === date && t.zoneGroupName === "DEPAL"
-        );
-        return [date, amountEntry ? amountEntry.total : 0];
+        const amountEntry = amountsData.data.filter(
+          (t) => t.date === date && ["X001", "X002", "X003", "X004"].includes(t.zoneName)
+        ).reduce((sum, curr) => sum + curr.total, 0);
+        return [date, amountEntry];
       })
     ),
   });
@@ -331,10 +332,10 @@ const formatDataForTable = async (data) => {
     error: "Quantité de palettes sortie",
     ...Object.fromEntries(
       sortedDates.map((date) => {
-        const amountEntry = amountsData.data.find(
-          (t) => t.date === date && t.zoneGroupName === "PALLET_AREA"
-        );
-        return [date, amountEntry ? amountEntry.total : 0];
+        const amountEntry = amountsData.data.filter(
+          (t) => t.date === date && ["F013"].includes(t.zoneName)
+        ).reduce((sum, curr) => sum + curr.total, 0);
+        return [date, amountEntry];
       })
     ),
   });
@@ -344,10 +345,10 @@ const formatDataForTable = async (data) => {
     error: "Quantité de palettes entrée",
     ...Object.fromEntries(
       sortedDates.map((date) => {
-        const amountEntry = amountsData.data.find(
-          (t) => t.date === date && t.zoneGroupName === "ENTREE_PAL"
-        );
-        return [date, amountEntry ? amountEntry.total : 0];
+        const amountEntry = amountsData.data.filter(
+          (t) => t.date === date && ["X001_PAL", "X002_PAL", "X003_PAL"].includes(t.zoneName)
+        ).reduce((sum, curr) => sum + curr.total, 0);
+        return [date, amountEntry];
       })
     ),
   });
