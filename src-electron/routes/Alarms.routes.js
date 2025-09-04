@@ -1,6 +1,12 @@
 import { Router } from "express";
 import { db } from "../database.js";
 import { Op, QueryTypes } from "sequelize";
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat.js";
+import "dayjs/locale/fr.js";
+
+dayjs.extend(customParseFormat);
+dayjs.locale("fr");
 
 const router = Router();
 
@@ -43,6 +49,144 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+router.post("/import-alarms", async (req, res) => {
+  const { data } = req.body;
+  if (!data) {
+    res.status(400).json({ error: "No data provided" });
+    return;
+  }
+
+  const response = {
+    recieved: 0,
+    parsed: 0,
+    inserted: 0,
+  };
+
+  try {
+    // data is a long CSV string and i want to have it as an array of objects
+    const lines = data.split("\n");
+    const headers = lines[0]
+      .split(";")
+      .map((h) => h.replaceAll('"', "").trim())
+      .filter((h) => h.length > 0);
+    const alarms = lines.slice(1).map((line) => {
+      const values = line.split(";").map((v) => v.replaceAll('"', "").trim());
+      const alarm = {};
+      headers.forEach((header, index) => {
+        alarm[header] = values[index];
+      });
+      return alarm;
+    });
+    console.log(`Importing ${alarms.length} alarms`);
+    response.recieved = alarms.length;
+
+    const formattedAlarms = alarms.map((alarm) => ({
+      dbId: alarm["Database ID"] ? parseInt(alarm["Database ID"], 10) : null,
+      timeOfOccurence: alarm["Time of occurrence"]
+        ? dayjs(
+            alarm["Time of occurrence"],
+            "D MMM YYYY à HH:mm:ss",
+            "fr"
+          ).toDate()
+        : null,
+      timeOfAcknowledge: alarm["Acknowledge instant"]
+        ? dayjs(
+            alarm["Acknowledge instant"],
+            "D MMM YYYY à HH:mm:ss",
+            "fr"
+          ).toDate()
+        : null,
+      duration: Math.abs(
+        dayjs(alarm["Time of occurrence"], "D MMM YYYY à HH:mm:ss", "fr").diff(
+          dayjs(alarm["Acknowledge instant"], "D MMM YYYY à HH:mm:ss", "fr"),
+          "second"
+        )
+      ),
+      dataSource: alarm["Data source"] || null,
+      alarmArea: alarm["Alarm area"] || null,
+      alarmCode: alarm["Alarm code"] || null,
+      alarmText: alarm["Alarm text"] || null,
+      severity: alarm["Severity"] || null,
+      classification: alarm["Classification"] || null,
+      assignedUser: alarm["Assigned user"] || null,
+      alarmId: `${alarm["Data source"]}.${alarm["Alarm area"]}.${alarm["Alarm code"]}`,
+    }));
+
+    const parsedAlarms = formattedAlarms.filter((fa) => {
+      if (typeof fa.dbId !== typeof 1) return false; // Don't put in DB the alarms without DBID
+      if (fa.alarmCode === "M6009.0306") return false; // Don't put in DB the warning from the shuttle
+      if (fa.alarmCode === "M6130.0201") return false; // Don't put in DB the warning from the shuttle
+      if (fa.alarmCode === "M6130.0203") return false; // Don't put in DB the warning from the shuttle
+      if (fa.alarmCode === "M6130.0202") return false; // Don't put in DB the warning from the shuttle
+      if (!fa.timeOfAcknowledge) return false; // Don't put in DB the alarms without acknowledge time
+      if (JSON.stringify(fa).includes("undefined")) return false; // Don't put in DB the alarms with undefined values
+      if (JSON.stringify(fa).includes("NaN")) return false; // Don't put in DB the alarms with NaN values
+      return true;
+    });
+    console.log(`Parsed ${parsedAlarms.length} alarms (after filtering)`);
+    response.parsed = parsedAlarms.length;
+
+    const bulk = await db.models.Datalog.bulkCreate(parsedAlarms, {
+      updateOnDuplicate: [
+        "timeOfOccurence",
+        "timeOfAcknowledge",
+        "duration",
+        "dataSource",
+        "alarmArea",
+        "alarmCode",
+        "alarmText",
+        "severity",
+        "classification",
+        "assignedUser",
+        "alarmId",
+      ],
+      validate: true,
+    });
+    // const bulk = [];
+    // const createdAlarms = [];
+    // let progress = 0;
+    // let lastProgress = 0;
+    // for (const alarm of parsedAlarms) {
+    //   try {
+    //     const [record, created] = await db.models.Datalog.upsert(alarm);
+    //     bulk.push(record);
+    //     if (created) createdAlarms.push(record);
+    //   } catch (error) {
+    //     console.error("Error inserting alarm:", error, alarm);
+    //   }
+    //   progress = Math.round((bulk.length / parsedAlarms.length) * 100);
+    //   if (progress != lastProgress) {
+    //     lastProgress = progress;
+    //     console.log(`${progress}% done`);
+    //   }
+    // }
+    console.log(`Inserted/Updated ${bulk.length} alarms`);
+    response.inserted = bulk.length;
+
+    // Keep only unique alarms from the parsed alarms
+    const uniqueAlarms = parsedAlarms.filter(
+      (alarm, index, self) =>
+        index === self.findIndex((a) => a.alarmId === alarm.alarmId)
+    );
+
+    for (const alarm of uniqueAlarms) {
+      await db.models.Alarms.upsert({
+        alarmId: alarm.alarmId,
+        dataSource: alarm.dataSource,
+        alarmArea: alarm.alarmArea,
+        alarmCode: alarm.alarmCode,
+        alarmText: alarm.alarmText,
+      });
+    }
+
+    console.log(`Alarm import completed`);
+    res.status(201).json(response);
+  } catch (error) {
+    console.error("Error importing alarms:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get("/", async (req, res) => {
   const { startRow, count, filter, sortBy, descending, sum } = req.body;
   try {

@@ -9,28 +9,24 @@
           @click="triggerFileInput"
           class="full-width q-mb-md"
           v-if="!data.length"
+          :loading="loading"
         />
         <q-file
           v-model="selectedFilePath"
           type="file"
-          accept=".txt,.csv"
+          accept=".csv"
           multiple
           style="display: none"
           ref="fileInput"
-        />
-        <textarea
-          v-model="data"
-          rows="5"
-          class="full-width"
-          placeholder="Paste your data here"
-          v-if="!selectedFilePath"
+          :loading="loading"
         />
         <q-btn
-          v-if="selectedFilePath || data.length"
+          v-if="selectedFilePath"
           color="secondary"
           label="Import"
           @click="importFile"
           class="full-width"
+          :loading="loading"
         />
       </q-card-section>
       <q-card-section v-if="dataLogStore.loading">
@@ -70,16 +66,16 @@ import { ref, onMounted, watch, computed } from "vue";
 import { useDataLogStore } from "stores/datalog";
 import dayjs from "dayjs";
 import { useQuasar } from "quasar";
+import { api } from "boot/axios";
 
 const $q = useQuasar();
 const dataLogStore = useDataLogStore();
 const selectedFilePath = ref(null);
 const saved = ref(false);
-// const date = ref(dayjs().format("YYYY/MM/DD"));
-// const filter = ref("");
 const data = ref("");
 const estimatedTimeLeft = ref(0);
 const fileInput = ref(null);
+const loading = ref(false);
 
 const triggerFileInput = () => {
   if (fileInput.value) {
@@ -93,112 +89,81 @@ const triggerFileInput = () => {
   }
 };
 
-const selectFile = async () => {
-  // try {
-  //   const result = await window.electron.selectFile({
-  //     name: "Text Files or CSV",
-  //     extensions: ["txt", "csv"],
-  //   });
-  //   if (result.canceled) {
-  //     return;
-  //   }
-  //   selectedFilePath.value = result.filePaths;
-  // } catch (error) {
-  //   console.error("Error selecting file:", error);
-  //   $q.notify({
-  //     type: "negative",
-  //     message: "Error selecting file: " + error.message,
-  //   });
-  // }
-};
-
 const importFile = async () => {
-  if (!data.value && !selectedFilePath.value) {
-    $q.notify({
-      type: "negative",
-      message: "No data to import",
-    });
-    return;
-  }
-
-  if (data.value && data.value.length) {
-    console.log("Importing data from textarea");
-    try {
-      const fileContent = data.value.split("\n");
-      const totalLines = fileContent.length;
-      dataLogStore.startImport(totalLines);
-
-      for (const line of fileContent) {
-        await dataLogStore.importDataChunk([line]);
-        estimatedTimeLeft.value = dataLogStore.progression.estimatedTimeLeft;
-      }
-
-      $q.notify({
-        type: "positive",
-        message: "Data imported successfully",
-        actions: [{ icon: "close", color: "white" }],
-        timeout: 0,
-      });
-
-      dataLogStore.finishImport();
-      data.value = "";
-      saved.value = false;
-      return;
-    } catch (error) {
-      console.error("Error importing data:", error);
-      $q.notify({
-        type: "negative",
-        message: "Error importing data: " + error.message,
-        actions: [{ icon: "close", color: "white" }],
-        timeout: 0,
-      });
-      return;
-    }
-  }
-
   if (!selectedFilePath.value) return;
 
   for (const file of selectedFilePath.value) {
+    loading.value = true;
     try {
       const fileType = file.name.split(".").pop().toLowerCase();
+      if (fileType !== "csv") {
+        $q.notify({
+          type: "negative",
+          message: "Unsupported file type: " + fileType,
+          actions: [{ icon: "close", color: "white" }],
+          timeout: 0,
+        });
+        continue;
+      }
       const fileReader = new FileReader();
       const fileContent = await new Promise((resolve, reject) => {
-        fileReader.onload = (event) => {
-          const content = event.target.result;
-          resolve(
-            content
-              .split("\n")
-              .map((line) => line.trim())
-              .filter(Boolean)
-          );
-        };
+        fileReader.onload = (event) => resolve(event.target.result);
         fileReader.onerror = (error) => reject(error);
         fileReader.readAsText(file);
       });
 
-      const totalLines = fileContent.length;
-      console.log("Total lines:", totalLines);
-      dataLogStore.startImport(totalLines);
+      api
+        .post("alarms/import-alarms", { data: fileContent })
+        .then((response) => {
+          $q.notify({
+            type: "positive",
+            message: `File : ${file.name} imported successfully`,
+            actions: [{ icon: "close", color: "white" }],
+            timeout: 0,
+          });
+          $q.notify({
+            type: "positive",
+            message: `Importation de ${response.data.recieved} alarmes, ${response.data.inserted} nouvelles alarmes insérées dans la base de donnée.`,
+            actions: [{ icon: "close", color: "white" }],
+            position: "top",
+            timeout: 10000,
+          });
+          loading.value = false;
+        })
+        .catch((error) => {
+          console.error("Error importing file:", error);
+          $q.notify({
+            type: "negative",
+            message: "Error importing file: " + error.message,
+            actions: [{ icon: "close", color: "white" }],
+            timeout: 0,
+          });
+          loading.value = false;
+        });
 
-      const chunkSize = 1000;
-      const chunks = [];
-      for (let i = 0; i < fileContent.length; i += chunkSize) {
-        chunks.push(fileContent.slice(i, i + chunkSize));
-      }
+      //   const totalLines = fileContent.length;
+      //   console.log("Total lines:", totalLines);
+      //   dataLogStore.startImport(totalLines);
 
-      for (const chunk of chunks) {
-        await dataLogStore.importDataChunk(chunk, fileType);
-        estimatedTimeLeft.value = dataLogStore.progression.estimatedTimeLeft;
-      }
+      //   const chunkSize = 1000;
+      //   const chunks = [];
+      //   for (let i = 0; i < fileContent.length; i += chunkSize) {
+      //     chunks.push(fileContent.slice(i, i + chunkSize));
+      //   }
 
-      $q.notify({
-        type: "positive",
-        message: `File : ${file.name} imported successfully`,
-        actions: [{ icon: "close", color: "white" }],
-        timeout: 0,
-      });
+      //   for (const chunk of chunks) {
+      //     await dataLogStore.importDataChunk(chunk, fileType);
+      //     estimatedTimeLeft.value = dataLogStore.progression.estimatedTimeLeft;
+      //   }
 
-      dataLogStore.finishImport();
+      //   $q.notify({
+      //     type: "positive",
+      //     message: `File : ${file.name} imported successfully`,
+      //     actions: [{ icon: "close", color: "white" }],
+      //     timeout: 0,
+      //   });
+
+      //   dataLogStore.finishImport();
     } catch (error) {
       console.error("Error importing file:", error);
       $q.notify({
