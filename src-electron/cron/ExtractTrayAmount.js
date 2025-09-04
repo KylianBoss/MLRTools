@@ -433,7 +433,7 @@ export const extractTrayAmount = (date) => {
         lastLog: `Extraction completed successfully`,
         endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         args: null,
-        cronExpression: "15 2 * * * "
+        cronExpression: "0 1 * * * ",
       });
 
       // Save data in DB
@@ -454,6 +454,15 @@ export const extractTrayAmount = (date) => {
         ),
         JSON.stringify(zones, null, 2)
       );
+
+      // Set the bot to restart
+      const bot = await db.models.User.findOne({
+        where: { isBot: true },
+      });
+      if (bot) {
+        bot.update({ needsRestart: true });
+      }
+
       resolve(zones);
     } catch (error) {
       console.error("Error extracting tray amount:", error);
