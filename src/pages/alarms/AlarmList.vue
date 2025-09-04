@@ -26,9 +26,9 @@
       :rows="
         dataLogStore.alarms.map((alarm) => {
           return {
-            dataSource: alarm.dataSource.toUpperCase(),
-            alarmArea: alarm.alarmArea.toUpperCase(),
-            alarmCode: alarm.alarmCode.toUpperCase(),
+            dataSource: alarm.dataSource,
+            alarmArea: alarm.alarmArea,
+            alarmCode: alarm.alarmCode,
             alarmText: alarm.alarmText,
             alarmId: alarm.alarmId,
             type: alarm.type,
