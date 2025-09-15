@@ -456,7 +456,7 @@ export const extractTrayAmount = (date) => {
       );
 
       // Set the bot to restart
-      const bot = await db.models.User.findOne({
+      const bot = await db.models.Users.findOne({
         where: { isBot: true },
       });
       if (bot) {
