@@ -164,7 +164,7 @@ const getData = async () => {
       data: [
         {
           x: "Nombre d'erreurs moyen",
-          y: data.data.avg_errors_per_thousand.toFixed(2),
+          y: Math.round(data.data.avg_errors_per_thousand, 2),
           goals: [
             {
               name: "Target",
@@ -180,7 +180,7 @@ const getData = async () => {
       data: [
         {
           x: "Temps de panne moyen",
-          y: data.data.avg_downtime_minutes_per_thousand.toFixed(2),
+          y: Math.round(data.data.avg_downtime_minutes_per_thousand, 2),
           goals: [
             {
               name: "Target",
@@ -305,9 +305,13 @@ const formatDataForTable = async (data) => {
     error: "Quantité de trays sortie (entrée palletiseurs)",
     ...Object.fromEntries(
       sortedDates.map((date) => {
-        const amountEntry = amountsData.data.filter(
-          (t) => t.date === date && ["X101", "X102", "X103", "X104"].includes(t.zoneName)
-        ).reduce((sum, curr) => sum + curr.total, 0);
+        const amountEntry = amountsData.data
+          .filter(
+            (t) =>
+              t.date === date &&
+              ["X101", "X102", "X103", "X104"].includes(t.zoneName)
+          )
+          .reduce((sum, curr) => sum + curr.total, 0);
         return [date, amountEntry];
       })
     ),
@@ -318,9 +322,13 @@ const formatDataForTable = async (data) => {
     error: "Quantité de trays entrée (sortie dépalettiseurs)",
     ...Object.fromEntries(
       sortedDates.map((date) => {
-        const amountEntry = amountsData.data.filter(
-          (t) => t.date === date && ["X001", "X002", "X003", "X004"].includes(t.zoneName)
-        ).reduce((sum, curr) => sum + curr.total, 0);
+        const amountEntry = amountsData.data
+          .filter(
+            (t) =>
+              t.date === date &&
+              ["X001", "X002", "X003", "X004"].includes(t.zoneName)
+          )
+          .reduce((sum, curr) => sum + curr.total, 0);
         return [date, amountEntry];
       })
     ),
@@ -331,9 +339,9 @@ const formatDataForTable = async (data) => {
     error: "Quantité de palettes sortie",
     ...Object.fromEntries(
       sortedDates.map((date) => {
-        const amountEntry = amountsData.data.filter(
-          (t) => t.date === date && ["F013"].includes(t.zoneName)
-        ).reduce((sum, curr) => sum + curr.total, 0);
+        const amountEntry = amountsData.data
+          .filter((t) => t.date === date && ["F013"].includes(t.zoneName))
+          .reduce((sum, curr) => sum + curr.total, 0);
         return [date, amountEntry];
       })
     ),
@@ -344,9 +352,13 @@ const formatDataForTable = async (data) => {
     error: "Quantité de palettes entrée",
     ...Object.fromEntries(
       sortedDates.map((date) => {
-        const amountEntry = amountsData.data.filter(
-          (t) => t.date === date && ["X001_PAL", "X002_PAL", "X003_PAL"].includes(t.zoneName)
-        ).reduce((sum, curr) => sum + curr.total, 0);
+        const amountEntry = amountsData.data
+          .filter(
+            (t) =>
+              t.date === date &&
+              ["X001_PAL", "X002_PAL", "X003_PAL"].includes(t.zoneName)
+          )
+          .reduce((sum, curr) => sum + curr.total, 0);
         return [date, amountEntry];
       })
     ),
