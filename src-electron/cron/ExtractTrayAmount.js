@@ -455,6 +455,35 @@ export const extractTrayAmount = (date) => {
         JSON.stringify(zones, null, 2)
       );
 
+      // Check if all last days since the last extract have been extracted
+      const lastExtract = await db.models.ZoneData.findOne({
+        order: [["date", "DESC"]],
+      });
+      const daysDiff = dayjs().diff(dayjs(lastExtract.date), "day");
+      if (daysDiff > 1) {
+        console.log(
+          `There are ${
+            daysDiff - 1
+          } days since the last extraction, starting extraction for missing days...`
+        );
+
+        // Start the extraction for missing days, start with the oldest day and set the bot for only one extraction at a time
+        const dayToExtract = dayjs(lastExtract.date).add(1, "day");
+        console.log(
+          `Setting extraction for date ${dayToExtract.format("YYYY-MM-DD")}`
+        );
+        await updateJob({
+          actualState: "idle",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `Extraction completed successfully. Setting extraction for date ${dayToExtract.format(
+            "YYYY-MM-DD"
+          )}`,
+          endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          args: JSON.stringify({ date: dayToExtract.format("YYYY-MM-DD") }),
+          cronExpression: dayjs().add(5, "minute").format("m H * * *"),
+        });
+      }
+
       // Set the bot to restart
       const bot = await db.models.Users.findOne({
         where: { isBot: true },
