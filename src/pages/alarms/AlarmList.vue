@@ -72,9 +72,9 @@
       </template>
       <template v-slot:body="props">
         <tr :props="props">
-          <td>{{ props.row.dataSource.toUpperCase() }}</td>
-          <td>{{ props.row.alarmArea.toUpperCase() }}</td>
-          <td>{{ props.row.alarmCode.toUpperCase() }}</td>
+          <td class="text-uppercase">{{ props.row.dataSource }}</td>
+          <td class="text-uppercase">{{ props.row.alarmArea }}</td>
+          <td class="text-uppercase">{{ props.row.alarmCode }}</td>
           <td>{{ props.row.alarmText }}</td>
           <td>{{ props.row.alarmId }}</td>
           <td>
