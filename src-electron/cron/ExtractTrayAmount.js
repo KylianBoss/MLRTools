@@ -479,7 +479,7 @@ export const extractTrayAmount = (date) => {
             "YYYY-MM-DD"
           )}`,
           endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          args: JSON.stringify({ date: dayToExtract.format("YYYY-MM-DD") }),
+          args: `date:${dayToExtract.format("YYYY-MM-DD")}`,
           cronExpression: dayjs().add(5, "minute").format("m H * * *"),
         });
       }
