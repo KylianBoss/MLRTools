@@ -116,45 +116,50 @@ export const extractWMS = async () => {
     let totalBoxes = 0;
 
     try {
-      let data;
-      if (fileToProcess.multipart) {
-        const results = [];
-        for (let part = 0; part < 24; part++) {
-          // File parts are with two digits
-          const partFileName = fileToProcess.file.replace(
-            ".csv",
-            `_${part.toString().padStart(2, "0")}.csv`
-          );
-          const partFilePath = path.join(WMS_HISTORY_PATH, partFileName);
-          if (fs.existsSync(partFilePath)) {
-            fs.createReadStream(partFilePath, "utf8")
-              .pipe(csv({ separator: ";" }))
-              .on("data", (row) => results.push(row))
-              .on("end", () => {
-                console.log(`Processed part file: ${partFileName}`);
-                data = results;
-              });
-          } else {
-            console.warn(
-              `Part file ${partFileName} does not exist, skipping...`
+      const gettingData = new Promise(async (resolve, reject) => {
+        let data;
+        if (fileToProcess.multipart) {
+          const results = [];
+          for (let part = 0; part < 24; part++) {
+            // File parts are with two digits
+            const partFileName = fileToProcess.file.replace(
+              ".csv",
+              `_${part.toString().padStart(2, "0")}.csv`
             );
-            await updateJob({
-              lastRun: new Date(),
-              lastLog: `Part file ${partFileName} does not exist, skipping...`,
-            });
-            continue;
+            const partFilePath = path.join(WMS_HISTORY_PATH, partFileName);
+            if (fs.existsSync(partFilePath)) {
+              fs.createReadStream(partFilePath, "utf8")
+                .pipe(csv({ separator: ";" }))
+                .on("data", (row) => results.push(row))
+                .on("end", () => {
+                  console.log(`Processed part file: ${partFileName}`);
+                  data = results;
+                });
+            } else {
+              console.warn(
+                `Part file ${partFileName} does not exist, skipping...`
+              );
+              await updateJob({
+                lastRun: new Date(),
+                lastLog: `Part file ${partFileName} does not exist, skipping...`,
+              });
+              continue;
+            }
           }
+        } else {
+          const results = [];
+          fs.createReadStream(filePath, "utf8")
+            .pipe(csv({ separator: ";" }))
+            .on("data", (row) => results.push(row))
+            .on("end", () => {
+              console.log(`Processed file: ${fileToProcess.file}`);
+              data = results;
+            });
         }
-      } else {
-        const results = [];
-        fs.createReadStream(filePath, "utf8")
-          .pipe(csv({ separator: ";" }))
-          .on("data", (row) => results.push(row))
-          .on("end", () => {
-            console.log(`Processed file: ${fileToProcess.file}`);
-            data = results;
-          });
-      }
+        resolve(data);
+      });
+
+      const data = await gettingData;
 
       const palettisationData = data.filter(
         (row) => row["ACTIVITE"] === "Palettisation"
