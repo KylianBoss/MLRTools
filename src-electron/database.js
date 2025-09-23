@@ -205,12 +205,6 @@ function initDB(config) {
       },
       {
         timestamps: false,
-        indexes: [
-          {
-            unique: true,
-            fields: ["zone"],
-          },
-        ],
       }
     );
 
@@ -233,13 +227,6 @@ function initDB(config) {
           },
           comment: "Array of zones in the group, e.g. ['F001', 'F002', ...]",
         },
-        // zoneTransportType: {
-        //   type: DataTypes.ENUM("tray", "box", "pallet"),
-        //   allowNull: false,
-        //   defaultValue: "tray",
-        //   comment:
-        //     "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
-        // },
         order: {
           type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
@@ -1042,173 +1029,103 @@ function initDB(config) {
       }
     );
 
-    const DefectHandling = db.define(
-      "DefectHandling",
+    const ErrorsByThousandSaved = db.define(
+      "ErrorsByThousandSaved",
       {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-        },
-        locationId: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          references: {
-            model: Location,
-            key: "id",
-          },
-          comment: "ID of the location where the defect occurred",
-        },
-        activity: {
-          type: DataTypes.ENUM("mecanical", "electrical", "software", "other"),
-          allowNull: false,
-          comment: "Type of activity related to the defect",
-        },
-        priority: {
-          type: DataTypes.ENUM("low", "medium", "high"),
-          allowNull: false,
-          defaultValue: "medium",
-          comment: "Priority of the defect, can be 'low', 'medium', or 'high'",
-        },
-        done: {
-          type: DataTypes.BOOLEAN,
-          allowNull: false,
-          defaultValue: false,
-          comment: "If true, the defect has been handled",
-        },
-        estimatedInterventionTime: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Estimated time in minutes for the intervention",
-        },
-        description: {
-          type: DataTypes.TEXT,
-          allowNull: false,
-          comment: "Description of the defect",
-        },
-        createdBy: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          references: {
-            model: Users,
-            key: "id",
-          },
-          comment: "User who created the defect report",
-        },
-        createdAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW,
-          comment: "Timestamp when the defect report was created",
-        },
-        updatedAt: {
-          type: DataTypes.DATE,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Timestamp when the defect report was last updated",
-        },
-      },
-      {
-        timestamps: true,
-        indexes: [
-          {
-            unique: true,
-            fields: ["locationId", "createdAt"],
-          },
-        ],
-      }
-    );
-
-    const DHHistory = db.define(
-      "DHHistory",
-      {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-        },
-        defectId: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          references: {
-            model: DefectHandling,
-            key: "id",
-          },
-          comment: "ID of the defect handling record",
-        },
-        status: {
-          type: DataTypes.ENUM(
-            "created",
-            "in_progress",
-            "updated",
-            "resolved",
-            "closed",
-            "cancelled"
-          ),
-          allowNull: false,
-          defaultValue: "created",
-          comment: "Current status of the defect handling process",
-        },
-        updatedBy: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          references: {
-            model: Users,
-            key: "id",
-          },
-          comment: "User who last updated the defect handling record",
-        },
-        updatedAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW,
-          comment: "Timestamp when the defect handling record was last updated",
-        },
-      },
-      {
-        timestamps: true,
-      }
-    );
-
-    const DHPieces = db.define(
-      "DHPieces",
-      {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-        },
-        defectId: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          references: {
-            model: DefectHandling,
-            key: "id",
-          },
-          comment: "ID of the defect handling record",
-        },
-        pieceId: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          comment: "ID of the piece related to the defect",
-        },
-        pieceName: {
+        groupName: {
           type: DataTypes.STRING,
           allowNull: false,
-          comment: "Name of the piece related to the defect",
+          primaryKey: true,
+          comment: "Name of the zone group, e.g. 'Group 1', 'Group 2', etc.",
         },
-        quantity: {
+        transportType: {
+          type: DataTypes.ENUM("tray", "box", "pallet"),
+          allowNull: false,
+          defaultValue: "tray",
+          comment: "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
+        },
+        result: {
+          type: DataTypes.FLOAT,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "Number of errors per thousand",
+        },
+        trayAmount: {
           type: DataTypes.INTEGER.UNSIGNED,
           allowNull: false,
-          defaultValue: 1,
-          comment: "Quantity of the piece needed for the defect",
+          defaultValue: 0,
+          comment: "Number of trays processed",
+        },
+        from: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          primaryKey: true,
+        },
+        to: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          primaryKey: true,
+        },
+        calculatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.NOW,
+          comment: "Time when the result was calculated",
         },
       },
       {
         timestamps: false,
       }
-    );
+    )
+
+    const DowntimeMinutesByThousandSaved = db.define(
+      "downtimeMinutesByThousandSaveds",
+      {
+        groupName: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          primaryKey: true,
+          comment: "Name of the zone group, e.g. 'Group 1', 'Group 2', etc.",
+        },
+        transportType: {
+          type: DataTypes.ENUM("tray", "box", "pallet"),
+          allowNull: false,
+          defaultValue: "tray",
+          comment: "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
+        },
+        result: {
+          type: DataTypes.FLOAT,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "Number of errors per thousand",
+        },
+        trayAmount: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "Number of trays processed",
+        },
+        from: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          primaryKey: true,
+        },
+        to: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          primaryKey: true,
+        },
+        calculatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.NOW,
+          comment: "Time when the result was calculated",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    )
 
     Users.hasMany(UserAccess, {
       foreignKey: "userId",

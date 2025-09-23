@@ -123,7 +123,7 @@ router.get("/resume", async (req, res) => {
 router.get("/groups", async (req, res) => {
   try {
     const groups = await db.models.ZoneGroups.findAll({
-      attributes: ["zoneGroupName", "zones", "zoneTransportType"],
+      attributes: ["zoneGroupName", "zones"],
       order: [["order", "ASC"]],
     });
 
@@ -158,7 +158,7 @@ router.get("/groups", async (req, res) => {
 });
 router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
   const { groupName } = req.params;
-  const WINDOW = 15;
+  const WINDOW = 90;
 
   try {
     let dataNumbers = [];

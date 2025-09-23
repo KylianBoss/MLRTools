@@ -3,6 +3,7 @@ import { db } from "../database.js";
 import dayjs from "dayjs";
 import cron from "node-cron";
 import { extractTrayAmount } from "../cron/ExtractTrayAmount.js";
+import { extractWMS } from "../cron/ExtractWMS.js";
 
 const router = Router();
 
@@ -66,6 +67,10 @@ router.post("/initialize", async (req, res) => {
               });
             }
             extractTrayAmount(date);
+            break;
+
+          case "extractWMS":
+            await extractWMS();
             break;
         }
       });
