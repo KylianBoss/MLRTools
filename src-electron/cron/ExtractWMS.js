@@ -118,6 +118,7 @@ export const extractWMS = async () => {
     try {
       let data;
       if (fileToProcess.multipart) {
+        const results = [];
         for (let part = 0; part < 24; part++) {
           // File parts are with two digits
           const partFileName = fileToProcess.file.replace(
@@ -128,9 +129,10 @@ export const extractWMS = async () => {
           if (fs.existsSync(partFilePath)) {
             fs.createReadStream(partFilePath, "utf8")
               .pipe(csv({ separator: ";" }))
-              .on("data", (row) => {
-                if (!data) data = [];
-                data.push(row);
+              .on("data", (row) => results.push(row))
+              .on("end", () => {
+                console.log(`Processed part file: ${partFileName}`);
+                data = results;
               });
           } else {
             console.warn(
@@ -144,11 +146,13 @@ export const extractWMS = async () => {
           }
         }
       } else {
+        const results = [];
         fs.createReadStream(filePath, "utf8")
           .pipe(csv({ separator: ";" }))
-          .on("data", (row) => {
-            if (!data) data = [];
-            data.push(row);
+          .on("data", (row) => results.push(row))
+          .on("end", () => {
+            console.log(`Processed file: ${fileToProcess.file}`);
+            data = results;
           });
       }
 
@@ -179,17 +183,7 @@ export const extractWMS = async () => {
       await updateJob({
         lastRun: new Date(),
         lastLog: `Data for ${date} inserted into database.`,
-        endAt: new Date(),
-        actualState: "idle",
       });
-
-      // Set the bot to restart
-      const bot = await db.models.Users.findOne({
-        where: { isBot: true },
-      });
-      if (bot) {
-        bot.update({ needsRestart: true });
-      }
     } catch (error) {
       console.error(`Failed to process data for date ${date}:`, error);
       await updateJob({
@@ -199,5 +193,20 @@ export const extractWMS = async () => {
         actualState: "error",
       });
     }
+  }
+
+  console.log("WMS extraction completed.");
+  await updateJob({
+    lastRun: new Date(),
+    lastLog: "WMS extraction completed.",
+    endAt: new Date(),
+    actualState: "idle",
+  });
+  // Set the bot to restart
+  const bot = await db.models.Users.findOne({
+    where: { isBot: true },
+  });
+  if (bot) {
+    bot.update({ needsRestart: true });
   }
 };
