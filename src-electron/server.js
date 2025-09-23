@@ -9,7 +9,6 @@ import express from "express";
 import cors from "cors";
 import routes from "./routes/index.js";
 import { extractTrayAmount } from "./cron/ExtractTrayAmount.js";
-import cron from "node-cron";
 
 dayjs.extend(duration);
 

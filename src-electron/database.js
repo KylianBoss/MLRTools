@@ -24,6 +24,55 @@ function initDB(config) {
       },
     });
 
+    const Audit = db.define(
+      "Audit",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+          comment: "Unique identifier for the audit log entry",
+        },
+        user: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Username of the user who performed the action",
+        },
+        type: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Type of action performed, e.g. 'create', 'update', 'delete'",
+        },
+        table: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Name of the table where the action was performed",
+        },
+        old: {
+          type: DataTypes.JSON,
+          allowNull: true,
+        },
+        new_: {
+          type: DataTypes.JSON,
+          allowNull: false,
+        },
+        data_id: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: "ID of the data record that was affected",
+        },
+        timestamp: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.NOW,
+          comment: "Timestamp when the action was performed",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
     const Element = db.define(
       "Element",
       {

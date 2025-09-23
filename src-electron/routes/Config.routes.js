@@ -2,6 +2,7 @@ import e, { Router } from "express";
 import path from "path";
 import fs from "fs/promises";
 import { initDB } from "../database.js";
+import Hooks from "../hooks.js";
 
 const router = Router();
 
@@ -21,11 +22,16 @@ router.get("/", async (req, res) => {
         attributes: ["menuId"],
       },
     });
+
+    const hooks = new Hooks(db, user.fullname);
+    hooks.init();
+
     res.json({
       config: true,
       user: user.toJSON(),
     });
   } catch (error) {
+    console.error("Error reading config file:", error);
     res.status(404).json({ error: "Config file not found" });
   }
 });
