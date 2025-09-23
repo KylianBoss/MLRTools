@@ -122,7 +122,7 @@ export const extractWMS = async () => {
           for (let part = 0; part < 24; part++) {
             // File parts are with two digits
             const partFileName = fileToProcess.file.replace(
-              ".csv",
+              "_00.csv",
               `_${part.toString().padStart(2, "0")}.csv`
             );
             const partFilePath = path.join(WMS_HISTORY_PATH, partFileName);
