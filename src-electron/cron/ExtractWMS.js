@@ -117,9 +117,8 @@ export const extractWMS = async () => {
 
     try {
       const gettingData = new Promise(async (resolve, reject) => {
-        let data;
+        const d = [];
         if (fileToProcess.multipart) {
-          const results = [];
           for (let part = 0; part < 24; part++) {
             // File parts are with two digits
             const partFileName = fileToProcess.file.replace(
@@ -128,13 +127,15 @@ export const extractWMS = async () => {
             );
             const partFilePath = path.join(WMS_HISTORY_PATH, partFileName);
             if (fs.existsSync(partFilePath)) {
-              fs.createReadStream(partFilePath, "utf8")
-                .pipe(csv({ separator: ";" }))
-                .on("data", (row) => results.push(row))
-                .on("end", () => {
-                  console.log(`Processed part file: ${partFileName}`);
-                  data = results;
-                });
+              await new Promise((res, rej) => {
+                fs.createReadStream(partFilePath, "utf8")
+                  .pipe(csv({ separator: ";" }))
+                  .on("data", (row) => d.push(row))
+                  .on("end", () => {
+                    console.log(`Processed part file: ${partFileName}`);
+                    res();
+                  });
+              });
             } else {
               console.warn(
                 `Part file ${partFileName} does not exist, skipping...`
@@ -146,17 +147,16 @@ export const extractWMS = async () => {
               continue;
             }
           }
+          resolve(d);
         } else {
-          const results = [];
           fs.createReadStream(filePath, "utf8")
             .pipe(csv({ separator: ";" }))
-            .on("data", (row) => results.push(row))
+            .on("data", (row) => d.push(row))
             .on("end", () => {
               console.log(`Processed file: ${fileToProcess.file}`);
-              data = results;
+              resolve(d);
             });
         }
-        resolve(data);
       });
 
       const data = await gettingData;
@@ -164,9 +164,7 @@ export const extractWMS = async () => {
       const palettisationData = data.filter(
         (row) => row["ACTIVITE"] === "Palettisation"
       );
-      const graiPalettised = palettisationData.map((row) =>
-        parseInt(row["GRAI"])
-      );
+      const graiPalettised = palettisationData.map((row) => row["GRAI"]);
       const uniqueGrai = [...new Set(graiPalettised)];
       totalBoxes = uniqueGrai.length;
 
