@@ -126,9 +126,12 @@ export const extractWMS = async () => {
           );
           const partFilePath = path.join(WMS_HISTORY_PATH, partFileName);
           if (fs.existsSync(partFilePath)) {
-            data = fs
-              .createReadStream(partFilePath)
-              .pipe(csv({ separator: ";" }));
+            fs.createReadStream(partFilePath, "utf8")
+              .pipe(csv({ separator: ";" }))
+              .on("data", (row) => {
+                if (!data) data = [];
+                data.push(row);
+              });
           } else {
             console.warn(
               `Part file ${partFileName} does not exist, skipping...`
@@ -141,7 +144,12 @@ export const extractWMS = async () => {
           }
         }
       } else {
-        data = fs.createReadStream(filePath).pipe(csv({ separator: ";" }));
+        fs.createReadStream(filePath, "utf8")
+          .pipe(csv({ separator: ";" }))
+          .on("data", (row) => {
+            if (!data) data = [];
+            data.push(row);
+          });
       }
 
       const palettisationData = data.filter(
