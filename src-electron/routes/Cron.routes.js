@@ -152,6 +152,9 @@ router.post("/start", async (req, res) => {
       case "extractTrayAmount":
         extractTrayAmount(dayjs().subtract(1, "day").format("YYYY-MM-DD"));
         break;
+      case "extractWMS":
+        await extractWMS();
+        break;
       default:
         res.status(400).json({ error: "Unknown action" });
         return;
