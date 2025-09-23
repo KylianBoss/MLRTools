@@ -13,7 +13,13 @@ export default class Hooks {
     const old = {};
     const new_ = {};
 
-    const ignoreFields = ["updatedAt", "createdAt", "password", "lastLoginAt"];
+    const ignoreFields = [
+      "updatedAt",
+      "createdAt",
+      "password",
+      "lastLoginAt",
+      "isBotActive",
+    ];
 
     if (changes.filter((change) => !ignoreFields.includes(change)).length === 0)
       return;
