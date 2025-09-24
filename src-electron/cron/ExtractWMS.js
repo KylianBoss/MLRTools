@@ -131,8 +131,12 @@ export const extractWMS = async () => {
                 fs.createReadStream(partFilePath, "utf8")
                   .pipe(csv({ separator: ";" }))
                   .on("data", (row) => d.push(row))
-                  .on("end", () => {
+                  .on("end", async () => {
                     console.log(`Processed part file: ${partFileName}`);
+                    await updateJob({
+                      lastRun: new Date(),
+                      lastLog: `Processed part file: ${partFileName}`,
+                    });
                     res();
                   });
               });
@@ -152,8 +156,12 @@ export const extractWMS = async () => {
           fs.createReadStream(filePath, "utf8")
             .pipe(csv({ separator: ";" }))
             .on("data", (row) => d.push(row))
-            .on("end", () => {
+            .on("end", async () => {
               console.log(`Processed file: ${fileToProcess.file}`);
+              await updateJob({
+                lastRun: new Date(),
+                lastLog: `Processed file: ${fileToProcess.file}`,
+              });
               resolve(d);
             });
         }
