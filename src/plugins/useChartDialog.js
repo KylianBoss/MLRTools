@@ -1,15 +1,15 @@
 import { Dialog } from "quasar";
-import DefectDialog from "src/components/dialogs/DefectDialog.vue";
+import ChartDialog from "src/components/dialogs/ChartDialog.vue";
 
-export function useDefectDialog() {
-  const open = (defectData) => {
+export function useChartDialog() {
+  const askForChart = (chartData) => {
     return new Promise((resolve, reject) => {
       Dialog.create({
-        component: DefectDialog,
+        component: ChartDialog,
         componentProps: {
           resolve,
           reject,
-          defectData,
+          chartData,
         },
         persistent: true,
       }).onOk((result) => {
@@ -19,6 +19,6 @@ export function useDefectDialog() {
   };
 
   return {
-    open,
+    askForChart,
   };
 }

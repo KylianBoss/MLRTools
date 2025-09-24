@@ -88,6 +88,12 @@
               icon="mdi-chart-bell-curve"
               label="Graphiques des pannes"
             />
+            <drawer-item
+              to="custom-charts"
+              autorisation="custom-charts"
+              icon="mdi-chart-line"
+              label="Graphiques personnalisés"
+            />
           </q-expansion-item>
           <!-- ALARMS -->
           <q-expansion-item

@@ -13,6 +13,8 @@
         />
       </div>
     </div>
+    {{ charts.filter((gc) => gc).length }} /
+    {{ charts.length }} graphiques chargés.
     <div class="row q-my-xs">
       <div class="col">
         <seven-days-average
@@ -31,7 +33,20 @@
             (groupCharts[index] = true), scrollTo(`#group-chart-${index}`)
           "
           :id="`group-chart-${index}`"
-          v-if="groupCharts.filter((gc) => gc).length > index"
+          v-if="groupCharts.filter((gc) => gc).length >= index"
+        />
+      </div>
+    </div>
+    <div class="row q-my-xs" v-for="(chart, index) in customs" :key="index">
+      <div class="col">
+        <custom-chart
+          :locale="locale"
+          :chart-data="chart"
+          @loaded="customCharts[index] = true"
+          :id="`group-chart-${index}`"
+          v-if="
+            charts.filter((gc) => gc).length >= groups.length + index
+          "
         />
       </div>
     </div>
@@ -41,6 +56,7 @@
 <script setup>
 import SevenDaysAverage from "components/charts/SevenDaysAverage.vue";
 import GroupChart from "components/charts/GroupChart.vue";
+import CustomChart from "components/charts/CustomChart.vue";
 import { api } from "boot/axios";
 import { ref, onMounted, computed } from "vue";
 import html2canvas from "html2canvas";
@@ -100,23 +116,44 @@ const locale = [
   },
 ];
 const groups = ref([]);
+const customs = ref([]);
 const groupCharts = ref([false]);
+const customCharts = ref([false]);
+const charts = computed(() => {
+  return [...groupCharts.value, ...customCharts.value];
+});
 const loading = ref(false);
 const allLoaded = computed(() => {
-  return groupCharts.value.every((v) => v);
+  return charts.value.every((v) => v);
 });
 
 const fetchGroups = async () => {
   try {
     const response = await api.get("/kpi/groups");
-    groups.value = response.data;
+    groups.value = response.data.slice(0, 5); // Limit to first 5 groups for performance
     groupCharts.value = Array.from(
-      { length: response.data.length },
+      { length: /*response.data.length*/ 5 },
       () => false
     );
     groupCharts.value.push(false); // For the SevenDaysAverage chart
   } catch (error) {
     console.error("Erreur lors de la récupération des groupes:", error);
+  }
+};
+
+const fetchCustomCharts = async () => {
+  try {
+    const response = await api.get("/charts/custom-charts");
+    customs.value = response.data;
+    customCharts.value = Array.from(
+      { length: response.data.length },
+      () => false
+    );
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération des graphiques personnalisés:",
+      error
+    );
   }
 };
 
@@ -187,6 +224,7 @@ const scrollTo = (selector) => {
 
 onMounted(() => {
   fetchGroups();
+  fetchCustomCharts();
 });
 </script>
 

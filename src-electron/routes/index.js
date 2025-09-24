@@ -10,6 +10,7 @@ import BotRouter from "./Bot.routes.js";
 import MaintenanceRouter from "./Maintenance.routes.js";
 import ImageRouter from "./Image.routes.js";
 import LocationRouter from "./Locations.routes.js";
+import ChartsRouter from "./Charts.routes.js";
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use("/bot", BotRouter);
 router.use("/maintenance", MaintenanceRouter);
 router.use("/images", ImageRouter);
 router.use("/locations", LocationRouter);
+router.use("/charts", ChartsRouter);
 
 export default router;

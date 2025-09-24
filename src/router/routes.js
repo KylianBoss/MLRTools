@@ -30,7 +30,12 @@ const routes = [
           {
             path: "faillure",
             name: "faillures-charts",
-            component: () => import("src/pages/FailluresChartsPage.vue"),
+            component: () => import("src/pages/charts/FailluresChartsPage.vue"),
+          },
+          {
+            path: "custom-charts",
+            name: "custom-charts",
+            component: () => import("src/pages/charts/CustomChartsPage.vue"),
           },
         ],
       },
@@ -137,18 +142,6 @@ const routes = [
                   import("src/pages/maintenance/MaintenanceReportDetails.vue"),
               },
             ],
-          },
-        ],
-      },
-      // === DEFECT HANDLING === //
-      {
-        path: "defect-handling",
-        children: [
-          {
-            path: "",
-            name: "defect-handling",
-            component: () =>
-              import("src/pages/defect-handling/DefectHandling.vue"),
           },
         ],
       },

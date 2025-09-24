@@ -41,7 +41,8 @@ function initDB(config) {
         type: {
           type: DataTypes.STRING,
           allowNull: false,
-          comment: "Type of action performed, e.g. 'create', 'update', 'delete'",
+          comment:
+            "Type of action performed, e.g. 'create', 'update', 'delete'",
         },
         table: {
           type: DataTypes.STRING,
@@ -1075,7 +1076,8 @@ function initDB(config) {
           type: DataTypes.ENUM("tray", "box", "pallet"),
           allowNull: false,
           defaultValue: "tray",
-          comment: "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
+          comment:
+            "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
         },
         result: {
           type: DataTypes.FLOAT,
@@ -1109,7 +1111,7 @@ function initDB(config) {
       {
         timestamps: false,
       }
-    )
+    );
 
     const DowntimeMinutesByThousandSaved = db.define(
       "DowntimeMinutesByThousandSaved",
@@ -1124,7 +1126,8 @@ function initDB(config) {
           type: DataTypes.ENUM("tray", "box", "pallet"),
           allowNull: false,
           defaultValue: "tray",
-          comment: "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
+          comment:
+            "Type of transport for the group, e.g. 'tray', 'box', 'pallet'",
         },
         result: {
           type: DataTypes.FLOAT,
@@ -1158,7 +1161,99 @@ function initDB(config) {
       {
         timestamps: false,
       }
-    )
+    );
+
+    const AlarmDataLast7DaysSaved = db.define(
+      "AlarmDataLast7DaysSaved",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        alarmIds: {
+          type: DataTypes.JSON,
+          allowNull: false,
+          // get() {
+          //   return JSON.parse(this.getDataValue("alarmIds"));
+          // },
+          set(value) {
+            this.setDataValue("alarmIds", JSON.stringify(value));
+          },
+          comment: "Array of alarm IDs, e.g. ['A001', 'A002', ...]",
+        },
+        totalOccurrences: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "Total number of occurrences of the alarms",
+        },
+        dailyBreakdown: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          comment:
+            'JSON string representing the daily breakdown of occurrences, e.g. \'{"2023-10-01": 5, "2023-10-02": 3, ...}\'',
+        },
+        from: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          comment: "Start date of the 7-day period",
+        },
+        to: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          comment: "End date of the 7-day period",
+        },
+        calculatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.NOW,
+          comment: "Time when the data was calculated",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
+    const CustomChart = db.define(
+      "CustomChart",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        chartName: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Name of the custom chart",
+        },
+        alarms: {
+          type: DataTypes.JSON,
+          allowNull: false,
+          // get() {
+          //   return JSON.parse(this.getDataValue("alarms"));
+          // },
+          set(value) {
+            this.setDataValue("alarms", JSON.stringify(value));
+          },
+          comment: "Array of alarm IDs included in the chart",
+        },
+        createdBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: Users,
+            key: "id",
+          },
+          comment: "ID of the user who created the chart",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
 
     Users.hasMany(UserAccess, {
       foreignKey: "userId",

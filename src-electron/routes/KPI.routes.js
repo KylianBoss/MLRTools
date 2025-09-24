@@ -340,6 +340,25 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+router.get("/charts/custom/:chartId", async (req, res) => {
+  const { chartId } = req.params;
+
+  try {
+    const customChartData = await db.models.CustomChart.findByPk(chartId);
+    if (!customChartData) {
+      return res.status(404).json({ error: "Custom chart not found" });
+    }
+
+    const chartData = await db.query("CALL getAlarmDataLast7Days(:alarmsIds)", {
+      replacements: { alarmsIds: customChartData.alarms },
+    });
+
+    res.json(chartData[0]);
+  } catch (error) {
+    console.error("Error fetching custom chart data:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 router.get("/charts/print", async (req, res) => {
   const id = uuid();
   printPDF[id] = [];
