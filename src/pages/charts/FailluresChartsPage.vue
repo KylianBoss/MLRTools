@@ -13,8 +13,8 @@
         />
       </div>
     </div>
-    {{ charts.filter((gc) => gc).length }} /
-    {{ charts.length }} graphiques chargés.
+    {{ charts.filter((gc) => gc).length }} / {{ charts.length }} graphiques
+    chargés.
     <div class="row q-my-xs">
       <div class="col">
         <seven-days-average
@@ -44,9 +44,7 @@
           :chart-data="chart"
           @loaded="customCharts[index] = true"
           :id="`group-chart-${groups.length + index}`"
-          v-if="
-            charts.filter((gc) => gc).length >= groups.length + index
-          "
+          v-if="charts.filter((gc) => gc).length >= groups.length + index"
         />
       </div>
     </div>
@@ -130,9 +128,9 @@ const allLoaded = computed(() => {
 const fetchGroups = async () => {
   try {
     const response = await api.get("/kpi/groups");
-    groups.value = response.data.slice(0, 5); // Limit to first 5 groups for performance
+    groups.value = response.data;
     groupCharts.value = Array.from(
-      { length: /*response.data.length*/ 5 },
+      { length: response.data.length },
       () => false
     );
     groupCharts.value.push(false); // For the SevenDaysAverage chart
