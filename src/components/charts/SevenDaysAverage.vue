@@ -99,6 +99,10 @@ const chartOptions = ref({
   title: {
     text: `Rapport des 7 derniers jours`,
     align: "center",
+    style: {
+      fontSize: "20px",
+      fontWeight: "bold",
+    },
   },
   dataLabels: {
     enabled: true,

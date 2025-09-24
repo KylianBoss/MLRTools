@@ -373,7 +373,11 @@ router.get("/charts/print", async (req, res) => {
 router.post("/charts/print/:id", async (req, res) => {
   const { id } = req.params;
   const { image } = req.body;
-
+  const dirPath = path.join(STORAGE_PATH, 'prints', id);
+  
+  if (!fs.existsSync(dirPath)) {
+    return res.status(404).json({ error: "Print session not found" });
+  }
   // if (!printPDF[id]) {
   //   return res.status(404).json({ error: "Print session not found" });
   // }
@@ -388,7 +392,10 @@ router.post("/charts/print/:id", async (req, res) => {
     image.replace(/^data:image\/\w+;base64,/, ""),
     "base64"
   );
-  const imgName = `chart-${Date.now()}.png`;
+
+  const quantityOfFiles = fs.readdirSync(path.join(STORAGE_PATH, 'prints', id)).length;
+
+  const imgName = `chart-${quantityOfFiles}.png`;
   const imgPath = path.join(STORAGE_PATH, 'prints', id, imgName);
   fs.writeFileSync(imgPath, imgBuffer);
 
@@ -421,6 +428,7 @@ router.get("/charts/print/:id", async (req, res) => {
   const buffers = [];
   doc.on("data", (buffer) => buffers.push(buffer));
   doc.on("end", () => {
+    console.log("PDF generation completed");
     const pdfData = Buffer.concat(buffers);
     delete printPDF[id]; // Clear the session after fetching
     res.setHeader("Content-Type", "application/pdf");
@@ -434,6 +442,7 @@ router.get("/charts/print/:id", async (req, res) => {
       align: "center",
       valign: "center",
     });
+    console.log("Added image to PDF")
   });
   doc.end();
 });

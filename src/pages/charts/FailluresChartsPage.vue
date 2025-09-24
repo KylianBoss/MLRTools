@@ -10,7 +10,22 @@
           @click="printPDF"
           v-if="allLoaded"
           :loading="loading"
+          :disable="loading"
         />
+        <q-linear-progress
+          v-if="printing"
+          stripe
+          :value="printValue"
+          class="q-mt-sm text-center"
+          style="height: 25px"
+        >
+          <div class="absolute-full flex flex-center">
+            <q-badge
+              text-color="white"
+              :label="`${Math.round(printValue * 100)}%`"
+            />
+          </div>
+        </q-linear-progress>
       </div>
     </div>
     {{ charts.filter((gc) => gc).length }} / {{ charts.length }} graphiques
@@ -20,7 +35,7 @@
         <seven-days-average
           :locale="locale"
           @loaded="groupCharts[groups.length] = true"
-          :id="`seven-days-average-chart`"
+          :id="`group-chart-0`"
         />
       </div>
     </div>
@@ -32,8 +47,8 @@
           @loaded="
             (groupCharts[index] = true), scrollTo(`#group-chart-${index}`)
           "
-          :id="`group-chart-${index}`"
-          v-if="groupCharts.filter((gc) => gc).length >= index"
+          :id="`group-chart-${index + 1}`"
+          v-if="groupCharts.filter((gc) => gc).length + 2 >= index"
         />
       </div>
     </div>
@@ -43,8 +58,8 @@
           :locale="locale"
           :chart-data="chart"
           @loaded="customCharts[index] = true"
-          :id="`group-chart-${groups.length + index}`"
-          v-if="charts.filter((gc) => gc).length >= groups.length + index"
+          :id="`group-chart-${groups.length + index + 1}`"
+          v-if="charts.filter((gc) => gc).length + 2 >= groups.length + index"
         />
       </div>
     </div>
@@ -57,7 +72,7 @@ import GroupChart from "components/charts/GroupChart.vue";
 import CustomChart from "components/charts/CustomChart.vue";
 import { api } from "boot/axios";
 import { ref, onMounted, computed } from "vue";
-import html2canvas from "html2canvas";
+import * as htmlToImage from "html-to-image";
 
 const locale = [
   {
@@ -113,6 +128,8 @@ const locale = [
     },
   },
 ];
+const printing = ref(false);
+const printValue = ref(0);
 const groups = ref([]);
 const customs = ref([]);
 const groupCharts = ref([false]);
@@ -160,38 +177,71 @@ const printPDF = async () => {
     console.warn("Tous les graphiques ne sont pas encore chargés.");
     return;
   }
+  printing.value = true;
+  printValue.value = 0;
   loading.value = true;
+  const maxPrintingSteps = charts.value.length + 2;
+  let currentStep = 0;
+  const updateProgress = () => {
+    currentStep++;
+    printValue.value = currentStep / maxPrintingSteps;
+  };
   const id = await api.get("/kpi/charts/print").then((response) => {
     return response.data.id;
   });
+  updateProgress();
+  console.log(id);
 
   // Capture the SevenDaysAverage chart
-  const sevenDaysChartSelector = `#seven-days-average-chart`;
-  const sevenDaysImageData = await captureElement(sevenDaysChartSelector);
-  await api.post(`/kpi/charts/print/${id}`, { image: sevenDaysImageData });
+  // const sevenDaysChartNode = document.getElementById(`seven-days-average-chart`);
+  // domtoimage.toPng(sevenDaysChartNode).then(async (dataUrl) => {
+  //   await api.post(`/kpi/charts/print/${id}`, { image: dataUrl });
+  //   updateProgress();
+  // })
+  // .catch((error) => {
+  //   console.error("Erreur lors de la capture du graphique Seven Days Average:", error);
+  //   return;
+  // });
+
   // Capture each group chart
   for (let i = 0; i < charts.value.length - 1; i++) {
     if (charts.value[i]) {
-      const chartSelector = `#group-chart-${i}`;
-      const imageData = await captureElement(chartSelector);
-      api.post(`/kpi/charts/print/${id}`, { image: imageData });
+      let node = document.getElementById(`group-chart-${i}`);
+      if (!node) {
+        console.error(`Element with ID group-chart-${i} not found.`);
+        continue;
+      }
+      const image = await htmlToImage
+        .toPng(node, { backgroundColor: "#ffffff" })
+        .catch((error) => {
+          console.error(
+            `Erreur lors de la capture du graphique group-chart-${i}:`,
+            error
+          );
+        });
+
+      await api.post(`/kpi/charts/print/${id}`, { image });
+      updateProgress();
     }
   }
   // After capturing all charts, you can handle the PDF generation
   const pdfResponse = await api.get(`/kpi/charts/print/${id}`, {
     responseType: "blob", // Ensure the response is treated as a blob for PDF
   });
+  updateProgress();
   const blob = new Blob([pdfResponse.data], { type: "application/pdf" });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.setAttribute("download", `charts-${new Date().toISOString()}.pdf`);
+  link.setAttribute("download", `KPI-${new Date().toISOString()}.pdf`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
   console.log("PDF generated and downloaded successfully.");
   loading.value = false;
+  printing.value = false;
+  printValue.value = 0;
 };
 
 // Dans le processus de rendu (renderer)
