@@ -451,23 +451,7 @@ function initDB(config) {
           type: DataTypes.INTEGER.UNSIGNED,
         },
         menuId: {
-          type: DataTypes.ENUM(
-            "kpi",
-            "searchMessages",
-            "charts",
-            "importMessages",
-            "excludedAlarms",
-            "tgwReportZones",
-            "productionData",
-            "alarmList",
-            "suspiciousPlaces",
-            "admin",
-            "admin-db",
-            "admin-users",
-            "maintenance-plans",
-            "maintenance-reports",
-            "canStartMaintenance"
-          ),
+          type: DataTypes.STRING(255),
         },
       },
       {

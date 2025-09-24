@@ -172,6 +172,10 @@ const access = [
   { label: "Maintenance Plans", value: "maintenance-plans" },
   { label: "Maintenance Reports", value: "maintenance-reports" },
   { label: "Peut démarrer maintenance", value: "canStartMaintenance" },
+  { label: "Graphiques personnalisés", value: "custom-charts" },
+  { label: "Créer un graphique personnalisé", value: "create-custom-chart" },
+  { label: "Supprimer un graphique personnalisé", value: "delete-custom-chart" },
+  { label: "Modifier un graphique personnalisé", value: "edit-custom-chart" },
 ];
 
 onMounted(() => {
