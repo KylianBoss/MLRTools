@@ -4,9 +4,12 @@ import dayjs from "dayjs";
 import { Op } from "sequelize";
 import { v4 as uuid } from "uuid";
 import PDFDocument from "pdfkit";
+import fs from 'fs';
+import path from "path";
 
 const router = Router();
 const printPDF = {};
+const STORAGE_PATH = path.join(process.cwd(), "storage");
 
 router.get("/count", async (req, res) => {
   const { from, to, includesExcluded = false } = req.query;
@@ -361,29 +364,52 @@ router.get("/charts/custom/:chartId", async (req, res) => {
 });
 router.get("/charts/print", async (req, res) => {
   const id = uuid();
-  printPDF[id] = [];
+  // printPDF[id] = [];
+
+  fs.mkdirSync(path.join(STORAGE_PATH, 'prints', id), { recursive: true });
+
   res.json({ id });
 });
 router.post("/charts/print/:id", async (req, res) => {
   const { id } = req.params;
   const { image } = req.body;
 
-  if (!printPDF[id]) {
-    return res.status(404).json({ error: "Print session not found" });
+  // if (!printPDF[id]) {
+  //   return res.status(404).json({ error: "Print session not found" });
+  // }
+
+  // printPDF[id].push(image);
+
+  if (!image) {
+    return res.status(400).json({ error: "No image provided" });
   }
 
-  printPDF[id].push(image);
+  const imgBuffer = Buffer.from(
+    image.replace(/^data:image\/\w+;base64,/, ""),
+    "base64"
+  );
+  const imgName = `chart-${Date.now()}.png`;
+  const imgPath = path.join(STORAGE_PATH, 'prints', id, imgName);
+  fs.writeFileSync(imgPath, imgBuffer);
 
   res.json({ status: "Image added to print session" });
 });
 router.get("/charts/print/:id", async (req, res) => {
   const { id } = req.params;
 
-  if (!printPDF[id]) {
+  // if (!printPDF[id]) {
+  //   return res.status(404).json({ error: "Print session not found" });
+  // }
+
+  // const images = printPDF[id];
+  const dirPath = path.join(STORAGE_PATH, 'prints', id);
+  if (!fs.existsSync(dirPath)) {
     return res.status(404).json({ error: "Print session not found" });
   }
+  const images = fs.readdirSync(dirPath)
+    .filter(file => file.endsWith('.png'))
+    .map(file => fs.readFileSync(path.join(dirPath, file)));
 
-  const images = printPDF[id];
   if (images.length === 0) {
     return res.status(404).json({ error: "No images in print session" });
   }
@@ -399,6 +425,7 @@ router.get("/charts/print/:id", async (req, res) => {
     delete printPDF[id]; // Clear the session after fetching
     res.setHeader("Content-Type", "application/pdf");
     res.send(pdfData);
+    fs.rmdirSync(dirPath, { recursive: true });
   });
   images.forEach((image) => {
     doc.addPage();

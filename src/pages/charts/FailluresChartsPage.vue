@@ -43,7 +43,7 @@
           :locale="locale"
           :chart-data="chart"
           @loaded="customCharts[index] = true"
-          :id="`group-chart-${index}`"
+          :id="`group-chart-${groups.length + index}`"
           v-if="
             charts.filter((gc) => gc).length >= groups.length + index
           "
@@ -172,8 +172,8 @@ const printPDF = async () => {
   const sevenDaysImageData = await captureElement(sevenDaysChartSelector);
   await api.post(`/kpi/charts/print/${id}`, { image: sevenDaysImageData });
   // Capture each group chart
-  for (let i = 0; i < groupCharts.value.length - 1; i++) {
-    if (groupCharts.value[i]) {
+  for (let i = 0; i < charts.value.length - 1; i++) {
+    if (charts.value[i]) {
       const chartSelector = `#group-chart-${i}`;
       const imageData = await captureElement(chartSelector);
       api.post(`/kpi/charts/print/${id}`, { image: imageData });
