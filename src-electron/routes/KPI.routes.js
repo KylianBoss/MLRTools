@@ -413,7 +413,11 @@ router.get("/charts/print/:id", async (req, res) => {
   }
   const images = fs.readdirSync(dirPath)
     .filter(file => file.endsWith('.png'))
-    .sort()
+    .sort((a, b) => {
+      const aIndex = parseInt(a.split('-')[1]);
+      const bIndex = parseInt(b.split('-')[1]);
+      return aIndex - bIndex;
+    })
     .map(file => fs.readFileSync(path.join(dirPath, file)));
 
   if (images.length === 0) {
