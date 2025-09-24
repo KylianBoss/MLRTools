@@ -372,9 +372,9 @@ router.get("/charts/print", async (req, res) => {
 });
 router.post("/charts/print/:id", async (req, res) => {
   const { id } = req.params;
-  const { image } = req.body;
+  const { image, index } = req.body;
   const dirPath = path.join(STORAGE_PATH, 'prints', id);
-  
+
   if (!fs.existsSync(dirPath)) {
     return res.status(404).json({ error: "Print session not found" });
   }
@@ -393,9 +393,7 @@ router.post("/charts/print/:id", async (req, res) => {
     "base64"
   );
 
-  const quantityOfFiles = fs.readdirSync(path.join(STORAGE_PATH, 'prints', id)).length;
-
-  const imgName = `chart-${quantityOfFiles}.png`;
+  const imgName = `chart-${index}.png`;
   const imgPath = path.join(STORAGE_PATH, 'prints', id, imgName);
   fs.writeFileSync(imgPath, imgBuffer);
 
@@ -415,6 +413,7 @@ router.get("/charts/print/:id", async (req, res) => {
   }
   const images = fs.readdirSync(dirPath)
     .filter(file => file.endsWith('.png'))
+    .sort()
     .map(file => fs.readFileSync(path.join(dirPath, file)));
 
   if (images.length === 0) {

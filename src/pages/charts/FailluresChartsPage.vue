@@ -220,7 +220,7 @@ const printPDF = async () => {
           );
         });
 
-      await api.post(`/kpi/charts/print/${id}`, { image });
+      await api.post(`/kpi/charts/print/${id}`, { image, index: i });
       updateProgress();
     }
   }
