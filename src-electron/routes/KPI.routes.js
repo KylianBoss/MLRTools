@@ -393,7 +393,7 @@ router.post("/charts/print/:id", async (req, res) => {
     "base64"
   );
 
-  const imgName = `chart-${index}.png`;
+  const imgName = `${index}.png`;
   const imgPath = path.join(STORAGE_PATH, 'prints', id, imgName);
   fs.writeFileSync(imgPath, imgBuffer);
 
@@ -414,8 +414,8 @@ router.get("/charts/print/:id", async (req, res) => {
   const images = fs.readdirSync(dirPath)
     .filter(file => file.endsWith('.png'))
     .sort((a, b) => {
-      const aIndex = parseInt(a.split('-')[1]);
-      const bIndex = parseInt(b.split('-')[1]);
+      const aIndex = parseInt(a.split('.png')[0]);
+      const bIndex = parseInt(b.split('.png')[0]);
       return aIndex - bIndex;
     })
     .map(file => fs.readFileSync(path.join(dirPath, file)));
