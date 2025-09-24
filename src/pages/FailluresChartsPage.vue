@@ -178,10 +178,11 @@ async function captureElement(selector) {
 }
 
 const scrollTo = (selector) => {
-  const element = document.querySelector(selector);
-  if (element) {
-    element.scrollIntoView({ behavior: "smooth" });
-  }
+  // const element = document.querySelector(selector);
+  // if (element) {
+  //   element.scrollIntoView({ behavior: "smooth" });
+  // }
+  return;
 };
 
 onMounted(() => {

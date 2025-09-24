@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../database.js";
-import { Op, QueryTypes } from "sequelize";
+import { Op, QueryTypes, Sequelize } from "sequelize";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import "dayjs/locale/fr.js";
@@ -524,6 +524,27 @@ router.post("/primary", async (req, res) => {
         },
       }
     );
+
+    // Remove data from the cache
+    const a = await db.models.Alarms.findOne({
+      where: {
+        alarmId,
+      },
+    });
+    const groupsToClear = await db.models.ZoneGroups.findAll({
+      where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
+    });
+    await db.models.ErrorsByThousandSaved.destroy({
+      where: {
+        groupName: groupsToClear.map((g) => g.zoneGroupName),
+      },
+    });
+    await db.models.DowntimeMinutesByThousandSaved.destroy({
+      where: {
+        groupName: groupsToClear.map((g) => g.zoneGroupName),
+      },
+    });
+
     res.json(alarm);
   } catch (error) {
     console.error("Error updating primary status:", error);
@@ -547,6 +568,27 @@ router.post("/secondary", async (req, res) => {
         },
       }
     );
+
+    // Remove data from the cache
+    const a = await db.models.Alarms.findOne({
+      where: {
+        alarmId,
+      },
+    });
+    const groupsToClear = await db.models.ZoneGroups.findAll({
+      where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
+    });
+    await db.models.ErrorsByThousandSaved.destroy({
+      where: {
+        groupName: groupsToClear.map((g) => g.zoneGroupName),
+      },
+    });
+    await db.models.DowntimeMinutesByThousandSaved.destroy({
+      where: {
+        groupName: groupsToClear.map((g) => g.zoneGroupName),
+      },
+    });
+
     res.json(alarm);
   } catch (error) {
     console.error("Error updating secondary status:", error);
@@ -570,6 +612,27 @@ router.post("/human", async (req, res) => {
         },
       }
     );
+
+    // Remove data from the cache
+    const a = await db.models.Alarms.findOne({
+      where: {
+        alarmId,
+      },
+    });
+    const groupsToClear = await db.models.ZoneGroups.findAll({
+      where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
+    });
+    await db.models.ErrorsByThousandSaved.destroy({
+      where: {
+        groupName: groupsToClear.map((g) => g.zoneGroupName),
+      },
+    });
+    await db.models.DowntimeMinutesByThousandSaved.destroy({
+      where: {
+        groupName: groupsToClear.map((g) => g.zoneGroupName),
+      },
+    });
+
     res.json(alarm);
   } catch (error) {
     console.error("Error updating human status:", error);
@@ -591,6 +654,27 @@ router.post("/other", async (req, res) => {
         },
       }
     );
+
+    // Remove data from the cache
+    const a = await db.models.Alarms.findOne({
+      where: {
+        alarmId,
+      },
+    });
+    const groupsToClear = await db.models.ZoneGroups.findAll({
+      where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
+    });
+    await db.models.ErrorsByThousandSaved.destroy({
+      where: {
+        groupName: groupsToClear.map((g) => g.zoneGroupName),
+      },
+    });
+    await db.models.DowntimeMinutesByThousandSaved.destroy({
+      where: {
+        groupName: groupsToClear.map((g) => g.zoneGroupName),
+      },
+    });
+
     res.json(alarm);
   } catch (error) {
     console.error("Error updating other status:", error);

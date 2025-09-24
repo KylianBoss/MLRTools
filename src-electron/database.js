@@ -1128,7 +1128,7 @@ function initDB(config) {
     )
 
     const DowntimeMinutesByThousandSaved = db.define(
-      "downtimeMinutesByThousandSaveds",
+      "DowntimeMinutesByThousandSaved",
       {
         groupName: {
           type: DataTypes.STRING,

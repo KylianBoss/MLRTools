@@ -159,13 +159,27 @@ router.get("/groups", async (req, res) => {
 router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
   const { groupName } = req.params;
   const WINDOW = 90;
+  const MIN_PROD_TO_TAKE = 30000;
+
+  const prodData = await db.models.ProductionData.findAll({
+    attributes: ["date", "boxTreated"],
+    where: {
+      date: {
+        [Op.gte]: dayjs().subtract(WINDOW, "day").format("YYYY-MM-DD"),
+      },
+    },
+    order: [["date", "ASC"]],
+    raw: true,
+  });
 
   try {
     let dataNumbers = [];
     let dataTimes = [];
 
     for (let i = WINDOW - 1; i >= 0; i--) {
-      const date = dayjs().subtract(i + 1, "day").format("YYYY-MM-DD");
+      const date = dayjs()
+        .subtract(i + 1, "day")
+        .format("YYYY-MM-DD");
 
       const dataNumber = await db.query(
         "CALL getErrorsByThousand(:from, :to, :groupName)",
@@ -182,6 +196,9 @@ router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
         value: dataNumber[0].result || 0,
         trayAmount: dataNumber[0].trayAmount || 0,
         transportType: dataNumber[0].transportType || "unknown",
+        minProdReached:
+          (prodData.find((d) => d.date === date)?.boxTreated || 0) >=
+          MIN_PROD_TO_TAKE,
       });
 
       const dataTime = await db.query(
@@ -199,6 +216,9 @@ router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
         value: dataTime[0].result || 0,
         trayAmount: dataTime[0].trayAmount || 0,
         transportType: dataTime[0].transportType || "unknown",
+        minProdReached:
+          (prodData.find((d) => d.date === date)?.boxTreated || 0) >=
+          MIN_PROD_TO_TAKE,
       });
     }
 
@@ -218,25 +238,32 @@ router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
           : timeEntry
           ? timeEntry.transportType
           : "unknown",
+        minProdReached: numberEntry
+          ? numberEntry.minProdReached
+          : timeEntry
+          ? timeEntry.minProdReached
+          : false,
       });
     });
 
     function calculateMovingAverage(data, windowSize = 7) {
-      return data.map((item, index) => {
-        const start = Math.max(0, index - windowSize + 1);
-        const window = data.slice(start, index + 1);
+      return data
+        .map((item, index) => {
+          const start = Math.max(0, index - windowSize + 1);
+          const window = data.slice(start, index + 1);
 
-        const averageNumber =
-          window.reduce((sum, point) => sum + point.number, 0) / window.length;
-        const averageTime =
-          window.reduce((sum, point) => sum + point.time, 0) / window.length;
+          const averageNumber =
+            window.reduce((sum, point) => sum + point.number, 0) /
+            window.length;
+          const averageTime =
+            window.reduce((sum, point) => sum + point.time, 0) / window.length;
 
-        return {
-          ...item,
-          movingAverageNumber: Math.round(averageNumber * 100) / 100,
-          movingAverageTime: Math.round(averageTime * 100) / 100,
-        };
-      });
+          return {
+            ...item,
+            movingAverageNumber: Math.round(averageNumber * 100) / 100,
+            movingAverageTime: Math.round(averageTime * 100) / 100,
+          };
+        });
     }
 
     res.json(calculateMovingAverage(data));

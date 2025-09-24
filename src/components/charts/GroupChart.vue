@@ -7,7 +7,16 @@
         :options="chartOptions"
         :series="chartSeries"
         :key="chartSeries.length"
+        v-if="chartSeries.some((s) => s.data && s.data.length > 0)"
       />
+      <div v-else class="text-center q-gutter-xs">
+        <div style="font-size: 20px; font-weight: bold">
+          {{ props.group.groupName }}
+        </div>
+        <div style="font-size: 14px; font-weight: normal">
+          {{ `(${props.group.zones.map((z) => z.description).join(", ")})` }}
+        </div>
+      </div>
     </q-card-section>
     <q-card-section v-else>
       <q-skeleton height="350px" square />
@@ -23,6 +32,7 @@
         bordered
         dense
         hide-bottom
+        v-if="rows.length > 0"
       >
         <template v-slot:body-cell="props">
           <q-td :props="props">
@@ -68,6 +78,17 @@
           </div>
         </template>
       </q-table>
+      <div v-else>
+        <q-banner class="bg-green text-dark">
+          <template v-slot:avatar>
+            <q-icon name="mdi-check-circle" />
+          </template>
+          <div>
+            Il n'y a pas eu d'erreurs dans ce groupe au cours des 7 derniers
+            jours.
+          </div>
+        </q-banner>
+      </div>
     </q-card-section>
     <q-card-section v-else>
       <skeleton-table />
@@ -105,10 +126,18 @@ const chartOptions = ref({
   title: {
     text: props.group.groupName,
     align: "center",
+    style: {
+      fontSize: "20px",
+      fontWeight: "bold",
+    },
   },
   subtitle: {
     text: `(${props.group.zones.map((z) => z.description).join(", ")})`,
     align: "center",
+    style: {
+      fontSize: "14px",
+      fontWeight: "normal",
+    },
   },
   dataLabels: {
     enabled: true,
@@ -167,7 +196,9 @@ const getData = async () => {
           ? "Pannes / 1000 trays (nombre)"
           : "Pannes / 100 palettes (nombre)",
       type: "column",
-      data: errorsByThousand.data.map((item) => item.number.toFixed(2)),
+      data: errorsByThousand.data
+        .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
+        .map((item) => item.number.toFixed(2)),
     },
     {
       name:
@@ -175,12 +206,16 @@ const getData = async () => {
           ? "Pannes / 1000 trays (temps [minutes])"
           : "Pannes / 100 palettes (temps [minutes])",
       type: "column",
-      data: errorsByThousand.data.map((item) => item.time.toFixed(2)),
+      data: errorsByThousand.data
+        .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
+        .map((item) => item.time.toFixed(2)),
     },
     {
       name: "Moyenne 7 jours (nombre)",
       type: "line",
-      data: errorsByThousand.data.map((item) => item.movingAverageNumber),
+      data: errorsByThousand.data
+        .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
+        .map((item) => item.movingAverageNumber),
       color: "#C10015",
     }
     // {
@@ -191,9 +226,9 @@ const getData = async () => {
     // }
   );
   chartOptions.value.xaxis = {
-    categories: errorsByThousand.data.map((item) =>
-      dayjs(item.date).format("YYYY-MM-DD")
-    ),
+    categories: errorsByThousand.data
+      .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
+      .map((item) => dayjs(item.date).format("YYYY-MM-DD")),
     labels: {
       show: true,
       rotate: -90,
@@ -349,20 +384,27 @@ const formatDataForTable = (data, trayData) => {
     return row;
   });
 
-  tableRows.unshift({
-    dataSource: "----",
-    alarmArea: "----",
-    error:
-      trayData[0].transportType === "tray"
-        ? "Quantité de trays"
-        : "Quantité de palettes",
-    ...Object.fromEntries(
-      sortedDates.map((date) => {
-        const trayEntry = trayData.find((t) => t.date === date);
-        return [date, trayEntry ? trayEntry.trayAmount : 0];
+  if (
+    sortedDates
+      .map((d) => {
+        return trayData.find((t) => t.date === d)?.trayAmount || 0;
       })
-    ),
-  });
+      .some((v) => v > 0)
+  )
+    tableRows.unshift({
+      dataSource: "----",
+      alarmArea: "----",
+      error:
+        trayData[0].transportType === "tray"
+          ? "Quantité de trays"
+          : "Quantité de palettes",
+      ...Object.fromEntries(
+        sortedDates.map((date) => {
+          const trayEntry = trayData.find((t) => t.date === date);
+          return [date, trayEntry ? trayEntry.trayAmount : 0];
+        })
+      ),
+    });
 
   return { tableRows, tableColumns };
 };
