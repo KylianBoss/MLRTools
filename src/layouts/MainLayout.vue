@@ -192,20 +192,6 @@
               label="Rapports de maintenance"
             />
           </q-expansion-item>
-          <!-- DEFECT HANDLING -->
-          <q-expansion-item
-            expand-separator
-            icon="mdi-alert-circle-outline"
-            label="Gestion des DH"
-            v-model="drawers[5]"
-          >
-            <drawer-item
-              to="defect-handling"
-              autorisation="*"
-              icon="mdi-alert-circle-outline"
-              label="Gestion des défauts"
-            />
-          </q-expansion-item>
           <!-- ADMINISTRATION -->
           <q-expansion-item
             expand-separator
