@@ -253,7 +253,7 @@ router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
       return data
         .map((item, index) => {
           const start = Math.max(0, index - windowSize + 1);
-          const window = data.slice(start, index + 1);
+          const window = data.slice(start, index + 1).filter((d) => d.number > 0);
 
           const averageNumber =
             window.reduce((sum, point) => sum + point.number, 0) /
