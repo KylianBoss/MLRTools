@@ -57,5 +57,50 @@ router.post("/custom-charts/", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+router.put("/custom-charts/:id", async (req, res) => {
+  const { id } = req.params;
+  const { alarms } = req.body;
+
+  if (!id || !Array.isArray(alarms) || alarms.length === 0) {
+    res.status(400).json({ error: "Valid id and alarms are required" });
+    return;
+  }
+
+  try {
+    const chart = await db.models.CustomChart.findByPk(id);
+    if (!chart) {
+      res.status(404).json({ error: "Custom chart not found" });
+      return;
+    }
+
+    chart.alarms = alarms;
+    await chart.save();
+    res.json(chart.toJSON());
+  } catch (error) {
+    console.error("Error updating custom chart:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+router.delete("/custom-charts/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    res.status(400).json({ error: "Valid id is required" });
+    return;
+  }
+
+  try {
+    const chart = await db.models.CustomChart.findByPk(id);
+    if (!chart) {
+      res.status(404).json({ error: "Custom chart not found" });
+      return;
+    }
+
+    await chart.destroy();
+    res.json({ message: "Custom chart deleted" });
+  } catch (error) {
+    console.error("Error deleting custom chart:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 export default router;

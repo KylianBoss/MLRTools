@@ -1255,6 +1255,36 @@ function initDB(config) {
       }
     );
 
+    const Target = db.define(
+      "Target",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        groupName: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Name of the zone group, e.g. 'Group 1', 'Group 2', etc.",
+        },
+        value: {
+          type: DataTypes.FLOAT,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "Target value, e.g. 99.5 for 99.5%",
+        },
+        setAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.NOW,
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
     Users.hasMany(UserAccess, {
       foreignKey: "userId",
     });

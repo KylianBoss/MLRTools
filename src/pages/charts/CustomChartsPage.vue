@@ -37,32 +37,28 @@
         >
           <q-td>{{ props.row.chartName }}</q-td>
           <q-td>{{ props.row.createdByName }}</q-td>
-          <q-td class="text-center">{{ JSON.parse(props.row.alarms).length }}</q-td>
+          <q-td class="text-center">{{
+            JSON.parse(props.row.alarms).length
+          }}</q-td>
+          <q-td class="text-center">
+            <q-btn
+              icon="mdi-pencil"
+              color="primary"
+              dense
+              flat
+              @click="updateChart(props.row)"
+              :disable="App.userHasAccess('edit-custom-chart') === false"
+            />
+            <q-btn
+              icon="mdi-delete"
+              color="negative"
+              dense
+              flat
+              @click="deleteChart(props.row)"
+              :disable="App.userHasAccess('delete-custom-chart') === false"
+            />
+          </q-td>
         </q-tr>
-      </template>
-
-      <template v-slot:body-cell-actions="props">
-        <q-td :props="props" align="center">
-          <q-btn
-            v-if="props.row.id === 0"
-            color="primary"
-            label="Ajouter"
-            icon="mdi-plus"
-            @click="$router.push({ name: 'create-custom-chart' })"
-          />
-          <q-btn
-            v-else
-            color="primary"
-            label="Voir"
-            icon="mdi-eye"
-            @click="
-              $router.push({
-                name: 'view-custom-chart',
-                params: { id: props.row.id },
-              })
-            "
-          />
-        </q-td>
       </template>
     </q-table>
   </q-page>
@@ -125,7 +121,7 @@ const createChart = async () => {
   const chartData = await askForChart();
   if (chartData) {
     const data = {
-      chartName: chartData.name,
+      chartName: chartData.chartName,
       alarms: chartData.alarms,
       createdBy: App.user.id,
     };
@@ -150,7 +146,78 @@ const createChart = async () => {
   }
 };
 
-onMounted(async () => {
+const updateChart = async (chart) => {
+  if (App.userHasAccess("edit-custom-chart") === false) {
+    $q.notify({
+      type: "negative",
+      message: "Vous n'avez pas la permission de modifier un graphique.",
+    });
+    return;
+  }
+
+  const chartData = await askForChart({
+    ...chart,
+    alarms: JSON.parse(chart.alarms),
+  });
+  if (chartData) {
+    const data = {
+      id: chart.id,
+      chartName: chartData.chartName,
+      alarms: chartData.alarms,
+    };
+
+    try {
+      await api.put(`/charts/custom-charts/${chart.id}`, data);
+      $q.notify({
+        type: "positive",
+        message: "Graphique mis à jour avec succès.",
+      });
+      await fetchCustomCharts();
+    } catch (error) {
+      $q.notify({
+        type: "negative",
+        message: "Erreur lors de la mise à jour du graphique.",
+      });
+    }
+  }
+};
+
+const deleteChart = async (chart) => {
+  if (App.userHasAccess("delete-custom-chart") === false) {
+    $q.notify({
+      type: "negative",
+      message: "Vous n'avez pas la permission de supprimer un graphique.",
+    });
+    return;
+  }
+
+  const confirm = await $q
+    .dialog({
+      title: "Confirmer la suppression",
+      message: `Êtes-vous sûr de vouloir supprimer le graphique "${chart.name}" ?`,
+      cancel: true,
+      persistent: true,
+    })
+    .onOk(async () => {
+      try {
+        await api.delete(`/charts/custom-charts/${chart.id}`);
+        $q.notify({
+          type: "positive",
+          message: "Graphique supprimé avec succès.",
+        });
+        rows.value = rows.value.filter((c) => c.id !== chart.id);
+      } catch (error) {
+        $q.notify({
+          type: "negative",
+          message: "Erreur lors de la suppression du graphique.",
+        });
+      }
+    })
+    .onCancel(() => false)
+    .onDismiss(() => false);
+};
+
+const fetchCustomCharts = async () => {
   try {
     const response = await api.get("/charts/custom-charts");
     rows.value = response.data;
@@ -166,5 +233,9 @@ onMounted(async () => {
       message: "Erreur lors du chargement des graphiques personnalisés",
     });
   }
+};
+
+onMounted(async () => {
+  await fetchCustomCharts();
 });
 </script>

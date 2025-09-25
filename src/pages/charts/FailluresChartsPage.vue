@@ -57,9 +57,10 @@
         <custom-chart
           :locale="locale"
           :chart-data="chart"
+          :alarm-list="alarmList"
           @loaded="customCharts[index] = true"
           :id="`group-chart-${groups.length + index + 1}`"
-          v-if="charts.filter((gc) => gc).length + 2 >= groups.length + index"
+          v-if="charts.filter((gc) => gc).length > groups.length + index"
         />
       </div>
     </div>
@@ -141,6 +142,7 @@ const loading = ref(false);
 const allLoaded = computed(() => {
   return charts.value.every((v) => v);
 });
+const alarmList = ref([]);
 
 const fetchGroups = async () => {
   try {
@@ -190,18 +192,6 @@ const printPDF = async () => {
     return response.data.id;
   });
   updateProgress();
-  console.log(id);
-
-  // Capture the SevenDaysAverage chart
-  // const sevenDaysChartNode = document.getElementById(`seven-days-average-chart`);
-  // domtoimage.toPng(sevenDaysChartNode).then(async (dataUrl) => {
-  //   await api.post(`/kpi/charts/print/${id}`, { image: dataUrl });
-  //   updateProgress();
-  // })
-  // .catch((error) => {
-  //   console.error("Erreur lors de la capture du graphique Seven Days Average:", error);
-  //   return;
-  // });
 
   // Capture each group chart
   for (let i = 0; i < charts.value.length - 1; i++) {
@@ -270,9 +260,19 @@ const scrollTo = (selector) => {
   return;
 };
 
+const fetchAlarmList = async () => {
+  try {
+    const response = await api.get("/alarms/unique");
+    alarmList.value = response.data.filter((alarm) => alarm.alarmId);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des alarmes:", error);
+  }
+};
+
 onMounted(() => {
   fetchGroups();
   fetchCustomCharts();
+  fetchAlarmList();
 });
 </script>
 

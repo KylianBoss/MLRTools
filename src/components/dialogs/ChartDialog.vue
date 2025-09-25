@@ -7,11 +7,21 @@
       </q-card-section>
       <q-card-section>
         <q-input
-          v-model="chartData.name"
+          v-model="chart.chartName"
           label="Nom du graphique"
           outlined
           dense
           class="full-width"
+          :disable="!!chart.id"
+        />
+        <q-input
+          v-model="chart.createdByName"
+          label="Créé par"
+          outlined
+          dense
+          class="full-width q-mt-sm"
+          :disable="!!chart.id"
+          v-if="!!chart.createdBy"
         />
       </q-card-section>
       <!-- Alarm selection -->
@@ -20,7 +30,7 @@
           :rows="alarmList"
           row-key="alarmId"
           selection="multiple"
-          v-model:selected="chartData.alarms"
+          v-model:selected="chart.alarms"
           :columns="columns"
           row-class="text-uppercase"
           flat
@@ -76,7 +86,7 @@
           flat
           label="OK"
           color="primary"
-          :disable="chartData.name.trim() === '' || chartData.alarms.length === 0"
+          :disable="chart.name?.length > 3 || chart.alarms?.length === 0"
           @click="onOk"
         />
       </q-card-actions>
@@ -96,10 +106,11 @@ const props = defineProps({
   },
 });
 
-const chartData = ref(
-  props.chartData || {
-    name: "",
+const chart = ref(
+  {
+    chartName: "",
     alarms: [],
+    ...props.chartData,
   }
 );
 const alarmList = ref([]);
@@ -118,7 +129,7 @@ const filter = ref("");
 const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent();
 
 const onOk = () => {
-  const data = { ...chartData.value };
+  const data = { ...chart.value };
   data.alarms = data.alarms.map((alarm) => alarm.alarmId);
   onDialogOK(data);
 };
@@ -126,6 +137,11 @@ const onOk = () => {
 onMounted(() => {
   api.get("/alarms/unique").then((response) => {
     alarmList.value = response.data.filter((alarm) => alarm.alarmId);
+    if (props.chartData?.alarms?.length) {
+      chart.value.alarms = alarmList.value.filter((alarm) =>
+        props.chartData.alarms.includes(alarm.alarmId)
+      );
+    }
   });
 });
 </script>

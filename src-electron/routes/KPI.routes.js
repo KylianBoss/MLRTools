@@ -352,7 +352,7 @@ router.get("/charts/custom/:chartId", async (req, res) => {
       return res.status(404).json({ error: "Custom chart not found" });
     }
 
-    const chartData = await db.query("CALL getAlarmDataLast7Days(:alarmsIds)", {
+    const chartData = await db.query("CALL getAlarmDataLast7Days(15, :alarmsIds)", {
       replacements: { alarmsIds: customChartData.alarms },
     });
 

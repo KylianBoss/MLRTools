@@ -109,6 +109,11 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  alarmList: {
+    type: Array,
+    required: false,
+    default: () => [],
+  },
 });
 
 const chart = ref(null);
@@ -170,7 +175,10 @@ const getData = async () => {
     .catch(() => ({ data: [] }));
   const dailyBreakdown = JSON.parse(response.data.dailyBreakdown);
 
-  const { tableRows, tableColumns } = formatDataForTable(dailyBreakdown);
+  const { tableRows, tableColumns } = formatDataForTable(
+    dailyBreakdown,
+    response.data.totalOccurrences
+  );
   rows.value = tableRows;
   columns.value = tableColumns;
 
@@ -286,7 +294,7 @@ const getData = async () => {
   emits("loaded");
 };
 
-const formatDataForTable = (data) => {
+const formatDataForTable = (data, totalOccurrences) => {
   const alarmMap = new Map();
   const dates = new Set();
 
@@ -349,9 +357,12 @@ const formatDataForTable = (data) => {
     .map((alarm) => {
       const row = {
         alarmId: alarm.alarmId,
-        dataSource: null,
-        alarmArea: null,
-        error: null,
+        dataSource: props.alarmList.find((a) => a.alarmId === alarm.alarmId)
+          ?.dataSource || "UNKNOWN",
+        alarmArea: props.alarmList.find((a) => a.alarmId === alarm.alarmId)
+          ?.alarmArea,
+        error: props.alarmList.find((a) => a.alarmId === alarm.alarmId)
+          ?.alarmText || alarm.alarmId,
       };
 
       sortedDates.forEach((date) => {
@@ -360,6 +371,14 @@ const formatDataForTable = (data) => {
 
       return row;
     });
+
+  tableRows.unshift({
+    alarmId: "header",
+    dataSource: "Total erreurs",
+    alarmArea: "----",
+    error: totalOccurrences,
+    ...Object.fromEntries(sortedDates.map((date) => [date, 0])),
+  });
 
   return { tableRows, tableColumns };
 };
