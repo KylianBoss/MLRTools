@@ -132,7 +132,14 @@ const chartOptions = ref({
     },
   },
   subtitle: {
-    text: `(${props.group.zones.map((z) => z.description).join(", ")})`,
+    text: `(${
+      props.group.zones.map((z) => z.description).join(", ").length > 180
+        ? props.group.zones
+            .map((z) => z.description)
+            .join(", ")
+            .slice(0, 180) + "..."
+        : props.group.zones.map((z) => z.description).join(", ")
+    })`,
     align: "center",
     style: {
       fontSize: "14px",
@@ -259,6 +266,14 @@ const getData = async () => {
             ? "Nombre de pannes / 1000 trays"
             : "Nombre de pannes / 100 palettes",
       },
+      min: 0,
+      max: Math.round(
+        Math.max(
+          ...errorsByThousand.data
+            .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
+            .map((item) => parseFloat(item.number))
+        ) * 1.2
+      ),
     },
     {
       opposite: true,
@@ -293,6 +308,14 @@ const getData = async () => {
         text: "Moyenne mobile 7 jours",
       },
       show: false,
+      min: 0,
+      max: Math.round(
+        Math.max(
+          ...errorsByThousand.data
+            .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
+            .map((item) => parseFloat(item.number))
+        ) * 1.2
+      ),
     },
     // {
     //   opposite: true,
