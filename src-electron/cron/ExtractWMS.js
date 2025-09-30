@@ -182,10 +182,10 @@ export const extractWMS = async () => {
         lastLog: `Total boxes for ${date}: ${totalBoxes}`,
       });
 
-      await db.models.ProductionData.create({
+      await db.models.ProductionData.upsert({
         date: fileToProcess.date.toDate(),
-        start: null,
-        end: null,
+        start: fileToProcess.date.startOf("day").toDate(),
+        end: fileToProcess.date.endOf("day").toDate(),
         dayOff: totalBoxes === 0,
         boxTreated: totalBoxes,
       });
