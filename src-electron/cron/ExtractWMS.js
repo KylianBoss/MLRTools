@@ -63,11 +63,11 @@ export const extractWMS = async () => {
   // Get dates already in the database
   const datesInDB = await getDatesInDB();
 
-  // Dates to process since the START_DATE
+  // Dates to process since the START_DATE and to yesterday
   const datesToProcess = Array.from(
-    { length: dayjs().diff(START_DATE, "day") + 1 },
+    { length: dayjs().diff(START_DATE, "day") },
     (_, i) => START_DATE.add(i, "day").format("YYYY-MM-DD")
-  ).filter((d) => !datesInDB.includes(d));
+  ).filter((date) => !datesInDB.includes(date));
   console.log("Dates to process:", datesToProcess);
   await updateJob({
     lastRun: new Date(),
@@ -92,16 +92,19 @@ export const extractWMS = async () => {
           continue;
         }
 
-        fs.createReadStream(path.join(WMS_HISTORY_PATH, fileName), "utf8")
-          .pipe(csv({ separator: ";" }))
-          .on("data", (row) => data.push(row))
-          .on("end", async () => {
-            console.log(`Processed file: ${fileName}`);
-            await updateJob({
-              lastRun: new Date(),
-              lastLog: `Processed file: ${fileName}`,
+        await new Promise((resolve) => {
+          fs.createReadStream(path.join(WMS_HISTORY_PATH, fileName), "utf8")
+            .pipe(csv({ separator: ";" }))
+            .on("data", (row) => data.push(row))
+            .on("end", async () => {
+              console.log(`Processed file: ${fileName}`);
+              await updateJob({
+                lastRun: new Date(),
+                lastLog: `Processed file: ${fileName}`,
+              });
+              resolve();
             });
-          });
+        });
       }
     }
 
