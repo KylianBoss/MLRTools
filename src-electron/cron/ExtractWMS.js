@@ -149,9 +149,9 @@ export const extractWMS = async () => {
 
       // Insert or update the data in the database
       await db.models.ProductionData.create({
-        date: fileToProcess.date.toDate(),
-        start: fileToProcess.date.startOf("day").toDate(),
-        end: fileToProcess.date.endOf("day").toDate(),
+        date: dayjs(date).toDate(),
+        start: dayjs(date).startOf("day").toDate(),
+        end: dayjs(date).endOf("day").toDate(),
         dayOff: totalBoxes === 0,
         boxTreated: totalBoxes,
       });
