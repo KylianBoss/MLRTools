@@ -14,10 +14,7 @@ export default class Hooks {
     const new_ = {};
 
     const ignoreFields = [
-      "updatedAt",
       "createdAt",
-      "password",
-      "lastLoginAt",
       "isBotActive",
     ];
 
@@ -54,10 +51,6 @@ export default class Hooks {
     if (
       [
         "audits",
-        "activities",
-        "role_permissions",
-        "user_slots",
-        "mails",
       ].includes(table.toLowerCase())
     )
       return;
