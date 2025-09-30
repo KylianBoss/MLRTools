@@ -78,6 +78,7 @@ export const extractWMS = async () => {
   try {
     for (const date of datesToProcess) {
       const data = [];
+      let getFile = false;
       for (let i = 0; i < 23; i++) {
         const fileName = `SUIVI_${dayjs(date).format("YYYYMMDD")}_${i
           .toString()
@@ -91,6 +92,7 @@ export const extractWMS = async () => {
           });
           continue;
         }
+        getFile = true;
 
         await new Promise((resolve) => {
           fs.createReadStream(path.join(WMS_HISTORY_PATH, fileName), "utf8")
@@ -107,6 +109,32 @@ export const extractWMS = async () => {
         });
       }
 
+      if (!getFile) {
+        console.warn(
+          `No files found for date ${date}, trying to get only one file...`
+        );
+        await updateJob({
+          lastRun: new Date(),
+          lastLog: `No files found for date ${date}, trying to get only one file...`,
+        });
+        const fileName = `SUIVI_${dayjs(date).format("YYYYMMDD")}.csv`;
+        if (fs.existsSync(path.join(WMS_HISTORY_PATH, fileName))) {
+          await new Promise((resolve) => {
+            fs.createReadStream(path.join(WMS_HISTORY_PATH, fileName), "utf8")
+              .pipe(csv({ separator: ";" }))
+              .on("data", (row) => data.push(row))
+              .on("end", async () => {
+                console.log(`Processed file: ${fileName}`);
+                await updateJob({
+                  lastRun: new Date(),
+                  lastLog: `Processed file: ${fileName}`,
+                });
+                resolve();
+              });
+          });
+        }
+      }
+
       const palettisationData = data.filter(
         (row) => row["ACTIVITE"] === "Palettisation"
       );
@@ -120,7 +148,7 @@ export const extractWMS = async () => {
       });
 
       // Insert or update the data in the database
-      await db.models.ProductionData.upsert({
+      await db.models.ProductionData.create({
         date: fileToProcess.date.toDate(),
         start: fileToProcess.date.startOf("day").toDate(),
         end: fileToProcess.date.endOf("day").toDate(),
