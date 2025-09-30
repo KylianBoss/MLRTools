@@ -194,7 +194,7 @@ const printPDF = async () => {
   updateProgress();
 
   // Capture each group chart
-  for (let i = 0; i < charts.value.length - 1; i++) {
+  for (let i = 0; i < charts.value.length; i++) {
     if (charts.value[i]) {
       let node = document.getElementById(`group-chart-${i}`);
       if (!node) {
