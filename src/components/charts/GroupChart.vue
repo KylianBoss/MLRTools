@@ -199,7 +199,7 @@ const getData = async () => {
   chartSeries.value.push(
     {
       name:
-        errorsByThousand.data[0].transportType === "tray"
+        errorsByThousand.data[0]?.transportType === "tray"
           ? "Pannes / 1000 trays (nombre)"
           : "Pannes / 100 palettes (nombre)",
       type: "column",
@@ -210,7 +210,7 @@ const getData = async () => {
     },
     {
       name:
-        errorsByThousand.data[0].transportType === "tray"
+        errorsByThousand.data[0]?.transportType === "tray"
           ? "Pannes / 1000 trays (temps [minutes])"
           : "Pannes / 100 palettes (temps [minutes])",
       type: "column",
@@ -251,7 +251,7 @@ const getData = async () => {
   chartOptions.value.yaxis = [
     {
       seriesName:
-        errorsByThousand.data[0].transportType === "tray"
+        errorsByThousand.data[0]?.transportType === "tray"
           ? "Pannes / 1000 trays (nombre)"
           : "Pannes / 100 palettes (nombre)",
       axisTicks: {
@@ -262,7 +262,7 @@ const getData = async () => {
       },
       title: {
         text:
-          errorsByThousand.data[0].transportType === "tray"
+          errorsByThousand.data[0]?.transportType === "tray"
             ? "Nombre de pannes / 1000 trays"
             : "Nombre de pannes / 100 palettes",
       },
@@ -278,7 +278,7 @@ const getData = async () => {
     {
       opposite: true,
       seriesName:
-        errorsByThousand.data[0].transportType === "tray"
+        errorsByThousand.data[0]?.transportType === "tray"
           ? "Pannes / 1000 trays (temps [minutes])"
           : "Pannes / 100 palettes (temps [minutes])",
       axisTicks: {
@@ -289,7 +289,7 @@ const getData = async () => {
       },
       title: {
         text:
-          errorsByThousand.data[0].transportType === "tray"
+          errorsByThousand.data[0]?.transportType === "tray"
             ? "Temps de pannes / 1000 trays (minutes)"
             : "Temps de pannes / 100 palettes (minutes)",
         rotate: 90,

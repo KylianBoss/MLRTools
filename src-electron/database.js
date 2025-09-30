@@ -74,6 +74,37 @@ function initDB(config) {
       }
     );
 
+    const RequestLogs = db.define(
+      "RequestLogs",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        method: {
+          type: DataTypes.STRING,
+        },
+        path: {
+          type: DataTypes.STRING,
+        },
+        timestamp: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.NOW,
+          comment: "Timestamp when the request was made",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            fields: ["timestamp"],
+          },
+        ],
+      }
+    );
+
     const Element = db.define(
       "Element",
       {
@@ -1284,6 +1315,50 @@ function initDB(config) {
         timestamps: false,
       }
     );
+
+    const Settings = db.define(
+      "Settings",
+      {
+        key: {
+          type: DataTypes.STRING,
+          primaryKey: true,
+          comment: "Key of the setting, e.g. 'siteName', 'timezone', etc.",
+        },
+        value: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Value of the setting",
+        },
+        description: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: "Description of the setting",
+        },
+        updatedBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          references: {
+            model: Users,
+            key: "id",
+          },
+          comment: "ID of the user who last updated the setting",
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.NOW,
+          comment: "Last time the setting was updated",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+    // Create a simple function to retrieve a value by key
+    Settings.getValue = async (key) => {
+      const setting = await Settings.findByPk(key);
+      return setting ? setting.value : null;
+    };
 
     Users.hasMany(UserAccess, {
       foreignKey: "userId",

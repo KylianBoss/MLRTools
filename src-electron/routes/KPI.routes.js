@@ -4,11 +4,10 @@ import dayjs from "dayjs";
 import { Op } from "sequelize";
 import { v4 as uuid } from "uuid";
 import PDFDocument from "pdfkit";
-import fs from 'fs';
+import fs from "fs";
 import path from "path";
 
 const router = Router();
-const printPDF = {};
 const STORAGE_PATH = path.join(process.cwd(), "storage");
 
 router.get("/count", async (req, res) => {
@@ -161,8 +160,10 @@ router.get("/groups", async (req, res) => {
 });
 router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
   const { groupName } = req.params;
-  const WINDOW = 90;
-  const MIN_PROD_TO_TAKE = 30000;
+  const WINDOW = await db.models.Settings.getValue("GRAPH_WINDOW");
+  const MIN_PROD_TO_TAKE = await db.models.Settings.getValue(
+    "MIN_PROD_TO_TAKE"
+  );
 
   const prodData = await db.models.ProductionData.findAll({
     attributes: ["date", "boxTreated"],
@@ -250,23 +251,21 @@ router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
     });
 
     function calculateMovingAverage(data, windowSize = 7) {
-      return data
-        .map((item, index) => {
-          const start = Math.max(0, index - windowSize + 1);
-          const window = data.slice(start, index + 1).filter((d) => d.number > 0);
+      return data.map((item, index) => {
+        const start = Math.max(0, index - windowSize + 1);
+        const window = data.slice(start, index + 1).filter((d) => d.number > 0);
 
-          const averageNumber =
-            window.reduce((sum, point) => sum + point.number, 0) /
-            window.length;
-          const averageTime =
-            window.reduce((sum, point) => sum + point.time, 0) / window.length;
+        const averageNumber =
+          window.reduce((sum, point) => sum + point.number, 0) / window.length;
+        const averageTime =
+          window.reduce((sum, point) => sum + point.time, 0) / window.length;
 
-          return {
-            ...item,
-            movingAverageNumber: Math.round(averageNumber * 100) / 100,
-            movingAverageTime: Math.round(averageTime * 100) / 100,
-          };
-        });
+        return {
+          ...item,
+          movingAverageNumber: Math.round(averageNumber * 100) / 100,
+          movingAverageTime: Math.round(averageTime * 100) / 100,
+        };
+      });
     }
 
     res.json(calculateMovingAverage(data));
@@ -352,9 +351,12 @@ router.get("/charts/custom/:chartId", async (req, res) => {
       return res.status(404).json({ error: "Custom chart not found" });
     }
 
-    const chartData = await db.query("CALL getAlarmDataLast7Days(15, :alarmsIds)", {
-      replacements: { alarmsIds: customChartData.alarms },
-    });
+    const chartData = await db.query(
+      "CALL getAlarmDataLast7Days(15, :alarmsIds)",
+      {
+        replacements: { alarmsIds: customChartData.alarms },
+      }
+    );
 
     res.json(chartData[0]);
   } catch (error) {
@@ -364,25 +366,19 @@ router.get("/charts/custom/:chartId", async (req, res) => {
 });
 router.get("/charts/print", async (req, res) => {
   const id = uuid();
-  // printPDF[id] = [];
 
-  fs.mkdirSync(path.join(STORAGE_PATH, 'prints', id), { recursive: true });
+  fs.mkdirSync(path.join(STORAGE_PATH, "prints", id), { recursive: true });
 
   res.json({ id });
 });
 router.post("/charts/print/:id", async (req, res) => {
   const { id } = req.params;
   const { image, index } = req.body;
-  const dirPath = path.join(STORAGE_PATH, 'prints', id);
+  const dirPath = path.join(STORAGE_PATH, "prints", id);
 
   if (!fs.existsSync(dirPath)) {
     return res.status(404).json({ error: "Print session not found" });
   }
-  // if (!printPDF[id]) {
-  //   return res.status(404).json({ error: "Print session not found" });
-  // }
-
-  // printPDF[id].push(image);
 
   if (!image) {
     return res.status(400).json({ error: "No image provided" });
@@ -394,7 +390,7 @@ router.post("/charts/print/:id", async (req, res) => {
   );
 
   const imgName = `${index}.png`;
-  const imgPath = path.join(STORAGE_PATH, 'prints', id, imgName);
+  const imgPath = path.join(STORAGE_PATH, "prints", id, imgName);
   fs.writeFileSync(imgPath, imgBuffer);
 
   res.json({ status: "Image added to print session" });
@@ -402,23 +398,19 @@ router.post("/charts/print/:id", async (req, res) => {
 router.get("/charts/print/:id", async (req, res) => {
   const { id } = req.params;
 
-  // if (!printPDF[id]) {
-  //   return res.status(404).json({ error: "Print session not found" });
-  // }
-
-  // const images = printPDF[id];
-  const dirPath = path.join(STORAGE_PATH, 'prints', id);
+  const dirPath = path.join(STORAGE_PATH, "prints", id);
   if (!fs.existsSync(dirPath)) {
     return res.status(404).json({ error: "Print session not found" });
   }
-  const images = fs.readdirSync(dirPath)
-    .filter(file => file.endsWith('.png'))
+  const images = fs
+    .readdirSync(dirPath)
+    .filter((file) => file.endsWith(".png"))
     .sort((a, b) => {
-      const aIndex = parseInt(a.split('.png')[0]);
-      const bIndex = parseInt(b.split('.png')[0]);
+      const aIndex = parseInt(a.split(".png")[0]);
+      const bIndex = parseInt(b.split(".png")[0]);
       return aIndex - bIndex;
     })
-    .map(file => fs.readFileSync(path.join(dirPath, file)));
+    .map((file) => fs.readFileSync(path.join(dirPath, file)));
 
   if (images.length === 0) {
     return res.status(404).json({ error: "No images in print session" });
@@ -433,7 +425,6 @@ router.get("/charts/print/:id", async (req, res) => {
   doc.on("end", () => {
     console.log("PDF generation completed");
     const pdfData = Buffer.concat(buffers);
-    delete printPDF[id]; // Clear the session after fetching
     res.setHeader("Content-Type", "application/pdf");
     res.send(pdfData);
     fs.rmdirSync(dirPath, { recursive: true });
@@ -445,7 +436,7 @@ router.get("/charts/print/:id", async (req, res) => {
       align: "center",
       valign: "center",
     });
-    console.log("Added image to PDF")
+    console.log("Added image to PDF");
   });
   doc.end();
 });

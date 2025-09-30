@@ -26,7 +26,15 @@ app.use(express.urlencoded({ extended: true }));
 
 // Middleware de logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} ${req.query ? JSON.stringify(req.query) : ""}`);
+  if (db) {
+    db.models.RequestLogs.create({
+      method: req.method,
+      path: req.path,
+    }).catch((err) => {
+      console.error("Error logging request:", err);
+    });
+  }
   next();
 });
 
