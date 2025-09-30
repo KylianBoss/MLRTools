@@ -106,34 +106,34 @@ export const extractWMS = async () => {
             });
         });
       }
+
+      const palettisationData = data.filter(
+        (row) => row["ACTIVITE"] === "Palettisation"
+      );
+      const graiPalettised = palettisationData.map((row) => row["GRAI"]);
+      const uniqueGrai = [...new Set(graiPalettised)];
+      const totalBoxes = uniqueGrai.length;
+      console.log(`Total boxes for ${date}: ${totalBoxes}`);
+      await updateJob({
+        lastRun: new Date(),
+        lastLog: `Total boxes for ${date}: ${totalBoxes}`,
+      });
+
+      // Insert or update the data in the database
+      await db.models.ProductionData.upsert({
+        date: fileToProcess.date.toDate(),
+        start: fileToProcess.date.startOf("day").toDate(),
+        end: fileToProcess.date.endOf("day").toDate(),
+        dayOff: totalBoxes === 0,
+        boxTreated: totalBoxes,
+      });
+
+      console.log(`Data for ${date} inserted into database.`);
+      await updateJob({
+        lastRun: new Date(),
+        lastLog: `Data for ${date} inserted into database.`,
+      });
     }
-
-    const palettisationData = data.filter(
-      (row) => row["ACTIVITE"] === "Palettisation"
-    );
-    const graiPalettised = palettisationData.map((row) => row["GRAI"]);
-    const uniqueGrai = [...new Set(graiPalettised)];
-    const totalBoxes = uniqueGrai.length;
-    console.log(`Total boxes for ${date}: ${totalBoxes}`);
-    await updateJob({
-      lastRun: new Date(),
-      lastLog: `Total boxes for ${date}: ${totalBoxes}`,
-    });
-
-    // Insert or update the data in the database
-    await db.models.ProductionData.upsert({
-      date: fileToProcess.date.toDate(),
-      start: fileToProcess.date.startOf("day").toDate(),
-      end: fileToProcess.date.endOf("day").toDate(),
-      dayOff: totalBoxes === 0,
-      boxTreated: totalBoxes,
-    });
-
-    console.log(`Data for ${date} inserted into database.`);
-    await updateJob({
-      lastRun: new Date(),
-      lastLog: `Data for ${date} inserted into database.`,
-    });
   } catch (error) {
     console.error(`Failed to process data for date ${date}:`, error);
     await updateJob({
