@@ -10,6 +10,7 @@ const WMS_HISTORY_PATH = path.join(
   ONEDRIVE_BUSINESS_PATH,
   "MLR Export WMS - Export_WMS_Suivi"
 );
+const START_DATE = dayjs("2025-06-30");
 const jobName = "extractWMS";
 
 function updateJob(data = {}) {
@@ -40,29 +41,6 @@ function updateJob(data = {}) {
   });
 }
 
-const getFiles = () => {
-  const fileNameRegex = /SUIVI_(\d{4})(\d{2})(\d{2})(_\d{2})?.csv/;
-
-  const matches = [];
-  const content = fs.readdirSync(WMS_HISTORY_PATH);
-
-  content.forEach((filename) => {
-    matches.push(filename.match(fileNameRegex));
-  });
-
-  const formattedFiles = matches
-    .filter((m) => m)
-    .map((m) => {
-      return {
-        file: m[0],
-        date: dayjs(`${m[1]}-${m[2]}-${m[3]}`),
-        multipart: !!m[4],
-      };
-    });
-
-  return formattedFiles;
-};
-
 const getDatesInDB = async () => {
   const results = await db.models.ProductionData.findAll({
     attributes: ["date"],
@@ -82,128 +60,85 @@ export const extractWMS = async () => {
     endAt: null,
   });
 
-  const files = getFiles();
-  const dispoDates = getFiles().map((f) => f.date.format("YYYY-MM-DD"));
+  // Get dates already in the database
   const datesInDB = await getDatesInDB();
 
-  const datesToProcess = dispoDates.filter((d) => !datesInDB.includes(d));
+  // Dates to process since the START_DATE
+  const datesToProcess = Array.from(
+    { length: dayjs().diff(START_DATE, "day") + 1 },
+    (_, i) => START_DATE.add(i, "day").format("YYYY-MM-DD")
+  ).filter((d) => !datesInDB.includes(d));
   console.log("Dates to process:", datesToProcess);
   await updateJob({
     lastRun: new Date(),
     lastLog: `Dates to process: ${datesToProcess.join(", ")}`,
   });
 
-  for (const date of datesToProcess) {
-    const fileToProcess = files.find(
-      (f) => f.date.format("YYYY-MM-DD") === date
-    );
-    if (!fileToProcess) {
-      console.warn(`No file found for date ${date}, skipping...`);
-      await updateJob({
-        lastRun: new Date(),
-        lastLog: `No file found for date ${date}, skipping...`,
-      });
-      continue;
+  // Process each date
+  try {
+    for (const date of datesToProcess) {
+      const data = [];
+      for (let i = 0; i < 23; i++) {
+        const fileName = `SUIVI_${dayjs(date).format("YYYYMMDD")}_${i
+          .toString()
+          .padStart(2, "0")}.csv`;
+
+        if (!fs.existsSync(path.join(WMS_HISTORY_PATH, fileName))) {
+          console.warn(`File ${fileName} does not exist, skipping...`);
+          await updateJob({
+            lastRun: new Date(),
+            lastLog: `File ${fileName} does not exist, skipping...`,
+          });
+          continue;
+        }
+
+        fs.createReadStream(path.join(WMS_HISTORY_PATH, fileName), "utf8")
+          .pipe(csv({ separator: ";" }))
+          .on("data", (row) => data.push(row))
+          .on("end", async () => {
+            console.log(`Processed file: ${fileName}`);
+            await updateJob({
+              lastRun: new Date(),
+              lastLog: `Processed file: ${fileName}`,
+            });
+          });
+      }
     }
 
-    const filePath = path.join(WMS_HISTORY_PATH, fileToProcess.file);
-    console.log(`Processing file: ${fileToProcess.file}`);
+    const palettisationData = data.filter(
+      (row) => row["ACTIVITE"] === "Palettisation"
+    );
+    const graiPalettised = palettisationData.map((row) => row["GRAI"]);
+    const uniqueGrai = [...new Set(graiPalettised)];
+    const totalBoxes = uniqueGrai.length;
+    console.log(`Total boxes for ${date}: ${totalBoxes}`);
     await updateJob({
       lastRun: new Date(),
-      lastLog: `Processing file: ${fileToProcess.file}`,
+      lastLog: `Total boxes for ${date}: ${totalBoxes}`,
     });
 
-    let totalBoxes = 0;
+    // Insert or update the data in the database
+    await db.models.ProductionData.upsert({
+      date: fileToProcess.date.toDate(),
+      start: fileToProcess.date.startOf("day").toDate(),
+      end: fileToProcess.date.endOf("day").toDate(),
+      dayOff: totalBoxes === 0,
+      boxTreated: totalBoxes,
+    });
 
-    try {
-      const gettingData = new Promise(async (resolve, reject) => {
-        const d = [];
-        if (fileToProcess.multipart) {
-          for (let part = 0; part < 24; part++) {
-            // File parts are with two digits
-            const partFileName = fileToProcess.file.replace(
-              "_00.csv",
-              `_${part.toString().padStart(2, "0")}.csv`
-            );
-            const partFilePath = path.join(WMS_HISTORY_PATH, partFileName);
-            if (fs.existsSync(partFilePath)) {
-              await new Promise((res, rej) => {
-                fs.createReadStream(partFilePath, "utf8")
-                  .pipe(csv({ separator: ";" }))
-                  .on("data", (row) => d.push(row))
-                  .on("end", async () => {
-                    console.log(`Processed part file: ${partFileName}`);
-                    await updateJob({
-                      lastRun: new Date(),
-                      lastLog: `Processed part file: ${partFileName}`,
-                    });
-                    res();
-                  });
-              });
-            } else {
-              console.warn(
-                `Part file ${partFileName} does not exist, skipping...`
-              );
-              await updateJob({
-                lastRun: new Date(),
-                lastLog: `Part file ${partFileName} does not exist, skipping...`,
-              });
-              continue;
-            }
-          }
-          resolve(d);
-        } else {
-          fs.createReadStream(filePath, "utf8")
-            .pipe(csv({ separator: ";" }))
-            .on("data", (row) => d.push(row))
-            .on("end", async () => {
-              console.log(`Processed file: ${fileToProcess.file}`);
-              await updateJob({
-                lastRun: new Date(),
-                lastLog: `Processed file: ${fileToProcess.file}`,
-              });
-              resolve(d);
-            });
-        }
-      });
-
-      const data = await gettingData;
-
-      const palettisationData = data.filter(
-        (row) => row["ACTIVITE"] === "Palettisation"
-      );
-      const graiPalettised = palettisationData.map((row) => row["GRAI"]);
-      const uniqueGrai = [...new Set(graiPalettised)];
-      totalBoxes = uniqueGrai.length;
-
-      console.log(`Total boxes for ${date}: ${totalBoxes}`);
-      await updateJob({
-        lastRun: new Date(),
-        lastLog: `Total boxes for ${date}: ${totalBoxes}`,
-      });
-
-      await db.models.ProductionData.upsert({
-        date: fileToProcess.date.toDate(),
-        start: fileToProcess.date.startOf("day").toDate(),
-        end: fileToProcess.date.endOf("day").toDate(),
-        dayOff: totalBoxes === 0,
-        boxTreated: totalBoxes,
-      });
-
-      console.log(`Data for ${date} inserted into database.`);
-      await updateJob({
-        lastRun: new Date(),
-        lastLog: `Data for ${date} inserted into database.`,
-      });
-    } catch (error) {
-      console.error(`Failed to process data for date ${date}:`, error);
-      await updateJob({
-        lastRun: new Date(),
-        lastLog: `Failed to process data for date ${date}: ${error.message}`,
-        endAt: new Date(),
-        actualState: "error",
-      });
-    }
+    console.log(`Data for ${date} inserted into database.`);
+    await updateJob({
+      lastRun: new Date(),
+      lastLog: `Data for ${date} inserted into database.`,
+    });
+  } catch (error) {
+    console.error(`Failed to process data for date ${date}:`, error);
+    await updateJob({
+      lastRun: new Date(),
+      lastLog: `Failed to process data for date ${date}: ${error.message}`,
+      endAt: new Date(),
+      actualState: "error",
+    });
   }
 
   console.log("WMS extraction completed.");
