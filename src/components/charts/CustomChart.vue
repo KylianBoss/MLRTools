@@ -135,7 +135,7 @@ const chartOptions = ref({
   },
   dataLabels: {
     enabled: true,
-    enabledOnSeries: [0, 1],
+    enabledOnSeries: [0, 0],
     offsetY: -10,
   },
   series: [],
@@ -173,7 +173,7 @@ const getData = async () => {
   const response = await api
     .get(`/kpi/charts/custom/${props.chartData.id}`)
     .catch(() => ({ data: [] }));
-  const dailyBreakdown = JSON.parse(response.data.dailyBreakdown);
+  const dailyBreakdown = response.data.dailyBreakdown;
 
   const { tableRows, tableColumns } = formatDataForTable(
     dailyBreakdown,
@@ -181,6 +181,9 @@ const getData = async () => {
   );
   rows.value = tableRows;
   columns.value = tableColumns;
+  const max = Math.round(
+    Math.max(...dailyBreakdown.map((item) => item.total_count)) * 1.5
+  );
 
   chartSeries.value.push(
     {
@@ -189,7 +192,7 @@ const getData = async () => {
       data: dailyBreakdown.map((item) => {
         return { x: item.date, y: item.total_count };
       }),
-    }
+    },
     // {
     //   name:
     //     errorsByThousand.data[0].transportType === "tray"
@@ -200,14 +203,14 @@ const getData = async () => {
     //     .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
     //     .map((item) => item.time.toFixed(2)),
     // },
-    // {
-    //   name: "Moyenne 7 jours (nombre)",
-    //   type: "line",
-    //   data: errorsByThousand.data
-    //     .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
-    //     .map((item) => item.movingAverageNumber),
-    //   color: "#C10015",
-    // }
+    {
+      name: "Moyenne 7 jours (nombre)",
+      type: "line",
+      data: dailyBreakdown.map((item) => {
+        return { x: item.date, y: item.movingAverage };
+      }),
+      color: "#C10015",
+    }
     // {
     //   name: "Quantité de trays",
     //   type: "column",
@@ -240,6 +243,8 @@ const getData = async () => {
       title: {
         text: "Nombre d'erreurs",
       },
+      min: 0,
+      max: max,
     },
     // {
     //   opposite: true,
@@ -261,20 +266,21 @@ const getData = async () => {
     //     rotate: 90,
     //   },
     // },
-    // {
-    //   opposite: true,
-    //   seriesName: "Moyenne mobile 7 jours",
-    //   axisTicks: {
-    //     show: true,
-    //   },
-    //   axisBorder: {
-    //     show: true,
-    //   },
-    //   title: {
-    //     text: "Moyenne mobile 7 jours",
-    //   },
-    //   show: false,
-    // },
+    {
+      opposite: true,
+      seriesName: "Moyenne mobile 7 jours",
+      axisTicks: {
+        show: true,
+      },
+      axisBorder: {
+        show: true,
+      },
+      title: {
+        text: "Moyenne mobile 7 jours",
+      },
+      min: 0,
+      max: max,
+    },
     // {
     //   opposite: true,
     //   seriesName: "Quantité de trays",
@@ -295,7 +301,7 @@ const getData = async () => {
 };
 
 const formatDataForTable = (data, totalOccurrences) => {
-  const alarmMap = new Map();
+  let alarmMap = new Map();
   const dates = new Set();
 
   data.forEach((row) => {
@@ -312,6 +318,20 @@ const formatDataForTable = (data, totalOccurrences) => {
       alarmMap.get(alarm.alarm_id).dailyBreakdown[row.date] = alarm.count;
     });
   });
+
+  // Make a total per alarm
+  alarmMap.forEach((value, key) => {
+    value.count = Object.values(value.dailyBreakdown).reduce(
+      (sum, current) => sum + current,
+      0
+    );
+    alarmMap.set(key, value);
+  });
+
+  // Order alarmMap by count desc
+  alarmMap = new Map(
+    Array.from(alarmMap.entries()).sort((a, b) => b[1].count - a[1].count)
+  );
 
   const sortedDates = Array.from(dates).sort();
 
@@ -357,12 +377,14 @@ const formatDataForTable = (data, totalOccurrences) => {
     .map((alarm) => {
       const row = {
         alarmId: alarm.alarmId,
-        dataSource: props.alarmList.find((a) => a.alarmId === alarm.alarmId)
-          ?.dataSource || "UNKNOWN",
+        dataSource:
+          props.alarmList.find((a) => a.alarmId === alarm.alarmId)
+            ?.dataSource || "UNKNOWN",
         alarmArea: props.alarmList.find((a) => a.alarmId === alarm.alarmId)
           ?.alarmArea,
-        error: props.alarmList.find((a) => a.alarmId === alarm.alarmId)
-          ?.alarmText || alarm.alarmId,
+        error:
+          props.alarmList.find((a) => a.alarmId === alarm.alarmId)?.alarmText ||
+          alarm.alarmId,
       };
 
       sortedDates.forEach((date) => {
@@ -377,7 +399,7 @@ const formatDataForTable = (data, totalOccurrences) => {
     dataSource: "Total erreurs",
     alarmArea: "----",
     error: totalOccurrences,
-    ...Object.fromEntries(sortedDates.map((date) => [date, 0])),
+    ...Object.fromEntries(sortedDates.map((date) => [date, -1])),
   });
 
   return { tableRows, tableColumns };
@@ -387,6 +409,7 @@ const cellFormat = (value, row) => {
   if (row.dataSource === "----") return "text-dark text-bold bg-blue-3";
   if (value === null || value === undefined) return "text-grey bg-grey";
   if (value === 0) return "text-grey bg-grey";
+  if (value === -1) return "text-white";
 
   const rowsValues = rows.value
     .slice(1, rows.value.length) // Exclude first two rows (headers and tray amounts)

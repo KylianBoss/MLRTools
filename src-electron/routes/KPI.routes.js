@@ -158,122 +158,6 @@ router.get("/groups", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-router.get("/charts/thousand-trays-number/:groupName", async (req, res) => {
-  const { groupName } = req.params;
-  const WINDOW = await db.models.Settings.getValue("GRAPH_WINDOW");
-  const MIN_PROD_TO_TAKE = await db.models.Settings.getValue(
-    "MIN_PROD_TO_TAKE"
-  );
-
-  const prodData = await db.models.ProductionData.findAll({
-    attributes: ["date", "boxTreated"],
-    where: {
-      date: {
-        [Op.gte]: dayjs().subtract(WINDOW, "day").format("YYYY-MM-DD"),
-      },
-    },
-    order: [["date", "ASC"]],
-    raw: true,
-  });
-
-  try {
-    let dataNumbers = [];
-    let dataTimes = [];
-
-    for (let i = WINDOW - 1; i >= 0; i--) {
-      const date = dayjs()
-        .subtract(i + 1, "day")
-        .format("YYYY-MM-DD");
-
-      const dataNumber = await db.query(
-        "CALL getErrorsByThousand(:from, :to, :groupName)",
-        {
-          replacements: {
-            from: dayjs(date + "00:00:00").format("YYYY-MM-DD HH:mm:ss"),
-            to: dayjs(date + "23:59:59").format("YYYY-MM-DD HH:mm:ss"),
-            groupName,
-          },
-        }
-      );
-      dataNumbers.push({
-        date,
-        value: dataNumber[0].result || 0,
-        trayAmount: dataNumber[0].trayAmount || 0,
-        transportType: dataNumber[0].transportType || "unknown",
-        minProdReached:
-          (prodData.find((d) => d.date === date)?.boxTreated || 0) >=
-          MIN_PROD_TO_TAKE,
-      });
-
-      const dataTime = await db.query(
-        "CALL getDowntimeMinutesByThousand(:from, :to, :groupName)",
-        {
-          replacements: {
-            from: dayjs(date + "00:00:00").format("YYYY-MM-DD HH:mm:ss"),
-            to: dayjs(date + "23:59:59").format("YYYY-MM-DD HH:mm:ss"),
-            groupName,
-          },
-        }
-      );
-      dataTimes.push({
-        date,
-        value: dataTime[0].result || 0,
-        trayAmount: dataTime[0].trayAmount || 0,
-        transportType: dataTime[0].transportType || "unknown",
-        minProdReached:
-          (prodData.find((d) => d.date === date)?.boxTreated || 0) >=
-          MIN_PROD_TO_TAKE,
-      });
-    }
-
-    const sortedDates = dataNumbers.map((d) => d.date).sort();
-
-    const data = [];
-    sortedDates.forEach((date) => {
-      const numberEntry = dataNumbers.find((d) => d.date === date);
-      const timeEntry = dataTimes.find((d) => d.date === date);
-      data.push({
-        date,
-        number: numberEntry ? numberEntry.value : 0,
-        time: timeEntry ? timeEntry.value : 0,
-        trayAmount: numberEntry ? numberEntry.trayAmount : 0,
-        transportType: numberEntry
-          ? numberEntry.transportType
-          : timeEntry
-          ? timeEntry.transportType
-          : "unknown",
-        minProdReached: numberEntry
-          ? numberEntry.minProdReached
-          : timeEntry
-          ? timeEntry.minProdReached
-          : false,
-      });
-    });
-
-    function calculateMovingAverage(data, windowSize = 7) {
-      return data.map((item, index) => {
-        const start = Math.max(0, index - windowSize + 1);
-        const window = data.slice(start, index + 1).filter((d) => d.number > 0);
-
-        const averageNumber =
-          window.reduce((sum, point) => sum + point.number, 0) / window.length;
-        const averageTime =
-          window.reduce((sum, point) => sum + point.time, 0) / window.length;
-
-        return {
-          ...item,
-          movingAverageNumber: Math.round(averageNumber * 100) / 100,
-          movingAverageTime: Math.round(averageTime * 100) / 100,
-        };
-      });
-    }
-
-    res.json(calculateMovingAverage(data));
-  } catch (error) {
-    console.error("Error fetching KPI charts:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
 router.get("/charts/global-last-7-days", async (req, res) => {
   try {
     const results = await db.query(
@@ -317,14 +201,38 @@ router.get("/charts/global-last-7-days/top-10", async (req, res) => {
   }
 });
 router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
+  const MOVING_AVERAGE_WINDOW = await db.models.Settings.getValue(
+    "MOVING_AVERAGE_WINDOW"
+  );
+  const GRAPH_TABLE_WINDOW = await db.models.Settings.getValue(
+    "GRAPH_TABLE_WINDOW"
+  );
+  const MIN_PROD_TO_TAKE = await db.models.Settings.getValue(
+    "MIN_PROD_TO_TAKE"
+  );
+  const WINDOW = await db.models.Settings.getValue("GRAPH_WINDOW");
   const { groupName } = req.params;
   const from = dayjs()
-    .subtract(7, "day")
+    .subtract(GRAPH_TABLE_WINDOW, "day")
     .startOf("day")
     .format("YYYY-MM-DD HH:mm:ss");
-  const to = dayjs().endOf("day").format("YYYY-MM-DD HH:mm:ss");
+  const to = dayjs()
+    .subtract(1, "day")
+    .endOf("day")
+    .format("YYYY-MM-DD HH:mm:ss");
 
   try {
+    const prodData = await db.models.ProductionData.findAll({
+      attributes: ["date", "boxTreated"],
+      where: {
+        date: {
+          [Op.gte]: dayjs().subtract(WINDOW, "day").format("YYYY-MM-DD"),
+        },
+      },
+      order: [["date", "ASC"]],
+      raw: true,
+    });
+
     const alarms = await db.query(
       "CALL getTop10AlarmsWithDailyBreakdown(:from, :to, :groupName, false)",
       {
@@ -336,7 +244,54 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
       }
     );
 
-    res.json(alarms);
+    const chartData = [];
+    for (let i = WINDOW - 1; i >= 0; i--) {
+      const date = dayjs()
+        .subtract(i + 1, "day")
+        .format("YYYY-MM-DD");
+      const data = await db.query("CALL getChartData(:date, :groupName)", {
+        replacements: {
+          date,
+          groupName,
+        },
+      });
+
+      chartData.push({
+        groupName: data[0].groupName,
+        transportType: data[0].transportType,
+        errors: data[0].errors,
+        downtime: data[0].downtime,
+        traysAmount: data[0].traysAmount,
+        date,
+      });
+    }
+
+    filledChartData = chartData.map((data, index) => {
+      const start = Math.max(0, index - MOVING_AVERAGE_WINDOW + 1);
+      const window = chartData.slice(start, index + 1).filter((d) => d.errors > 0);
+
+      const averageErrors =
+        window.reduce((sum, point) => sum + parseFloat(point.errors), 0) /
+        window.length;
+      const averageDowntime =
+        window.reduce((sum, point) => sum + point.downtime, 0) / window.length;
+
+      return {
+        ...data,
+        movingAverageErrors:
+          averageErrors > 0 ? Math.round(averageErrors * 100) / 100 : 0,
+        movingAverageDowntime:
+          averageDowntime > 0 ? Math.round(averageDowntime * 100) / 100 : 0,
+        minProdReached:
+          (prodData.find((d) => d.date === data.date)?.boxTreated || 0) >=
+          MIN_PROD_TO_TAKE,
+      };
+    });
+
+    res.json({
+      alarms,
+      chartData: filledChartData,
+    });
   } catch (error) {
     console.error("Error fetching KPI alarms by group:", error);
     res.status(500).json({ error: error.message });
@@ -344,6 +299,10 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
 });
 router.get("/charts/custom/:chartId", async (req, res) => {
   const { chartId } = req.params;
+
+  const MOVING_AVERAGE_WINDOW = await db.models.Settings.getValue(
+    "MOVING_AVERAGE_WINDOW"
+  );
 
   try {
     const customChartData = await db.models.CustomChart.findByPk(chartId);
@@ -358,7 +317,46 @@ router.get("/charts/custom/:chartId", async (req, res) => {
       }
     );
 
-    res.json(chartData[0]);
+    function calculateMovingAverage(data, windowSize = 7) {
+      const dailyBreakdown = JSON.parse(data.dailyBreakdown);
+
+      return {
+        ...data,
+        dailyBreakdown: dailyBreakdown.map((item, index) => {
+          const start = Math.max(0, index - windowSize + 1);
+          const window = dailyBreakdown
+            .slice(start, index + 1)
+            .filter((d) => d.total_count > 0);
+
+          const averageNumber =
+            window.reduce((sum, point) => sum + point.total_count, 0) /
+            window.length;
+
+          return {
+            ...item,
+            movingAverage: Math.round(averageNumber * 100) / 100,
+          };
+        }),
+      };
+
+      return data.map((item, index) => {
+        const start = Math.max(0, index - windowSize + 1);
+        const window = data
+          .slice(start, index + 1)
+          .filter((d) => d.total_count > 0);
+
+        const averageNumber =
+          window.reduce((sum, point) => sum + point.total_count, 0) /
+          window.length;
+
+        return {
+          ...item,
+          movingAverage: Math.round(averageNumber * 100) / 100,
+        };
+      });
+    }
+
+    res.json(calculateMovingAverage(chartData[0], MOVING_AVERAGE_WINDOW));
   } catch (error) {
     console.error("Error fetching custom chart data:", error);
     res.status(500).json({ error: error.message });

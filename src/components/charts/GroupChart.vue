@@ -170,6 +170,7 @@ const chartOptions = ref({
       columnWidth: "20%",
     },
   },
+  colors: ["#00e396", "#008ffb"],
 });
 const chartSeries = ref([]);
 const rows = ref([]);
@@ -183,61 +184,58 @@ const emits = defineEmits(["loaded"]);
 
 const getData = async () => {
   chartSeries.value = [];
-  const errorsByThousand = await api
-    .get(`/kpi/charts/thousand-trays-number/${props.group.groupName}`)
-    .catch(() => ({ data: [] }));
-  const errorsFromLastSevenDays = await api
+  const response = await api
     .get(`/kpi/charts/alarms-by-group/${props.group.groupName}`)
     .catch(() => ({ data: [] }));
-  const { tableRows, tableColumns } = formatDataForTable(
-    errorsFromLastSevenDays.data,
-    errorsByThousand.data
-  );
+  const data = response.data;
+
+  const { tableRows, tableColumns } = formatDataForTable(data);
   rows.value = tableRows;
   columns.value = tableColumns;
+  const max = Math.round(
+    Math.max(
+      ...data.chartData
+        .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
+        .map((item) => parseFloat(item.errors)),
+      ...data.chartData
+        .filter((d) => d.minProdReached && d.downtime > 0 && d.downtime > 0)
+        .map((item) => parseFloat(item.downtime))
+    ) * 1.2
+  );
 
   chartSeries.value.push(
     {
       name:
-        errorsByThousand.data[0]?.transportType === "tray"
-          ? "Pannes / 1000 trays (nombre)"
-          : "Pannes / 100 palettes (nombre)",
-      type: "column",
-      data: errorsByThousand.data
-        .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
-        .map((item) => item.number.toFixed(2)),
-      zIndex: 10,
-    },
-    {
-      name:
-        errorsByThousand.data[0]?.transportType === "tray"
+        data.chartData[0]?.transportType === "tray"
           ? "Pannes / 1000 trays (temps [minutes])"
           : "Pannes / 100 palettes (temps [minutes])",
       type: "column",
-      data: errorsByThousand.data
-        .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
-        .map((item) => item.time.toFixed(2)),
-      zIndex: 5,
+      data: data.chartData
+        .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
+        .map((item) => item.downtime.toFixed(2)),
+    },
+    {
+      name:
+        data.chartData[0]?.transportType === "tray"
+          ? "Pannes / 1000 trays (nombre)"
+          : "Pannes / 100 palettes (nombre)",
+      type: "column",
+      data: data.chartData
+        .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
+        .map((item) => item.errors.toFixed(2)),
     },
     {
       name: "Moyenne 7 jours (nombre)",
       type: "line",
-      data: errorsByThousand.data
-        .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
-        .map((item) => item.movingAverageNumber),
+      data: data.chartData
+        .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
+        .map((item) => item.movingAverageErrors),
       color: "#C10015",
-      zIndex: 1,
     }
-    // {
-    //   name: "Quantité de trays",
-    //   type: "column",
-    //   data: errorsByThousand.data.map((item) => item.trayAmount),
-    //   color: "#00C100",
-    // }
   );
   chartOptions.value.xaxis = {
-    categories: errorsByThousand.data
-      .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
+    categories: data.chartData
+      .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
       .map((item) => dayjs(item.date).format("YYYY-MM-DD")),
     labels: {
       show: true,
@@ -250,35 +248,9 @@ const getData = async () => {
   };
   chartOptions.value.yaxis = [
     {
-      seriesName:
-        errorsByThousand.data[0]?.transportType === "tray"
-          ? "Pannes / 1000 trays (nombre)"
-          : "Pannes / 100 palettes (nombre)",
-      axisTicks: {
-        show: true,
-      },
-      axisBorder: {
-        show: true,
-      },
-      title: {
-        text:
-          errorsByThousand.data[0]?.transportType === "tray"
-            ? "Nombre de pannes / 1000 trays"
-            : "Nombre de pannes / 100 palettes",
-      },
-      min: 0,
-      max: Math.round(
-        Math.max(
-          ...errorsByThousand.data
-            .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
-            .map((item) => parseFloat(item.number))
-        ) * 1.2
-      ),
-    },
-    {
       opposite: true,
       seriesName:
-        errorsByThousand.data[0]?.transportType === "tray"
+        data.chartData[0]?.transportType === "tray"
           ? "Pannes / 1000 trays (temps [minutes])"
           : "Pannes / 100 palettes (temps [minutes])",
       axisTicks: {
@@ -289,11 +261,35 @@ const getData = async () => {
       },
       title: {
         text:
-          errorsByThousand.data[0]?.transportType === "tray"
+          data.chartData[0]?.transportType === "tray"
             ? "Temps de pannes / 1000 trays (minutes)"
             : "Temps de pannes / 100 palettes (minutes)",
         rotate: 90,
       },
+      min: 0,
+      max: max,
+      color: "#008ffb",
+    },
+    {
+      seriesName:
+        data.chartData[0]?.transportType === "tray"
+          ? "Pannes / 1000 trays (nombre)"
+          : "Pannes / 100 palettes (nombre)",
+      axisTicks: {
+        show: true,
+      },
+      axisBorder: {
+        show: true,
+      },
+      title: {
+        text:
+          data.chartData[0]?.transportType === "tray"
+            ? "Nombre de pannes / 1000 trays"
+            : "Nombre de pannes / 100 palettes",
+      },
+      min: 0,
+      max: max,
+      color: "#00e396",
     },
     {
       opposite: true,
@@ -309,38 +305,20 @@ const getData = async () => {
       },
       show: false,
       min: 0,
-      max: Math.round(
-        Math.max(
-          ...errorsByThousand.data
-            .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
-            .map((item) => parseFloat(item.number))
-        ) * 1.2
-      ),
+      max: max,
     },
-    // {
-    //   opposite: true,
-    //   seriesName: "Quantité de trays",
-    //   axisTicks: {
-    //     show: true,
-    //   },
-    //   axisBorder: {
-    //     show: true,
-    //   },
-    //   title: {
-    //     text: "Quantité de trays",
-    //   },
-    //   show: false,
-    // },
   ];
   chartVisibility.value = true;
   emits("loaded");
 };
 
-const formatDataForTable = (data, trayData) => {
-  const alarmMap = new Map();
+const formatDataForTable = (data) => {
+  let alarmMap = new Map();
   const dates = new Set();
 
-  data.forEach((row) => {
+  if (data.alarms.length === 0) return { tableRows: [], tableColumns: [] };
+
+  data.alarms.forEach((row) => {
     dates.add(row.alarm_date);
 
     if (!alarmMap.has(row.alarmId)) {
@@ -355,6 +333,20 @@ const formatDataForTable = (data, trayData) => {
 
     alarmMap.get(row.alarmId).dailyBreakdown[row.alarm_date] = row.daily_count;
   });
+
+  // Make a total per alarm
+  alarmMap.forEach((value, key) => {
+    value.count = Object.values(value.dailyBreakdown).reduce(
+      (sum, current) => sum + current,
+      0
+    );
+    alarmMap.set(key, value);
+  });
+
+  // Order alarmMap by count desc
+  alarmMap = new Map(
+    Array.from(alarmMap.entries()).sort((a, b) => b[1].count - a[1].count)
+  );
 
   const sortedDates = Array.from(dates).sort();
 
@@ -413,7 +405,7 @@ const formatDataForTable = (data, trayData) => {
   if (
     sortedDates
       .map((d) => {
-        return trayData.find((t) => t.date === d)?.trayAmount || 0;
+        return data.chartData.find((t) => t.date === d)?.traysAmount || 0;
       })
       .some((v) => v > 0)
   )
@@ -421,13 +413,13 @@ const formatDataForTable = (data, trayData) => {
       dataSource: "----",
       alarmArea: "----",
       error:
-        trayData[0].transportType === "tray"
+        data.chartData[0].transportType === "tray"
           ? "Quantité de trays"
           : "Quantité de palettes",
       ...Object.fromEntries(
         sortedDates.map((date) => {
-          const trayEntry = trayData.find((t) => t.date === date);
-          return [date, trayEntry ? trayEntry.trayAmount : 0];
+          const trayEntry = data.chartData.find((t) => t.date === date);
+          return [date, trayEntry ? trayEntry.traysAmount : 0];
         })
       ),
     });

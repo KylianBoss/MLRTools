@@ -161,6 +161,7 @@ const getData = async () => {
   );
   rows.value = tableRows;
   columns.value = tableColumns;
+  const max = Math.round(Math.max(data.data.avg_errors_per_thousand, data.data.avg_downtime_minutes_per_thousand) * 1.5);
 
   chartSeries.value.push(
     {
@@ -168,7 +169,7 @@ const getData = async () => {
       data: [
         {
           x: "Nombre d'erreurs moyen",
-          y: Math.round(data.data.avg_errors_per_thousand, 2),
+          y: (data.data.avg_errors_per_thousand).toFixed(1),
           goals: [
             {
               name: "Target",
@@ -184,7 +185,7 @@ const getData = async () => {
       data: [
         {
           x: "Temps de panne moyen",
-          y: Math.round(data.data.avg_downtime_minutes_per_thousand, 2),
+          y: (data.data.avg_downtime_minutes_per_thousand).toFixed(1),
           goals: [
             {
               name: "Target",
@@ -208,6 +209,8 @@ const getData = async () => {
       title: {
         text: "Nombre / 1000 trays",
       },
+      min: 0,
+      max: max,
     },
     {
       opposite: true,
@@ -222,6 +225,8 @@ const getData = async () => {
         text: "Temps / 1000 trays [min]",
         rotate: 90,
       },
+      min: 0,
+      max: max,
     },
   ];
   chartVisibility.value = true;

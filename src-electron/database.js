@@ -1094,8 +1094,8 @@ function initDB(config) {
       }
     );
 
-    const ErrorsByThousandSaved = db.define(
-      "ErrorsByThousandSaved",
+    const cache_ErrorsByThousand = db.define(
+      "cache_ErrorsByThousand",
       {
         groupName: {
           type: DataTypes.STRING,
@@ -1122,13 +1122,8 @@ function initDB(config) {
           defaultValue: 0,
           comment: "Number of trays processed",
         },
-        from: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          primaryKey: true,
-        },
-        to: {
-          type: DataTypes.DATE,
+        date: {
+          type: DataTypes.DATEONLY,
           allowNull: false,
           primaryKey: true,
         },
@@ -1144,8 +1139,8 @@ function initDB(config) {
       }
     );
 
-    const DowntimeMinutesByThousandSaved = db.define(
-      "DowntimeMinutesByThousandSaved",
+    const cache_DowntimeMinutesByThousand = db.define(
+      "cache_DowntimeMinutesByThousand",
       {
         groupName: {
           type: DataTypes.STRING,
@@ -1172,13 +1167,8 @@ function initDB(config) {
           defaultValue: 0,
           comment: "Number of trays processed",
         },
-        from: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          primaryKey: true,
-        },
-        to: {
-          type: DataTypes.DATE,
+        date: {
+          type: DataTypes.DATEONLY,
           allowNull: false,
           primaryKey: true,
         },
