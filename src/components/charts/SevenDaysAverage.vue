@@ -181,7 +181,7 @@ const getData = async () => {
       ],
     },
     {
-      name: "Temps de pannes",
+      name: "Temps de pannes [min]",
       data: [
         {
           x: "Temps de panne moyen",

@@ -268,7 +268,9 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
 
     filledChartData = chartData.map((data, index) => {
       const start = Math.max(0, index - MOVING_AVERAGE_WINDOW + 1);
-      const window = chartData.slice(start, index + 1).filter((d) => d.errors > 0);
+      const window = chartData
+        .slice(start, index + 1)
+        .filter((d) => d.errors > 0);
 
       const averageErrors =
         window.reduce((sum, point) => sum + parseFloat(point.errors), 0) /

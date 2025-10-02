@@ -197,9 +197,6 @@ const getData = async () => {
       ...data.chartData
         .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
         .map((item) => parseFloat(item.errors)),
-      ...data.chartData
-        .filter((d) => d.minProdReached && d.downtime > 0 && d.downtime > 0)
-        .map((item) => parseFloat(item.downtime))
     ) * 1.2
   );
 
@@ -267,7 +264,6 @@ const getData = async () => {
         rotate: 90,
       },
       min: 0,
-      max: max,
       color: "#008ffb",
     },
     {
