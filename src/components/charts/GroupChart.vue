@@ -147,8 +147,8 @@ const chartOptions = ref({
     },
   },
   dataLabels: {
-    enabled: true,
-    enabledOnSeries: [0, 1],
+    enabled: false,
+    enabledOnSeries: [1, 2],
     offsetY: -10,
   },
   series: [],
@@ -170,7 +170,6 @@ const chartOptions = ref({
       columnWidth: "20%",
     },
   },
-  colors: ["#00e396", "#008ffb"],
 });
 const chartSeries = ref([]);
 const rows = ref([]);
@@ -188,28 +187,74 @@ const getData = async () => {
     .get(`/kpi/charts/alarms-by-group/${props.group.groupName}`)
     .catch(() => ({ data: [] }));
   const data = response.data;
+  const filteredData = data.chartData.filter(
+    (d) => d.minProdReached && d.errors > 0 && d.downtime > 0
+  );
 
   const { tableRows, tableColumns } = formatDataForTable(data);
   rows.value = tableRows;
   columns.value = tableColumns;
-  const max = Math.round(
-    Math.max(
-      ...data.chartData
-        .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
-        .map((item) => parseFloat(item.errors)),
-    ) * 1.2
-  );
+  const errorValues = filteredData
+    .map((item) => parseFloat(item.errors))
+    .sort((a, b) => a - b);
+  const percentile90Index = Math.floor(errorValues.length * 0.9);
+  const max = Math.round(errorValues[percentile90Index] * 1.5);
+
+  // Calculer la ligne de tendance (régression linéaire)
+  const calculateTrendLine = (values) => {
+    const n = values.length;
+    const xValues = Array.from({ length: n }, (_, i) => i);
+    const yValues = values.map((v) => parseFloat(v));
+
+    const sumX = xValues.reduce((a, b) => a + b, 0);
+    const sumY = yValues.reduce((a, b) => a + b, 0);
+    const sumXY = xValues.reduce((sum, x, i) => sum + x * yValues[i], 0);
+    const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0);
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    return {
+      data: xValues.map((x) => (slope * x + intercept).toFixed(2)),
+      slope: slope,
+    };
+  };
+
+  const trendLine = calculateTrendLine(filteredData.map((item) => item.errors));
+
+  const getTrendColor = (slope) => {
+    const avgValue =
+      filteredData.reduce((sum, item) => sum + parseFloat(item.errors), 0) /
+      filteredData.length;
+    const relativeSlope = Math.abs(slope) / avgValue; // Pente relative en %
+
+    if (relativeSlope < 0.01) return "#FFA500"; // Orange - stable (< 1% de variation)
+    return slope < 0 ? "#00C853" : "#FF1744"; // Vert si descend, Rouge si monte
+  };
+
+  const trendColor = getTrendColor(trendLine.slope);
 
   chartSeries.value.push(
+    {
+      name: "Tendance",
+      type: "line",
+      data: trendLine.data,
+      color: trendColor,
+    },
+    {
+      name: "Moyenne 7 jours (nombre)",
+      type: "line",
+      data: filteredData.map((item) => item.movingAverageErrors),
+      color: "#C10015",
+    },
     {
       name:
         data.chartData[0]?.transportType === "tray"
           ? "Pannes / 1000 trays (temps [minutes])"
           : "Pannes / 100 palettes (temps [minutes])",
       type: "column",
-      data: data.chartData
-        .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
-        .map((item) => item.downtime.toFixed(2)),
+      data: filteredData.map((item) => item.downtime.toFixed(2)),
+      color: "#00e396",
     },
     {
       name:
@@ -217,23 +262,15 @@ const getData = async () => {
           ? "Pannes / 1000 trays (nombre)"
           : "Pannes / 100 palettes (nombre)",
       type: "column",
-      data: data.chartData
-        .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
-        .map((item) => item.errors.toFixed(2)),
-    },
-    {
-      name: "Moyenne 7 jours (nombre)",
-      type: "line",
-      data: data.chartData
-        .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
-        .map((item) => item.movingAverageErrors),
-      color: "#C10015",
+      data: filteredData.map((item) => item.errors.toFixed(2)),
+      color: "#008ffb",
     }
   );
+
   chartOptions.value.xaxis = {
-    categories: data.chartData
-      .filter((d) => d.minProdReached && d.errors > 0 && d.downtime > 0)
-      .map((item) => dayjs(item.date).format("YYYY-MM-DD")),
+    categories: filteredData.map((item) =>
+      dayjs(item.date).format("YYYY-MM-DD")
+    ),
     labels: {
       show: true,
       rotate: -90,
@@ -243,7 +280,36 @@ const getData = async () => {
       },
     },
   };
+
+  chartOptions.value.stroke = {
+    width: [3, 2, 0, 0], // Largeur des lignes pour chaque série
+    dashArray: [5, 0, 0, 0], // Pointillés pour la tendance uniquement
+  };
+
   chartOptions.value.yaxis = [
+    {
+      opposite: true,
+      seriesName: "Tendance",
+      show: false,
+      min: 0,
+      max: max,
+    },
+    {
+      opposite: true,
+      seriesName: "Moyenne mobile 7 jours",
+      axisTicks: {
+        show: true,
+      },
+      axisBorder: {
+        show: true,
+      },
+      title: {
+        text: "Moyenne mobile 7 jours",
+      },
+      show: false,
+      min: 0,
+      max: max,
+    },
     {
       opposite: true,
       seriesName:
@@ -286,22 +352,6 @@ const getData = async () => {
       min: 0,
       max: max,
       color: "#00e396",
-    },
-    {
-      opposite: true,
-      seriesName: "Moyenne mobile 7 jours",
-      axisTicks: {
-        show: true,
-      },
-      axisBorder: {
-        show: true,
-      },
-      title: {
-        text: "Moyenne mobile 7 jours",
-      },
-      show: false,
-      min: 0,
-      max: max,
     },
   ];
   chartVisibility.value = true;
