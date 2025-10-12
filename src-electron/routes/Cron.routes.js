@@ -159,6 +159,9 @@ router.post("/start", async (req, res) => {
       case "extractWMS":
         await extractWMS();
         break;
+      case "extractSAV":
+        await extractSAV();
+        break;
       default:
         res.status(400).json({ error: "Unknown action" });
         return;
