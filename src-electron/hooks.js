@@ -13,10 +13,7 @@ export default class Hooks {
     const old = {};
     const new_ = {};
 
-    const ignoreFields = [
-      "createdAt",
-      "isBotActive",
-    ];
+    const ignoreFields = ["createdAt", "isBotActive"];
 
     if (changes.filter((change) => !ignoreFields.includes(change)).length === 0)
       return;
@@ -48,12 +45,7 @@ export default class Hooks {
     const table = instance.constructor.tableName;
     const current = instance.dataValues;
 
-    if (
-      [
-        "audits",
-      ].includes(table.toLowerCase())
-    )
-      return;
+    if (["audits", "RequestLogs"].includes(table.toLowerCase())) return;
 
     const new_ = current;
 
@@ -98,6 +90,19 @@ export default class Hooks {
   init() {
     this.db.addHook("afterUpdate", this.afterUpdate.bind(this));
     this.db.addHook("afterCreate", this.afterCreate.bind(this));
+    this.db.addHook("afterBulkCreate", (instances, options) => {
+      instances.forEach((instance) => {
+        this.afterCreate(instance, options);
+      });
+    });
+    this.db.addHook("afterBulkUpdate", async (options) => {
+      const instances = await this.db.models[options.model.name].findAll({
+        where: options.where,
+      });
+      instances.forEach((instance) => {
+        this.afterUpdate(instance, options);
+      });
+    });
     this.db.addHook("afterDestroy", this.afterDestroy.bind(this));
     console.log("Hooks initialized");
   }
