@@ -2,9 +2,6 @@ import { db } from "./database";
 import { QueryTypes, Op } from "sequelize";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import PDFdocument from "pdfkit-table";
-import fs from "fs/promises";
-import path from "path";
 import express from "express";
 import cors from "cors";
 import routes from "./routes/index.js";
@@ -198,70 +195,6 @@ app.post("/production/data", async (req, res) => {
     console.error("Error creating production time:", error);
     res.status(500).json({ error: error.message });
   }
-});
-
-app.post("/print/suspicious-places", async (req, res) => {
-  const { places } = req.body;
-  const doc = new PDFdocument({
-    size: "A4",
-    layout: "landscape",
-    margin: 30,
-  });
-  const chunks = [];
-  doc.on("data", (chunk) => chunks.push(chunk));
-  doc.on("end", () => {
-    // Send base64 encoded PDF to the renderer
-    const pdfBuffer = Buffer.concat(chunks).toString("base64");
-    res.json(pdfBuffer);
-  });
-  doc
-    .fontSize(20)
-    .text("Emplacements suspects dans le Shuttle", { align: "center" });
-  doc.moveDown();
-  doc.fontSize(14).text("Liste des emplacements suspects");
-  doc.moveDown();
-  doc.fontSize(12);
-  // Make a table with the place data
-  // {
-  //  aisle: 1,
-  //  side: Gauche,
-  //  level: 10,
-  //  maintenanceLevel: 5,
-  //  rack: 10,
-  //  x: 3,
-  //  z: 2,
-  //  trayNumber: 0000023564,
-  // }
-  const table = {
-    headers: [
-      "Allée",
-      "Côté",
-      "Maintenance Level",
-      "Étagère",
-      "Compartiment",
-      "Place",
-      "Profondeur",
-      "Numéro du tray",
-      "Actuel",
-    ],
-    rows: places.map((p) => [
-      p.aisle,
-      p.side,
-      p.maintenanceLevel,
-      p.level,
-      p.rack,
-      p.x,
-      p.z,
-      p.trayNumber,
-      "",
-    ]),
-  };
-  doc
-    .table(table, {
-      prepareHeader: () => doc.font("Helvetica-Bold"),
-      prepareRow: (row, i) => doc.font("Helvetica").fontSize(12),
-    })
-    .then(() => doc.end());
 });
 
 // CHARTS

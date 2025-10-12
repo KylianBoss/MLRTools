@@ -4,45 +4,22 @@ import fs from "fs";
 import path from "path";
 import puppeteer from "puppeteer";
 import csv from "csv-parser";
+import { updateJob } from "./utils.js";
 
 const jobName = "extractTrayAmount";
-function updateJob(data = {}) {
-  return new Promise((resolve, reject) => {
-    db.models.CronJobs.findOne({
-      where: {
-        action: jobName,
-      },
-    })
-      .then((job) => {
-        if (job) {
-          job.update({ ...data }).then(() => {
-            resolve(job);
-          });
-        } else {
-          db.models.CronJobs.create({
-            action: jobName,
-            ...data,
-          }).then((job) => {
-            resolve(job);
-          });
-        }
-      })
-      .catch((error) => {
-        console.error("Error updating job:", error);
-        reject(error);
-      });
-  });
-}
 
 export const extractTrayAmount = (date) => {
   return new Promise(async (resolve, reject) => {
     try {
-      await updateJob({
-        actualState: "running",
-        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        lastLog: `Starting extraction job`,
-        startAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-      });
+      await updateJob(
+        {
+          actualState: "running",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `Starting extraction job`,
+          startAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        },
+        jobName
+      );
       const zones = await db.models.ZoneReadPoints.findAll({
         raw: true,
       });
@@ -102,11 +79,14 @@ export const extractTrayAmount = (date) => {
         "Extract tray amount",
         "Starting extraction..."
       );
-      await updateJob({
-        actualState: "running",
-        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        lastLog: `Starting extraction for date ${date}`,
-      });
+      await updateJob(
+        {
+          actualState: "running",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `Starting extraction for date ${date}`,
+        },
+        jobName
+      );
 
       // Setup the storage
       if (fs.existsSync(path.join(process.cwd(), "storage", "downloads")))
@@ -158,11 +138,14 @@ export const extractTrayAmount = (date) => {
         "Extract tray amount",
         "Logged in successfully"
       );
-      await updateJob({
-        actualState: "running",
-        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        lastLog: `Logged in successfully`,
-      });
+      await updateJob(
+        {
+          actualState: "running",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `Logged in successfully`,
+        },
+        jobName
+      );
       await sleep(2000);
 
       await page.goto(
@@ -179,11 +162,14 @@ export const extractTrayAmount = (date) => {
         for (const readPoint of zone.readPoints) {
           let i = 1;
           for (const split of splits) {
-            await updateJob({
-              actualState: "running",
-              lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-              lastLog: `Processing : ${zone.zone} - ${readPoint} - Split: ${i}`,
-            });
+            await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: `Processing : ${zone.zone} - ${readPoint} - Split: ${i}`,
+              },
+              jobName
+            );
             const startDateInput = await page.$(
               'input[id="inputTimestampPicker_1"]'
             );
@@ -239,11 +225,14 @@ export const extractTrayAmount = (date) => {
                 if (downloadLink) {
                   await downloadLink.click();
                   console.log("Start downloading CSV file...");
-                  await updateJob({
-                    actualState: "running",
-                    lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                    lastLog: `Start downloading CSV file for address ${readPoint} in group ${zone.zone} for split ${i}`,
-                  });
+                  await updateJob(
+                    {
+                      actualState: "running",
+                      lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                      lastLog: `Start downloading CSV file for address ${readPoint} in group ${zone.zone} for split ${i}`,
+                    },
+                    jobName
+                  );
                 } else {
                   console.warn(
                     `No download link found for address ${readPoint} in group ${zone.zone} for split ${i}`
@@ -273,11 +262,14 @@ export const extractTrayAmount = (date) => {
                   )
                 );
                 console.log("CSV file downloaded successfully");
-                await updateJob({
-                  actualState: "running",
-                  lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                  lastLog: `CSV file downloaded successfully for address ${readPoint} in group ${zone.zone} for split ${i}`,
-                });
+                await updateJob(
+                  {
+                    actualState: "running",
+                    lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                    lastLog: `CSV file downloaded successfully for address ${readPoint} in group ${zone.zone} for split ${i}`,
+                  },
+                  jobName
+                );
 
                 fs.renameSync(
                   path.join(
@@ -315,11 +307,14 @@ export const extractTrayAmount = (date) => {
         "Extract tray amount",
         "All readPoints downloaded successfully, starting extraction..."
       );
-      await updateJob({
-        actualState: "running",
-        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        lastLog: `All readPoints downloaded successfully, starting extraction...`,
-      });
+      await updateJob(
+        {
+          actualState: "running",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `All readPoints downloaded successfully, starting extraction...`,
+        },
+        jobName
+      );
       await browser.close();
 
       for (const zone of zones) {
@@ -333,11 +328,14 @@ export const extractTrayAmount = (date) => {
             console.log(
               `Processing split ${i} for address ${readPoint} in group ${zone.zone}`
             );
-            await updateJob({
-              actualState: "running",
-              lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-              lastLog: `Processing split ${i} for address ${readPoint} in group ${zone.zone}`,
-            });
+            await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: `Processing split ${i} for address ${readPoint} in group ${zone.zone}`,
+              },
+              jobName
+            );
             let results = [];
             if (
               !fs.existsSync(
@@ -395,11 +393,14 @@ export const extractTrayAmount = (date) => {
                   console.log(
                     `Extracted ${results.length} records for address ${readPoint} in group ${zone.zone} for split ${i}`
                   );
-                  await updateJob({
-                    actualState: "running",
-                    lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                    lastLog: `Extracted ${results.length} records for address ${readPoint} in group ${zone.zone} for split ${i}`,
-                  });
+                  await updateJob(
+                    {
+                      actualState: "running",
+                      lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                      lastLog: `Extracted ${results.length} records for address ${readPoint} in group ${zone.zone} for split ${i}`,
+                    },
+                    jobName
+                  );
                   splitGroup = [...splitGroup, ...results];
                   resolve();
                 });
@@ -427,14 +428,17 @@ export const extractTrayAmount = (date) => {
         "Extract tray amount",
         "Extraction completed successfully"
       );
-      await updateJob({
-        actualState: "idle",
-        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        lastLog: `Extraction completed successfully`,
-        endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        args: null,
-        cronExpression: "0 1 * * * ",
-      });
+      await updateJob(
+        {
+          actualState: "idle",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `Extraction completed successfully`,
+          endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          args: null,
+          cronExpression: "0 1 * * * ",
+        },
+        jobName
+      );
 
       // Save data in DB
       for (const zone of zones) {
@@ -472,16 +476,19 @@ export const extractTrayAmount = (date) => {
         console.log(
           `Setting extraction for date ${dayToExtract.format("YYYY-MM-DD")}`
         );
-        await updateJob({
-          actualState: "idle",
-          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          lastLog: `Extraction completed successfully. Setting extraction for date ${dayToExtract.format(
-            "YYYY-MM-DD"
-          )}`,
-          endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          args: `date:${dayToExtract.format("YYYY-MM-DD")}`,
-          cronExpression: dayjs().add(5, "minute").format("m H * * *"),
-        });
+        await updateJob(
+          {
+            actualState: "idle",
+            lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+            lastLog: `Extraction completed successfully. Setting extraction for date ${dayToExtract.format(
+              "YYYY-MM-DD"
+            )}`,
+            endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+            args: `date:${dayToExtract.format("YYYY-MM-DD")}`,
+            cronExpression: dayjs().add(5, "minute").format("m H * * *"),
+          },
+          jobName
+        );
       }
 
       // Set the bot to restart
@@ -503,7 +510,8 @@ export const extractTrayAmount = (date) => {
         actualState: "error",
         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         lastLog: `Error extracting tray amount: ${error.message}`,
-      });
+      }),
+        jobName;
       reject(error);
     }
   });

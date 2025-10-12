@@ -4,6 +4,7 @@ import os from "os";
 import dayjs from "dayjs";
 import csv from "csv-parser";
 import { db } from "../database.js";
+import { updateJob } from "./utils.js";
 
 const ONEDRIVE_BUSINESS_PATH = path.join(os.homedir(), "OneDrive - Migros");
 const WMS_HISTORY_PATH = path.join(
@@ -12,34 +13,6 @@ const WMS_HISTORY_PATH = path.join(
 );
 const START_DATE = dayjs("2025-06-30");
 const jobName = "extractWMS";
-
-function updateJob(data = {}) {
-  return new Promise((resolve, reject) => {
-    db.models.CronJobs.findOne({
-      where: {
-        action: jobName,
-      },
-    })
-      .then((job) => {
-        if (job) {
-          job.update({ ...data }).then(() => {
-            resolve(job);
-          });
-        } else {
-          db.models.CronJobs.create({
-            action: jobName,
-            ...data,
-          }).then((job) => {
-            resolve(job);
-          });
-        }
-      })
-      .catch((error) => {
-        console.error("Error updating job:", error);
-        reject(error);
-      });
-  });
-}
 
 const getDatesInDB = async () => {
   const results = await db.models.ProductionData.findAll({
@@ -52,13 +25,16 @@ const getDatesInDB = async () => {
 
 export const extractWMS = async () => {
   console.log("Starting WMS extraction...");
-  await updateJob({
-    lastRun: new Date(),
-    actualState: "running",
-    lastLog: "Starting WMS extraction...",
-    startAt: new Date(),
-    endAt: null,
-  });
+  await updateJob(
+    {
+      lastRun: new Date(),
+      actualState: "running",
+      lastLog: "Starting WMS extraction...",
+      startAt: new Date(),
+      endAt: null,
+    },
+    jobName
+  );
 
   // Get dates already in the database
   const datesInDB = await getDatesInDB();
@@ -69,10 +45,13 @@ export const extractWMS = async () => {
     (_, i) => START_DATE.add(i, "day").format("YYYY-MM-DD")
   ).filter((date) => !datesInDB.includes(date));
   console.log("Dates to process:", datesToProcess);
-  await updateJob({
-    lastRun: new Date(),
-    lastLog: `Dates to process: ${datesToProcess.join(", ")}`,
-  });
+  await updateJob(
+    {
+      lastRun: new Date(),
+      lastLog: `Dates to process: ${datesToProcess.join(", ")}`,
+    },
+    jobName
+  );
 
   // Process each date
   try {
@@ -86,10 +65,13 @@ export const extractWMS = async () => {
 
         if (!fs.existsSync(path.join(WMS_HISTORY_PATH, fileName))) {
           console.warn(`File ${fileName} does not exist, skipping...`);
-          await updateJob({
-            lastRun: new Date(),
-            lastLog: `File ${fileName} does not exist, skipping...`,
-          });
+          await updateJob(
+            {
+              lastRun: new Date(),
+              lastLog: `File ${fileName} does not exist, skipping...`,
+            },
+            jobName
+          );
           continue;
         }
         getFile = true;
@@ -100,10 +82,13 @@ export const extractWMS = async () => {
             .on("data", (row) => data.push(row))
             .on("end", async () => {
               console.log(`Processed file: ${fileName}`);
-              await updateJob({
-                lastRun: new Date(),
-                lastLog: `Processed file: ${fileName}`,
-              });
+              await updateJob(
+                {
+                  lastRun: new Date(),
+                  lastLog: `Processed file: ${fileName}`,
+                },
+                jobName
+              );
               resolve();
             });
         });
@@ -113,10 +98,13 @@ export const extractWMS = async () => {
         console.warn(
           `No files found for date ${date}, trying to get only one file...`
         );
-        await updateJob({
-          lastRun: new Date(),
-          lastLog: `No files found for date ${date}, trying to get only one file...`,
-        });
+        await updateJob(
+          {
+            lastRun: new Date(),
+            lastLog: `No files found for date ${date}, trying to get only one file...`,
+          },
+          jobName
+        );
         const fileName = `SUIVI_${dayjs(date).format("YYYYMMDD")}.csv`;
         if (fs.existsSync(path.join(WMS_HISTORY_PATH, fileName))) {
           await new Promise((resolve) => {
@@ -125,10 +113,13 @@ export const extractWMS = async () => {
               .on("data", (row) => data.push(row))
               .on("end", async () => {
                 console.log(`Processed file: ${fileName}`);
-                await updateJob({
-                  lastRun: new Date(),
-                  lastLog: `Processed file: ${fileName}`,
-                });
+                await updateJob(
+                  {
+                    lastRun: new Date(),
+                    lastLog: `Processed file: ${fileName}`,
+                  },
+                  jobName
+                );
                 resolve();
               });
           });
@@ -142,10 +133,13 @@ export const extractWMS = async () => {
       const uniqueGrai = [...new Set(graiPalettised)];
       const totalBoxes = uniqueGrai.length;
       console.log(`Total boxes for ${date}: ${totalBoxes}`);
-      await updateJob({
-        lastRun: new Date(),
-        lastLog: `Total boxes for ${date}: ${totalBoxes}`,
-      });
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Total boxes for ${date}: ${totalBoxes}`,
+        },
+        jobName
+      );
 
       // Insert or update the data in the database
       await db.models.ProductionData.create({
@@ -157,28 +151,37 @@ export const extractWMS = async () => {
       });
 
       console.log(`Data for ${date} inserted into database.`);
-      await updateJob({
-        lastRun: new Date(),
-        lastLog: `Data for ${date} inserted into database.`,
-      });
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Data for ${date} inserted into database.`,
+        },
+        jobName
+      );
     }
   } catch (error) {
     console.error(`Failed to process data for date ${date}:`, error);
-    await updateJob({
-      lastRun: new Date(),
-      lastLog: `Failed to process data for date ${date}: ${error.message}`,
-      endAt: new Date(),
-      actualState: "error",
-    });
+    await updateJob(
+      {
+        lastRun: new Date(),
+        lastLog: `Failed to process data for date ${date}: ${error.message}`,
+        endAt: new Date(),
+        actualState: "error",
+      },
+      jobName
+    );
   }
 
   console.log("WMS extraction completed.");
-  await updateJob({
-    lastRun: new Date(),
-    lastLog: "WMS extraction completed.",
-    endAt: new Date(),
-    actualState: "idle",
-  });
+  await updateJob(
+    {
+      lastRun: new Date(),
+      lastLog: "WMS extraction completed.",
+      endAt: new Date(),
+      actualState: "idle",
+    },
+    jobName
+  );
   // Set the bot to restart
   const bot = await db.models.Users.findOne({
     where: { isBot: true },

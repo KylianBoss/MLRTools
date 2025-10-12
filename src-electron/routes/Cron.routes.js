@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import cron from "node-cron";
 import { extractTrayAmount } from "../cron/ExtractTrayAmount.js";
 import { extractWMS } from "../cron/ExtractWMS.js";
+import { extractSAV } from "../cron/ExtractSAV.js";
 
 const router = Router();
 
@@ -71,6 +72,9 @@ router.post("/initialize", async (req, res) => {
 
           case "extractWMS":
             await extractWMS();
+            break;
+          case "extractSAV":
+            await extractSAV();
             break;
         }
       });
