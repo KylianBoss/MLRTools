@@ -73,29 +73,35 @@ export const extractSAV = async () => {
     });
 
     const formattedData = data.map((line) => {
-      const rawData = line.replaceAll('"', "").split(";");
-      if (rawData.length < 11) return null;
-      if (!!!rawData[0].match(/\d/)) return null;
-      const startDate = dayjs(rawData[1], "D MMM YYYY à HH:mm:ss", "fr");
-      const endDate = dayjs(rawData[2], "D MMM YYYY à HH:mm:ss", "fr");
+      const startDate = dayjs(
+        line["Time of occurence"],
+        "D MMM YYYY à HH:mm:ss",
+        "fr"
+      );
+      const endDate = dayjs(
+        line["Acknowledge instant"],
+        "D MMM YYYY à HH:mm:ss",
+        "fr"
+      );
       if (!startDate.isValid() || !endDate.isValid()) return null;
-      if (rawData[7] === "M6009.0306") return null; // Don't put in DB the warning from the shuttle
-      if (rawData[7] === "M6130.0201") return null; // Don't put in DB the warning from the shuttle
-      if (rawData[7] === "M6130.0203") return null; // Don't put in DB the warning from the shuttle
-      if (rawData[7] === "M6130.0202") return null; // Don't put in DB the warning from the shuttle
+      if (line["Alarm code"] === "M6009.0306") return null; // Don't put in DB the warning from the shuttle
+      if (line["Alarm code"] === "M6130.0201") return null; // Don't put in DB the warning from the shuttle
+      if (line["Alarm code"] === "M6130.0203") return null; // Don't put in DB the warning from the shuttle
+      if (line["Alarm code"] === "M6130.0202") return null; // Don't put in DB the warning from the shuttle
       return {
-        dbId: rawData[0],
+        dbId: line["Database ID"],
         timeOfOccurence: startDate.format("YYYY-MM-DD HH:mm:ss"),
         timeOfAcknowledge: endDate.format("YYYY-MM-DD HH:mm:ss"),
         duration: dayjs.duration(endDate.diff(startDate)).asSeconds(),
-        dataSource: rawData[5],
-        alarmArea: rawData[6],
-        alarmCode: rawData[7],
-        alarmText: rawData[8],
-        severity: rawData[9],
-        classification: rawData[10],
-        assignedUser: rawData[12],
-        alarmId: `${rawData[5]}.${rawData[6]}.${rawData[7]}`.toLowerCase(),
+        dataSource: line["Data source"],
+        alarmArea: line["Alarm area"],
+        alarmCode: line["Alarm code"],
+        alarmText: line["Alarm text"],
+        severity: line["Severity"],
+        classification: line["Classification"],
+        assignedUser: line["Assigned user"],
+        alarmId:
+          `${line["Data source"]}.${line["Alarm area"]}.${line["Alarm code"]}`.toLowerCase(),
       };
     });
 
