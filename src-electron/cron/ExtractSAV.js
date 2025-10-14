@@ -73,13 +73,6 @@ export const extractSAV = async () => {
     });
 
     const formattedData = data.map(async (line) => {
-      await updateJob(
-        {
-          lastRun: new Date(),
-          lastLog: `Processing line: ${JSON.stringify(line)} - ${line["Time of occurrence"]}`,
-        },
-        jobName
-      );
       const startDate = dayjs(
         line["Time of occurrence"],
         "D MMM YYYY à HH:mm:ss",
@@ -89,13 +82,6 @@ export const extractSAV = async () => {
         line["Acknowledge instant"],
         "D MMM YYYY à HH:mm:ss",
         "fr"
-      );
-      await updateJob(
-        {
-          lastRun: new Date(),
-          lastLog: `Parsed dates - Start: ${startDate.isValid() ? startDate.format() : 'invalid'} | End: ${endDate.isValid() ? endDate.format() : 'invalid'}`,
-        },
-        jobName
       );
       if (!startDate.isValid() || !endDate.isValid()) return null;
       if (line["Alarm code"] === "M6009.0306") return null; // Don't put in DB the warning from the shuttle
@@ -119,41 +105,31 @@ export const extractSAV = async () => {
       };
     });
 
-    // formattedData.forEach(async (item, index) => {
-    //   await updateJob(
-    //     {
-    //       lastRun: new Date(),
-    //       lastLog: `Processing line ${index + 1} | ${JSON.stringify(item)}`,
-    //     },
-    //     jobName
-    //   );
-    // });
-
-    // const alarms = await db.models.Datalog.bulkCreate(formattedData, {
-    //   updateOnDuplicate: [
-    //     "timeOfOccurence",
-    //     "timeOfAcknowledge",
-    //     "duration",
-    //     "dataSource",
-    //     "alarmArea",
-    //     "alarmCode",
-    //     "alarmText",
-    //     "severity",
-    //     "classification",
-    //     "assignedUser",
-    //     "alarmId",
-    //   ],
-    // });
-    // console.log(
-    //   `Data for ${dateToGet} ${alarms.length} inserted/updated into database.`
-    // );
-    // await updateJob(
-    //   {
-    //     lastRun: new Date(),
-    //     lastLog: `Data for ${dateToGet} ${alarms.length} inserted/updated into database.`,
-    //   },
-    //   jobName
-    // );
+    const alarms = await db.models.Datalog.bulkCreate(formattedData, {
+      updateOnDuplicate: [
+        "timeOfOccurence",
+        "timeOfAcknowledge",
+        "duration",
+        "dataSource",
+        "alarmArea",
+        "alarmCode",
+        "alarmText",
+        "severity",
+        "classification",
+        "assignedUser",
+        "alarmId",
+      ],
+    });
+    console.log(
+      `Data for ${dateToGet} ${alarms.length} inserted/updated into database.`
+    );
+    await updateJob(
+      {
+        lastRun: new Date(),
+        lastLog: `Data for ${dateToGet} ${alarms.length} inserted/updated into database.`,
+      },
+      jobName
+    );
 
     // Keep only unique alarms from the inserted alarms
     const uniqueAlarms = alarms.filter(
@@ -162,13 +138,13 @@ export const extractSAV = async () => {
     );
 
     for (const alarm of uniqueAlarms) {
-      // await db.models.Alarms.upsert({
-      //   alarmId: alarm.alarmId,
-      //   dataSource: alarm.dataSource,
-      //   alarmArea: alarm.alarmArea,
-      //   alarmCode: alarm.alarmCode,
-      //   alarmText: alarm.alarmText,
-      // });
+      await db.models.Alarms.upsert({
+        alarmId: alarm.alarmId,
+        dataSource: alarm.dataSource,
+        alarmArea: alarm.alarmArea,
+        alarmCode: alarm.alarmCode,
+        alarmText: alarm.alarmText,
+      });
     }
     console.log(
       `Alarms table updated with ${uniqueAlarms.length} unique alarms.`
