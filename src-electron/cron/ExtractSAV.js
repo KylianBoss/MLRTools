@@ -72,41 +72,68 @@ export const extractSAV = async () => {
         });
     });
 
-    const formattedData = data
-      .map(async (line) => {
-        const startDate = dayjs(
-          line["Time of occurrence"],
-          "D MMM YYYY à HH:mm:ss",
-          "fr"
-        );
-        const endDate = dayjs(
-          line["Acknowledge instant"],
-          "D MMM YYYY à HH:mm:ss",
-          "fr"
-        );
-        if (!startDate.isValid() || !endDate.isValid()) return null;
-        if (line["Alarm code"] === "M6009.0306") return null; // Don't put in DB the warning from the shuttle
-        if (line["Alarm code"] === "M6130.0201") return null; // Don't put in DB the warning from the shuttle
-        if (line["Alarm code"] === "M6130.0203") return null; // Don't put in DB the warning from the shuttle
-        if (line["Alarm code"] === "M6130.0202") return null; // Don't put in DB the warning from the shuttle
-        return {
-          dbId: line["Database ID"],
-          timeOfOccurence: startDate.format("YYYY-MM-DD HH:mm:ss"),
-          timeOfAcknowledge: endDate.format("YYYY-MM-DD HH:mm:ss"),
-          duration: dayjs.duration(endDate.diff(startDate)).asSeconds(),
-          dataSource: line["Data source"],
-          alarmArea: line["Alarm area"],
-          alarmCode: line["Alarm code"],
-          alarmText: line["Alarm text"],
-          severity: line["Severity"],
-          classification: line["Classification"],
-          assignedUser: line["Assigned user"],
-          alarmId:
-            `${line["Data source"]}.${line["Alarm area"]}.${line["Alarm code"]}`.toUpperCase(),
-        };
-      })
-      .filter((d) => d) // Remove null values
-      .filter((d) => d.alarmId); // Remove empty alarmIds
+    const formattedData = data.map(async (line) => {
+      const startDate = dayjs(
+        line["Time of occurrence"],
+        "D MMM YYYY à HH:mm:ss",
+        "fr"
+      );
+      const endDate = dayjs(
+        line["Acknowledge instant"],
+        "D MMM YYYY à HH:mm:ss",
+        "fr"
+      );
+      if (!startDate.isValid() || !endDate.isValid()) return null;
+
+      const alarmCode = line["Alarm code"];
+      if (!alarmCode || alarmCode.trim() === "") return null; // Skip if no
+
+      const dbId = line["Database ID"];
+      if (!dbId || dbId.trim() === "") return null; // Skip if no DB ID
+
+      const dataSource = line["Data source"];
+      const alarmArea = line["Alarm area"];
+      const alarmText = line["Alarm text"];
+      const severity = line["Severity"];
+      const classification = line["Classification"];
+      const assignedUser = line["Assigned user"];
+      const alarmId = `${dataSource || ""}.${alarmArea || ""}.${
+        alarmCode || ""
+      }`.toUpperCase();
+
+      if (alarmCode === "M6009.0306") return null; // Don't put in DB the warning from the shuttle
+      if (alarmCode === "M6130.0201") return null; // Don't put in DB the warning from the shuttle
+      if (alarmCode === "M6130.0203") return null; // Don't put in DB the warning from the shuttle
+      if (alarmCode === "M6130.0202") return null; // Don't put in DB the warning from the shuttle
+
+      console.log(
+        dbId,
+        startDate,
+        endDate,
+        alarmId,
+        alarmText,
+        severity,
+        classification,
+        assignedUser,
+        dataSource,
+        alarmArea,
+        alarmCode
+      );
+      return {
+        dbId,
+        timeOfOccurence: startDate.format("YYYY-MM-DD HH:mm:ss"),
+        timeOfAcknowledge: endDate.format("YYYY-MM-DD HH:mm:ss"),
+        duration: dayjs.duration(endDate.diff(startDate)).asSeconds(),
+        dataSource,
+        alarmArea,
+        alarmCode,
+        alarmText,
+        severity,
+        classification,
+        assignedUser,
+        alarmId,
+      };
+    });
 
     const alarms = await db.models.Datalog.bulkCreate(formattedData, {
       updateOnDuplicate: [
