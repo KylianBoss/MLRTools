@@ -72,7 +72,15 @@ export const extractSAV = async () => {
         });
     });
 
-    const formattedData = data.map((line) => {
+    const formattedData = data.map(async (line) => {
+      console.log(line);
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Processing line: ${JSON.stringify(line)}`,
+        },
+        jobName
+      );
       const startDate = dayjs(
         line["Time of occurence"],
         "D MMM YYYY à HH:mm:ss",
