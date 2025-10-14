@@ -101,35 +101,46 @@ export const extractSAV = async () => {
         classification: line["Classification"],
         assignedUser: line["Assigned user"],
         alarmId:
-          `${line["Data source"]}.${line["Alarm area"]}.${line["Alarm code"]}`.toLowerCase(),
+          `${line["Data source"]}.${line["Alarm area"]}.${line["Alarm code"]}`.toUpperCase(),
       };
     });
 
-    const alarms = await db.models.Datalog.bulkCreate(formattedData, {
-      updateOnDuplicate: [
-        "timeOfOccurence",
-        "timeOfAcknowledge",
-        "duration",
-        "dataSource",
-        "alarmArea",
-        "alarmCode",
-        "alarmText",
-        "severity",
-        "classification",
-        "assignedUser",
-        "alarmId",
-      ],
+    formattedData.forEach(async (item, index) => {
+      console.log(index, item);
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Processing line ${index + 1} | ${JSON.stringify(item)}`,
+        },
+        jobName
+      );
     });
-    console.log(
-      `Data for ${dateToGet} ${alarms.length} inserted/updated into database.`
-    );
-    await updateJob(
-      {
-        lastRun: new Date(),
-        lastLog: `Data for ${dateToGet} ${alarms.length} inserted/updated into database.`,
-      },
-      jobName
-    );
+
+    // const alarms = await db.models.Datalog.bulkCreate(formattedData, {
+    //   updateOnDuplicate: [
+    //     "timeOfOccurence",
+    //     "timeOfAcknowledge",
+    //     "duration",
+    //     "dataSource",
+    //     "alarmArea",
+    //     "alarmCode",
+    //     "alarmText",
+    //     "severity",
+    //     "classification",
+    //     "assignedUser",
+    //     "alarmId",
+    //   ],
+    // });
+    // console.log(
+    //   `Data for ${dateToGet} ${alarms.length} inserted/updated into database.`
+    // );
+    // await updateJob(
+    //   {
+    //     lastRun: new Date(),
+    //     lastLog: `Data for ${dateToGet} ${alarms.length} inserted/updated into database.`,
+    //   },
+    //   jobName
+    // );
 
     // Keep only unique alarms from the inserted alarms
     const uniqueAlarms = alarms.filter(
@@ -138,13 +149,13 @@ export const extractSAV = async () => {
     );
 
     for (const alarm of uniqueAlarms) {
-      await db.models.Alarms.upsert({
-        alarmId: alarm.alarmId,
-        dataSource: alarm.dataSource,
-        alarmArea: alarm.alarmArea,
-        alarmCode: alarm.alarmCode,
-        alarmText: alarm.alarmText,
-      });
+      // await db.models.Alarms.upsert({
+      //   alarmId: alarm.alarmId,
+      //   dataSource: alarm.dataSource,
+      //   alarmArea: alarm.alarmArea,
+      //   alarmCode: alarm.alarmCode,
+      //   alarmText: alarm.alarmText,
+      // });
     }
     console.log(
       `Alarms table updated with ${uniqueAlarms.length} unique alarms.`
