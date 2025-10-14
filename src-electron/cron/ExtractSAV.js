@@ -73,11 +73,10 @@ export const extractSAV = async () => {
     });
 
     const formattedData = data.map(async (line) => {
-      console.log(line);
       await updateJob(
         {
           lastRun: new Date(),
-          lastLog: `Processing line: ${JSON.stringify(line)}`,
+          lastLog: `Processing line: ${JSON.stringify(line)} - ${line["Time of occurence"]}`,
         },
         jobName
       );
@@ -90,6 +89,13 @@ export const extractSAV = async () => {
         line["Acknowledge instant"],
         "D MMM YYYY à HH:mm:ss",
         "fr"
+      );
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Parsed dates - Start: ${startDate.isValid() ? startDate.format() : 'invalid'} | End: ${endDate.isValid() ? endDate.format() : 'invalid'}`,
+        },
+        jobName
       );
       if (!startDate.isValid() || !endDate.isValid()) return null;
       if (line["Alarm code"] === "M6009.0306") return null; // Don't put in DB the warning from the shuttle
@@ -114,7 +120,6 @@ export const extractSAV = async () => {
     });
 
     formattedData.forEach(async (item, index) => {
-      console.log(index, item);
       await updateJob(
         {
           lastRun: new Date(),
