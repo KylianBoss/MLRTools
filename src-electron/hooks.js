@@ -45,7 +45,7 @@ export default class Hooks {
     const table = instance.constructor.tableName;
     const current = instance.dataValues;
 
-    if (["audits", "RequestLogs"].includes(table.toLowerCase())) return;
+    if (["audits", "requestlogs"].includes(table.toLowerCase())) return;
 
     const new_ = current;
 
