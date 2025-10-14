@@ -72,6 +72,21 @@ function sendNotificationToElectron(title, body) {
   });
 }
 global.sendNotificationToElectron = sendNotificationToElectron;
+function sendCommandToFrontend(command, payload) {
+  const data = JSON.stringify({
+    type: command,
+    ...payload,
+    timestamp: new Date().toISOString(),
+  });
+  electronClients.forEach((client) => {
+    try {
+      client.write(`data: ${data}\n\n`);
+    } catch (error) {
+      console.error("SSE send error:", error);
+    }
+  });
+}
+global.sendCommandToFrontend = sendCommandToFrontend;
 
 // === ROUTES === //
 app.get("/extract/:date", (req, res) => {

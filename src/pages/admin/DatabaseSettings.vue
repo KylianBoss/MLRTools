@@ -67,6 +67,17 @@
         />
       </div>
     </div> -->
+    <div class="row q-py-xs">
+      <div class="col">
+        <q-btn
+          label="Internal route to charts"
+          color="primary"
+          @click="routeToCharts"
+          class="full-width"
+          :loading="DB.loadingState"
+        />
+      </div>
+    </div>
   </q-page>
 </template>
 
@@ -94,43 +105,43 @@ const selectDateToEmpty = () => {
   });
 };
 
-const extractTrayAmount = () => {
-  $q.dialog({
-    title: "Extraire le nombre de trays",
-    message: "Saisir la date pour l'extraction",
-    prompt: {
-      label: "Date",
-      type: "date",
-      mask: "##.##.####",
-      model: null,
-    },
-    cancel: true,
-    persistent: true,
-  }).onOk((data) => {
-    const date = data;
-    api
-      .get(`/extract/${date}`)
-      .then((response) => {
-        if (response.data.success) {
-          $q.notify({
-            type: "positive",
-            message: `Extraction réussie pour la date ${date}`,
-          });
-        } else {
-          $q.notify({
-            type: "negative",
-            message: "Erreur lors de l'extraction des trays",
-          });
-        }
-      })
-      .catch((error) => {
-        $q.notify({
-          type: "negative",
-          message: `Erreur: ${error.message}`,
-        });
-      });
-  });
-};
+// const extractTrayAmount = () => {
+//   $q.dialog({
+//     title: "Extraire le nombre de trays",
+//     message: "Saisir la date pour l'extraction",
+//     prompt: {
+//       label: "Date",
+//       type: "date",
+//       mask: "##.##.####",
+//       model: null,
+//     },
+//     cancel: true,
+//     persistent: true,
+//   }).onOk((data) => {
+//     const date = data;
+//     api
+//       .get(`/extract/${date}`)
+//       .then((response) => {
+//         if (response.data.success) {
+//           $q.notify({
+//             type: "positive",
+//             message: `Extraction réussie pour la date ${date}`,
+//           });
+//         } else {
+//           $q.notify({
+//             type: "negative",
+//             message: "Erreur lors de l'extraction des trays",
+//           });
+//         }
+//       })
+//       .catch((error) => {
+//         $q.notify({
+//           type: "negative",
+//           message: `Erreur: ${error.message}`,
+//         });
+//       });
+//   });
+// };
 
 const askExtractTrayAmount = () => {
   $q.dialog({
@@ -185,6 +196,23 @@ const askBotToRestart = () => {
         });
       });
   });
+};
+
+const routeToCharts = () => {
+  api
+    .get(`/cron/test`)
+    .then((response) => {
+      $q.notify({
+        type: "positive",
+        message: `Commande de routage envoyée au frontend`,
+      });
+    })
+    .catch((error) => {
+      $q.notify({
+        type: "negative",
+        message: `Erreur: ${error.message}`,
+      });
+    });
 };
 </script>
 

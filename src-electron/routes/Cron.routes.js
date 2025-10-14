@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { db } from "../database.js";
 import dayjs from "dayjs";
+import { sendCommandToFrontend } from "../electron-main.js";
 import cron from "node-cron";
 import { extractTrayAmount } from "../cron/ExtractTrayAmount.js";
 import { extractWMS } from "../cron/ExtractWMS.js";
 import { extractSAV } from "../cron/ExtractSAV.js";
+import { sendKPI } from "../cron/SendKPI.js";
 
 const router = Router();
 
@@ -75,6 +77,9 @@ router.post("/initialize", async (req, res) => {
             break;
           case "extractSAV":
             await extractSAV();
+            break;
+          case "sendKPI":
+            await sendKPI();
             break;
         }
       });
@@ -162,6 +167,9 @@ router.post("/start", async (req, res) => {
       case "extractSAV":
         await extractSAV();
         break;
+      case "sendKPI":
+        await sendKPI();
+        break;
       default:
         res.status(400).json({ error: "Unknown action" });
         return;
@@ -172,6 +180,11 @@ router.post("/start", async (req, res) => {
     console.error("Error starting cron job:", error);
     res.status(500).json({ error: error.message });
   }
+});
+// Test router command
+router.get("/test", (req, res) => {
+  global.sendCommandToFrontend("router", { path: "faillures-charts" });
+  res.json({ message: "Cron routes are working!" });
 });
 
 export default router;

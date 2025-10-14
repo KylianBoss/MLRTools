@@ -74,7 +74,10 @@ import CustomChart from "components/charts/CustomChart.vue";
 import { api } from "boot/axios";
 import { ref, onMounted, computed } from "vue";
 import * as htmlToImage from "html-to-image";
+import { useRoute, useRouter } from "vue-router";
 
+const route = useRoute();
+const router = useRouter();
 const locale = [
   {
     name: "fr",
@@ -174,7 +177,7 @@ const fetchCustomCharts = async () => {
   }
 };
 
-const printPDF = async () => {
+const printPDF = async (automated = false) => {
   if (!allLoaded.value) {
     console.warn("Tous les graphiques ne sont pas encore chargés.");
     return;
@@ -215,19 +218,25 @@ const printPDF = async () => {
     }
   }
   // After capturing all charts, you can handle the PDF generation
-  const pdfResponse = await api.get(`/kpi/charts/print/${id}`, {
-    responseType: "blob", // Ensure the response is treated as a blob for PDF
-  });
-  updateProgress();
-  const blob = new Blob([pdfResponse.data], { type: "application/pdf" });
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", `KPI-${new Date().toISOString()}.pdf`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
+  if (automated) {
+    await api.post(`/kpi/charts/print/${id}/finalize-and-send`);
+    window.electron.toggleFullscreenApp();
+    window.electron.minimizeApp();
+  } else {
+    const pdfResponse = await api.get(`/kpi/charts/print/${id}`, {
+      responseType: "blob", // Ensure the response is treated as a blob for PDF
+    });
+    updateProgress();
+    const blob = new Blob([pdfResponse.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `KPI-${new Date().toISOString()}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }
   console.log("PDF generated and downloaded successfully.");
   loading.value = false;
   printing.value = false;
@@ -273,6 +282,17 @@ onMounted(() => {
   fetchGroups();
   fetchCustomCharts();
   fetchAlarmList();
+  if (route.query.automated) {
+    console.log("Lancement automatique de l'impression PDF");
+    window.electron.maximizeApp();
+    window.electron.toggleFullscreenApp();
+    const checkAndPrint = setInterval(() => {
+      if (allLoaded.value) {
+        printPDF(true);
+        clearInterval(checkAndPrint);
+      }
+    }, 1000);
+  }
 });
 </script>
 

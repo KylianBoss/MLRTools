@@ -140,8 +140,10 @@ import { useAppStore } from "stores/app";
 import { api } from "boot/axios";
 import { ref, onMounted } from "vue";
 import { EventSource } from "eventsource";
+import { useRouter } from "vue-router";
 
 const App = useAppStore();
+const router = useRouter();
 
 const cronJobs = ref([]);
 
@@ -208,6 +210,11 @@ onMounted(async () => {
         });
       }, 60000); // every minute
     }
+    window.electron.onRouter((data) => {
+      if (data && data.path) {
+        router.push({ name: data.path, query: { automated: true } });
+      }
+    });
   } catch (error) {
     console.error("Error fetching cron jobs:", error);
   }

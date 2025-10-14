@@ -140,10 +140,14 @@ function connectToServer() {
   eventSource.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      console.log("SSE message recieved:", data);
 
       if (data.type === "notification") {
         showNotification(data.title, data.body);
+      }
+      if (data.type === "router") {
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.send("router", data);
+        }
       }
     } catch (error) {
       console.error("Error parsing SSE:", error);
@@ -160,41 +164,14 @@ function connectToServer() {
     }, 5000);
   };
 }
+// Function to send command to the frontend
+function sendCommandToFrontend(command, payload = {}) {
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send(command, payload || {});
+  }
+}
 
 // IPC communication
-// Handle IPC messages for printing
-ipcMain.handle("print-pdf", async (event, pdfUrl) => {
-  return new Promise((resolve, reject) => {
-    try {
-      // Load the PDF in the hidden window
-      printWindow.loadURL(pdfUrl);
-
-      // Wait for the PDF to load
-      printWindow.webContents.on("did-finish-load", () => {
-        // Open print dialog
-        printWindow.webContents.print(
-          {
-            silent: false,
-            printBackground: true,
-            deviceName: "",
-          },
-          (success, errorType) => {
-            if (success) {
-              resolve({ success: true });
-            } else {
-              if (errorType === "Print job canceled") {
-                resolve({ success: false, canceled: true });
-              }
-              reject(new Error(`Print failed: ${errorType}`));
-            }
-          }
-        );
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
-});
 // Handle IPC to show notifications
 ipcMain.handle("show-notification", (event, { title, body }) => {
   showNotification(title, body);
@@ -203,6 +180,22 @@ ipcMain.handle("show-notification", (event, { title, body }) => {
 ipcMain.handle("minimize-app", () => {
   if (mainWindow) {
     mainWindow.minimize();
+  }
+});
+// Maximize/Restore app
+ipcMain.handle("maximize-restore-app", () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+// Fullscreen app
+ipcMain.handle("toggle-fullscreen-app", () => {
+  if (mainWindow) {
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
   }
 });
 // Restart app
@@ -221,3 +214,7 @@ process.on("uncaughtException", (error) => {
 process.on("unhandledRejection", (reason, promise) => {
   console.error("Promesse rejetée non gérée:", reason);
 });
+
+module.exports = {
+  sendCommandToFrontend,
+};

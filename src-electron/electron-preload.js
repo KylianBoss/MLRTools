@@ -31,38 +31,20 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electron", {
-  // selectFile: (filter) => ipcRenderer.invoke("selectFile", filter),
-  // readLargeFile: (filePath) => {
-  //   return new Promise((resolve, reject) => {
-  //     const chunks = [];
-  //     ipcRenderer.on("fileChunk", (event, chunk) => {
-  //       chunks.push(chunk);
-  //     });
-
-  //     ipcRenderer
-  //       .invoke("readLargeFile", filePath)
-  //       .then(() => resolve(chunks))
-  //       .catch(reject);
-  //   });
-  // },
-  // serverRequest: (method, path, body) =>
-  //   ipcRenderer.invoke("server-request", { method, path, body }),
-  printPDF: (pdfBuffer) => ipcRenderer.invoke("print-pdf", pdfBuffer),
   checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
   downloadUpdate: () => ipcRenderer.invoke("download-update"),
   installUpdate: () => ipcRenderer.invoke("install-update"),
   restartApp: () => ipcRenderer.invoke("restart-app"),
   minimizeApp: () => ipcRenderer.invoke("minimize-app"),
+  maximizeApp: () => ipcRenderer.invoke("maximize-restore-app"),
+  toggleFullscreenApp: () => ipcRenderer.invoke("toggle-fullscreen-app"),
   onUpdateAvailable: (callback) => {
     ipcRenderer.on("update-available", (_event, value) => callback(value));
   },
   removeUpdateListener: () => {
     ipcRenderer.removeAllListeners("update-available");
   },
-  onConsoleFromServer: (callback) => {
-    ipcRenderer.on("console-log", (_event, value) => callback(value));
-  },
-  removeConsoleFromServerListener: () => {
-    ipcRenderer.removeAllListeners("console-log");
+  onRouter: (callback) => {
+    ipcRenderer.on("router", (_event, value) => callback(value));
   },
 });

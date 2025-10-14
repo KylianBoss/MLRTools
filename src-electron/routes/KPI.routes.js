@@ -6,9 +6,11 @@ import { v4 as uuid } from "uuid";
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
+import nodemailer from "nodemailer";
 
 const router = Router();
 const STORAGE_PATH = path.join(process.cwd(), "storage");
+const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 
 router.get("/count", async (req, res) => {
   const { from, to, includesExcluded = false } = req.query;
@@ -370,6 +372,134 @@ router.get("/charts/print", async (req, res) => {
   fs.mkdirSync(path.join(STORAGE_PATH, "prints", id), { recursive: true });
 
   res.json({ id });
+});
+router.post("/charts/print/:id/finalize-and-send", async (req, res) => {
+  const { id } = req.params;
+  const dirPath = path.join(STORAGE_PATH, "prints", id);
+  if (!fs.existsSync(dirPath)) {
+    return res.status(404).json({ error: "Print session not found" });
+  }
+
+  const images = fs
+    .readdirSync(dirPath)
+    .filter((file) => file.endsWith(".png"))
+    .sort((a, b) => {
+      const aIndex = parseInt(a.split(".png")[0]);
+      const bIndex = parseInt(b.split(".png")[0]);
+      return aIndex - bIndex;
+    })
+    .map((file) => fs.readFileSync(path.join(dirPath, file)));
+  if (images.length === 0) {
+    return res.status(404).json({ error: "No images in print session" });
+  }
+  const doc = new PDFDocument({
+    autoFirstPage: false,
+    layout: "landscape",
+    margin: 36,
+  });
+  const buffers = [];
+  doc.on("data", (buffer) => buffers.push(buffer));
+  doc.on("end", () => {
+    console.log("PDF generation completed");
+    const pdfData = Buffer.concat(buffers);
+    fs.writeFileSync(
+      path.join(
+        STORAGE_PATH,
+        "prints",
+        id,
+        `KPI_${dayjs().subtract(1, "day").format("YYYY_MM_DD")}.pdf`
+      ),
+      pdfData
+    );
+
+    // Send by mail
+    const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
+    if (!config.email || !config.email.enabled) {
+      console.log("Email sending is disabled in configuration.");
+      fs.rmSync(dirPath, { recursive: true });
+      return res.sendStatus(200);
+    }
+
+    // Get all users with recieveDailyReport set to true
+    db.models.Users.findAll({
+      where: { recieveDailyReport: true },
+    }).then((users) => {
+      if (!users || users.length === 0) {
+        console.log("No users configured to receive daily report.");
+        fs.rmSync(dirPath, { recursive: true });
+        return res.sendStatus(200);
+      }
+      const recipientEmails = users
+        .map((u) => u.email)
+        .filter((email) => email && email.includes("@"));
+
+      const transporter = nodemailer.createTransport({
+        host: config.email.host,
+        port: config.email.port,
+        secure: false,
+        auth: {
+          user: config.email.user,
+          pass: config.email.pass,
+        },
+      });
+
+      const mailOptions = {
+        // from: `${config.email.fromName} <${config.email.user}>`,
+        from: `${config.email.fromName}`,
+        to: recipientEmails,
+        subject: `KPI Daily Report - ${dayjs()
+          .subtract(1, "day")
+          .format("YYYY-MM-DD")}`,
+        text: `
+Bonjour,
+Hallo,
+Hello,
+
+Voici les KPI machine des 7 derniers jours.
+Hier sind die Maschinen-KPIs der letzten 7 Tage.
+Here are the machine's KPIs for the last 7 days.
+
+Bonne lecture, bonne journée.
+Viel Spaß beim Lesen, einen schönen Tag noch.
+Enjoy your reading, have a nice day.
+
+-----------------------------------------------------------------------
+
+Ceci est un email généré automatiquement, merci de ne pas y répondre.
+Dies ist eine automatisch generierte E-Mail, bitte nicht antworten.
+This is an automatically generated email, please do not reply.`,
+        attachments: [
+          {
+            filename: `KPI_${dayjs()
+              .subtract(1, "day")
+              .format("YYYY_MM_DD")}.pdf`,
+            content: pdfData,
+          },
+        ],
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error("Error sending KPI report email:", error);
+        } else {
+          console.log("KPI report email sent:", info.response);
+        }
+        fs.rmSync(dirPath, { recursive: true });
+      });
+      global.sendCommandToFrontend("router", { path: "home" });
+      res.sendStatus(200);
+    });
+  });
+  images.forEach((image) => {
+    doc.addPage();
+    doc.image(image, {
+      fit: [doc.page.width - 72, doc.page.height - 72],
+      align: "center",
+      valign: "center",
+    });
+    console.log("Added image to PDF");
+  });
+  doc.end();
 });
 router.post("/charts/print/:id", async (req, res) => {
   const { id } = req.params;
