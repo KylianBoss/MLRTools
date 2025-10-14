@@ -76,12 +76,12 @@ export const extractSAV = async () => {
       await updateJob(
         {
           lastRun: new Date(),
-          lastLog: `Processing line: ${JSON.stringify(line)} - ${line["Time of occurence"]}`,
+          lastLog: `Processing line: ${JSON.stringify(line)} - ${line["Time of occurrence"]}`,
         },
         jobName
       );
       const startDate = dayjs(
-        line["Time of occurence"],
+        line["Time of occurrence"],
         "D MMM YYYY à HH:mm:ss",
         "fr"
       );
@@ -119,15 +119,15 @@ export const extractSAV = async () => {
       };
     });
 
-    formattedData.forEach(async (item, index) => {
-      await updateJob(
-        {
-          lastRun: new Date(),
-          lastLog: `Processing line ${index + 1} | ${JSON.stringify(item)}`,
-        },
-        jobName
-      );
-    });
+    // formattedData.forEach(async (item, index) => {
+    //   await updateJob(
+    //     {
+    //       lastRun: new Date(),
+    //       lastLog: `Processing line ${index + 1} | ${JSON.stringify(item)}`,
+    //     },
+    //     jobName
+    //   );
+    // });
 
     // const alarms = await db.models.Datalog.bulkCreate(formattedData, {
     //   updateOnDuplicate: [
