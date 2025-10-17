@@ -107,17 +107,16 @@ export const extractSAV = async () => {
       if (alarmCode === "M6130.0202") return null; // Don't put in DB the warning from the shuttle
 
       console.log(
+        "ALARM",
         dbId,
-        startDate,
-        endDate,
-        alarmId,
+        dataSource,
+        alarmArea,
+        alarmCode,
         alarmText,
         severity,
         classification,
         assignedUser,
-        dataSource,
-        alarmArea,
-        alarmCode
+        alarmId
       );
       return {
         dbId,
@@ -134,6 +133,14 @@ export const extractSAV = async () => {
         alarmId,
       };
     });
+    console.log("Formatted data prepared, inserting into database...");
+    await updateJob(
+      {
+        lastRun: new Date(),
+        lastLog: "Formatted data prepared, inserting into database...",
+      },
+      jobName
+    );
 
     const alarms = await db.models.Datalog.bulkCreate(formattedData, {
       updateOnDuplicate: [
@@ -162,12 +169,20 @@ export const extractSAV = async () => {
     );
 
     // Keep only unique alarms from the inserted alarms
-    const uniqueAlarms = formattedData.filter(
-      (alarm, index, self) =>
-        index === self.findIndex((a) => a.alarmId === alarm.alarmId)
+    const uniqueAlarms = new Set([...alarms].map((a) => a.alarmId));
+    const uniqueAlarmsData = [...uniqueAlarms].map((alarmId) => {
+      return alarms.find((a) => a.alarmId === alarmId);
+    });
+    console.log(`Updating Alarms table with ${uniqueAlarms.length} unique alarms...`);
+    await updateJob(
+      {
+        lastRun: new Date(),
+        lastLog: `Updating Alarms table with ${uniqueAlarms.length} unique alarms...`,
+      },
+      jobName
     );
 
-    for (const alarm of uniqueAlarms) {
+    for (const alarm of uniqueAlarmsData) {
       await db.models.Alarms.upsert({
         alarmId: alarm.alarmId,
         dataSource: alarm.dataSource,

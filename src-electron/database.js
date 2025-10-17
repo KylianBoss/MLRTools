@@ -183,9 +183,11 @@ function initDB(config) {
         dbId: {
           type: DataTypes.INTEGER,
           primaryKey: true,
+          allowNull: false,
         },
         timeOfOccurence: {
           type: DataTypes.DATE,
+          allowNull: false,
         },
         timeOfAcknowledge: {
           type: DataTypes.DATE,
@@ -195,6 +197,7 @@ function initDB(config) {
         },
         dataSource: {
           type: DataTypes.STRING,
+          allowNull: false,
         },
         alarmArea: {
           type: DataTypes.STRING,
@@ -204,6 +207,7 @@ function initDB(config) {
         },
         alarmText: {
           type: DataTypes.STRING,
+          allowNull: false,
         },
         severity: {
           type: DataTypes.STRING,
@@ -218,6 +222,7 @@ function initDB(config) {
         },
         alarmId: {
           type: DataTypes.STRING,
+          allowNull: false,
         },
       },
       {
