@@ -78,6 +78,28 @@
         />
       </div>
     </div>
+    <!-- <div class="row q-py-xs">
+      <div class="col">
+        <q-btn
+          label="Maximise"
+          color="primary"
+          @click="maximise"
+          class="full-width"
+          :loading="DB.loadingState"
+        />
+      </div>
+    </div>
+    <div class="row q-py-xs">
+      <div class="col">
+        <q-btn
+          label="Fullscreen"
+          color="primary"
+          @click="fullscreen"
+          class="full-width"
+          :loading="DB.loadingState"
+        />
+      </div>
+    </div> -->
   </q-page>
 </template>
 
@@ -213,6 +235,14 @@ const routeToCharts = () => {
         message: `Erreur: ${error.message}`,
       });
     });
+};
+
+const maximise = () => {
+  window.electron.maximizeApp();
+};
+
+const fullscreen = () => {
+  window.electron.toggleFullscreenApp();
 };
 </script>
 

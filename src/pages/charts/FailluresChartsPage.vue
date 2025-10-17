@@ -220,7 +220,6 @@ const printPDF = async (automated = false) => {
   // After capturing all charts, you can handle the PDF generation
   if (automated) {
     await api.post(`/kpi/charts/print/${id}/finalize-and-send`);
-    window.electron.toggleFullscreenApp();
     window.electron.minimizeApp();
   } else {
     const pdfResponse = await api.get(`/kpi/charts/print/${id}`, {
@@ -285,7 +284,6 @@ onMounted(() => {
   if (route.query.automated) {
     console.log("Lancement automatique de l'impression PDF");
     window.electron.maximizeApp();
-    window.electron.toggleFullscreenApp();
     const checkAndPrint = setInterval(() => {
       if (allLoaded.value) {
         printPDF(true);

@@ -182,13 +182,19 @@ ipcMain.handle("minimize-app", () => {
     mainWindow.minimize();
   }
 });
-// Maximize/Restore app
-ipcMain.handle("maximize-restore-app", () => {
+// Maximize app
+ipcMain.handle("maximize-app", () => {
+  if (mainWindow) {
+    if (!mainWindow.isMaximized()) {
+      mainWindow.maximize();
+    }
+  }
+});
+// Restore app
+ipcMain.handle("restore-app", () => {
   if (mainWindow) {
     if (mainWindow.isMaximized()) {
       mainWindow.unmaximize();
-    } else {
-      mainWindow.maximize();
     }
   }
 });

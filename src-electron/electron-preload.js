@@ -36,7 +36,8 @@ contextBridge.exposeInMainWorld("electron", {
   installUpdate: () => ipcRenderer.invoke("install-update"),
   restartApp: () => ipcRenderer.invoke("restart-app"),
   minimizeApp: () => ipcRenderer.invoke("minimize-app"),
-  maximizeApp: () => ipcRenderer.invoke("maximize-restore-app"),
+  maximizeApp: () => ipcRenderer.invoke("maximize-app"),
+  restoreApp: () => ipcRenderer.invoke("restore-app"),
   toggleFullscreenApp: () => ipcRenderer.invoke("toggle-fullscreen-app"),
   onUpdateAvailable: (callback) => {
     ipcRenderer.on("update-available", (_event, value) => callback(value));
