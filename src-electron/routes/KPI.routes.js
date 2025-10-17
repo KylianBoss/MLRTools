@@ -444,8 +444,7 @@ router.post("/charts/print/:id/finalize-and-send", async (req, res) => {
       });
 
       const mailOptions = {
-        // from: `${config.email.fromName} <${config.email.user}>`,
-        from: `${config.email.fromName}`,
+        from: `MLR Tool <${config.email.user}>`,
         to: recipientEmails,
         subject: `KPI Daily Report - ${dayjs()
           .subtract(1, "day")
