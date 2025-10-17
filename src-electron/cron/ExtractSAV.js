@@ -72,7 +72,7 @@ export const extractSAV = async () => {
         });
     });
 
-    const formattedData = data.map(async (line) => {
+    const fd = data.map(async (line) => {
       const startDate = dayjs(
         line["Time of occurrence"],
         "D MMM YYYY à HH:mm:ss",
@@ -133,6 +133,7 @@ export const extractSAV = async () => {
         alarmId,
       };
     });
+    const formattedData = (await Promise.all(fd)).filter((d) => d !== null);
     console.log("Formatted data prepared, inserting into database...");
     await updateJob(
       {
@@ -192,12 +193,12 @@ export const extractSAV = async () => {
       });
     }
     console.log(
-      `Alarms table updated with ${uniqueAlarms.length} unique alarms.`
+      `Alarms table updated with ${uniqueAlarmsData.length} unique alarms.`
     );
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: `Alarms table updated with ${uniqueAlarms.length} unique alarms.`,
+        lastLog: `Alarms table updated with ${uniqueAlarmsData.length} unique alarms.`,
       },
       jobName
     );
