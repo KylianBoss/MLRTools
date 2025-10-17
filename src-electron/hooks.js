@@ -25,10 +25,6 @@ export default class Hooks {
       new_[change] = current[change];
     }
 
-    if (!current.id) {
-      console.error("No id in current after update hook");
-    }
-
     const audit = {
       type: "UPDATE",
       table,
@@ -48,10 +44,6 @@ export default class Hooks {
     if (["audits", "requestlogs"].includes(table.toLowerCase())) return;
 
     const new_ = current;
-
-    if (!current.id) {
-      console.error("No id in current after create hook");
-    }
 
     const audit = {
       type: "CREATE",
