@@ -23,7 +23,7 @@ export const sendKPI = async () => {
       lastRun: new Date(),
       lastLog: "SendKPI job completed.",
       endAt: new Date(),
-      actualState: "success",
+      actualState: "idle",
     },
     jobName
   );
