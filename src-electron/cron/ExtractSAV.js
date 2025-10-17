@@ -151,18 +151,18 @@ export const extractSAV = async () => {
       ],
     });
     console.log(
-      `Data for ${dateToGet} ${alarms.length} inserted/updated into database.`
+      `Data for ${dateToGet} ${formattedData.length} inserted/updated into database.`
     );
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: `Data for ${dateToGet} ${alarms.length} inserted/updated into database.`,
+        lastLog: `Data for ${dateToGet} ${formattedData.length} inserted/updated into database.`,
       },
       jobName
     );
 
     // Keep only unique alarms from the inserted alarms
-    const uniqueAlarms = alarms.filter(
+    const uniqueAlarms = formattedData.filter(
       (alarm, index, self) =>
         index === self.findIndex((a) => a.alarmId === alarm.alarmId)
     );
@@ -197,13 +197,6 @@ export const extractSAV = async () => {
       },
       jobName
     );
-    // Set the bot to restart
-    const bot = await db.models.Users.findOne({
-      where: { isBot: true },
-    });
-    if (bot) {
-      bot.update({ needsRestart: true });
-    }
   } catch (error) {
     console.error("Error during SAV extraction:", error);
     await updateJob(
