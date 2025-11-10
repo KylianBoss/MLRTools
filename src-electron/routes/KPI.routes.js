@@ -307,6 +307,10 @@ router.get("/charts/custom/:chartId", async (req, res) => {
   const MOVING_AVERAGE_WINDOW = await db.models.Settings.getValue(
     "MOVING_AVERAGE_WINDOW"
   );
+  const CUSTOM_CHART_WINDOW = await db.models.Settings.getValue(
+    "CUSTOM_CHART_WINDOW"
+  );
+  const GRAPH_TABLE_WINDOW = await db.models.Settings.getValue("GRAPH_TABLE_WINDOW");
 
   try {
     const customChartData = await db.models.CustomChart.findByPk(chartId);
@@ -315,9 +319,12 @@ router.get("/charts/custom/:chartId", async (req, res) => {
     }
 
     const chartData = await db.query(
-      "CALL getAlarmDataLast7Days(15, :alarmsIds)",
+      "CALL getAlarmDataLast7Days(:window, :alarmsIds)",
       {
-        replacements: { alarmsIds: customChartData.alarms },
+        replacements: {
+          alarmsIds: customChartData.alarms,
+          window: CUSTOM_CHART_WINDOW,
+        },
       }
     );
 
@@ -326,6 +333,7 @@ router.get("/charts/custom/:chartId", async (req, res) => {
 
       return {
         ...data,
+        graphTableWindow: GRAPH_TABLE_WINDOW,
         dailyBreakdown: dailyBreakdown.map((item, index) => {
           const start = Math.max(0, index - windowSize + 1);
           const window = dailyBreakdown

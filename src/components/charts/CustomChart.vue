@@ -135,7 +135,7 @@ const chartOptions = ref({
   },
   dataLabels: {
     enabled: true,
-    enabledOnSeries: [0, 0],
+    enabledOnSeries: [],
     offsetY: -10,
   },
   series: [],
@@ -174,9 +174,10 @@ const getData = async () => {
     .get(`/kpi/charts/custom/${props.chartData.id}`)
     .catch(() => ({ data: [] }));
   const dailyBreakdown = response.data.dailyBreakdown;
+  const graphTableWindow = response.data.graphTableWindow;
 
   const { tableRows, tableColumns } = formatDataForTable(
-    dailyBreakdown,
+    dailyBreakdown.slice(dailyBreakdown.length - graphTableWindow),
     response.data.totalOccurrences
   );
   rows.value = tableRows;
@@ -399,14 +400,14 @@ const formatDataForTable = (data, totalOccurrences) => {
     dataSource: "Total erreurs",
     alarmArea: "----",
     error: totalOccurrences,
-    ...Object.fromEntries(sortedDates.map((date) => [date, -1])),
+    ...Object.fromEntries(sortedDates.map((date) => [date, data.find((d) => d.date === date)?.total_count || -1])),
   });
 
   return { tableRows, tableColumns };
 };
 
 const cellFormat = (value, row) => {
-  if (row.dataSource === "----") return "text-dark text-bold bg-blue-3";
+  if (row.alarmArea === "----") return "text-dark text-bold bg-blue-3";
   if (value === null || value === undefined) return "text-grey bg-grey";
   if (value === 0) return "text-grey bg-grey";
   if (value === -1) return "text-white";
