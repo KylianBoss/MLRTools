@@ -252,7 +252,7 @@
             :options="chartOptions"
             :series="chartOptions.series"
             :key="chartOptions.series.length"
-            v-if="getData"
+            v-if="getData && false"
           />
           <q-btn
             flat
