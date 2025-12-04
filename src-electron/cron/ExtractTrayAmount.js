@@ -104,7 +104,7 @@ export const extractTrayAmount = (date, headless = true) => {
 
       // Setup puppeteer
       const browser = await puppeteer.launch({
-        headless,
+        headless: headless,
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
