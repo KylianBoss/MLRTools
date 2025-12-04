@@ -202,6 +202,14 @@ export const extractTrayAmount = (date, headless = true) => {
             await messageTypeInput.type(zone.messageType);
 
             console.log("Filling form...");
+            await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: `Sending form for : ${zone.zone} - ${readPoint} - Split: ${i}`,
+              },
+              jobName
+            );
             await Promise.all([
               page.waitForNavigation({
                 waitUntil: "networkidle0",
@@ -210,12 +218,29 @@ export const extractTrayAmount = (date, headless = true) => {
               page.click('input[name="Search"]'),
             ]);
 
+            await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: `Form loaded for : ${zone.zone} - ${readPoint} - Split: ${i}`,
+              },
+              jobName
+            );
+
             await page.waitForSelector('a[href*=".csv"]', {
               timeout: 120000,
             });
 
             const pageContent = await page.content();
             if (pageContent.includes("Aucun jeu de données")) {
+              await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: `Nothing to import from : ${zone.zone} - ${readPoint} - Split: ${i}`,
+              },
+              jobName
+            );
               i++;
               continue;
             }
