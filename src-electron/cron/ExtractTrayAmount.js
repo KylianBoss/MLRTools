@@ -185,6 +185,16 @@ export const extractTrayAmount = (date, headless = true) => {
               !addressInput ||
               !messageTypeInput
             ) {
+              await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: `An error has occured, one of the input field was not found on the page`,
+                endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                actualState: 'error'
+              },
+              jobName
+            );
               throw new Error("One or more input fields not found on the page");
             }
 
