@@ -8,7 +8,7 @@ import { updateJob } from "./utils.js";
 
 const jobName = "extractTrayAmount";
 
-export const extractTrayAmount = (date) => {
+export const extractTrayAmount = (date, headless = true) => {
   return new Promise(async (resolve, reject) => {
     try {
       await updateJob(
@@ -17,6 +17,7 @@ export const extractTrayAmount = (date) => {
           lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
           lastLog: `Starting extraction job`,
           startAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          endAt: null,
         },
         jobName
       );
@@ -103,7 +104,7 @@ export const extractTrayAmount = (date) => {
 
       // Setup puppeteer
       const browser = await puppeteer.launch({
-        headless: true,
+        headless,
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
