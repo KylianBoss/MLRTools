@@ -188,16 +188,48 @@ export const extractTrayAmount = (date, headless = true) => {
               throw new Error("One or more input fields not found on the page");
             }
 
+            await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: `Filling start date : ${dayjs(split.start).format("DD.MM.YYYY HH:mm:ss")}`,
+              },
+              jobName
+            );
             await clearInput(startDateInput, page);
             await startDateInput.type(
               dayjs(split.start).format("DD.MM.YYYY HH:mm:ss")
+            );
+            await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: `Filling end date : ${dayjs(split.end).format("DD.MM.YYYY HH:mm:ss")}`,
+              },
+              jobName
             );
             await clearInput(endDateInput, page);
             await endDateInput.type(
               dayjs(split.end).format("DD.MM.YYYY HH:mm:ss")
             );
+            await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: `Filling address : ${readPoint}`,
+              },
+              jobName
+            );
             await clearInput(addressInput, page);
             await addressInput.type(readPoint);
+            await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: `Filling message type : ${zone.messageType}`,
+              },
+              jobName
+            );
             await clearInput(messageTypeInput, page);
             await messageTypeInput.type(zone.messageType);
 
