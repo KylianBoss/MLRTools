@@ -51,6 +51,7 @@ router.post("/initialize", async (req, res) => {
         switch (job.action) {
           case "extractTrayAmount":
             let date = dayjs().subtract(1, "day").format("YYYY-MM-DD");
+            let headless = true;
             if (job.args) {
               // date: YYYY-MM-DD, runNow: true/false (this is just a string)
               const args = job.args.split(",");
@@ -67,9 +68,12 @@ router.post("/initialize", async (req, res) => {
                     );
                   }
                 }
+                if (key === "headless") {
+                  headless = value;
+                }
               });
             }
-            extractTrayAmount(date);
+            extractTrayAmount(date, headless);
             break;
 
           case "extractWMS":
