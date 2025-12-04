@@ -61,7 +61,6 @@ router.post("/initialize", async (req, res) => {
                   if (dayjs(value, "YYYY-MM-DD", true).isValid()) {
                     date = value;
                     job.lastLog = `Using date from cron job args: ${date}`;
-                    job.save();
                   } else {
                     console.warn(
                       `Invalid date format in cron job args: ${value}, using default date ${date}`
@@ -70,8 +69,10 @@ router.post("/initialize", async (req, res) => {
                 }
                 if (key === "headless") {
                   headless = value;
+                  job.lastLog += `, headless mode => ${headless}`;
                 }
               });
+              job.save();
             }
             extractTrayAmount(date, headless);
             break;
