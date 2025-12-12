@@ -58,7 +58,7 @@ export const extractWMS = async () => {
     for (const date of datesToProcess) {
       const data = [];
       let getFile = false;
-      for (let i = 0; i < 23; i++) {
+      for (let i = 0; i < 24; i++) {
         const fileName = `SUIVI_${dayjs(date).format("YYYYMMDD")}_${i
           .toString()
           .padStart(2, "0")}.csv`;
