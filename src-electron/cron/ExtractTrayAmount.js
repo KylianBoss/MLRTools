@@ -346,7 +346,14 @@ export const extractTrayAmount = (date, headless = true) => {
           "utf8"
         )
           .pipe(csv({ separator: ";" }))
-          .on("data", (row) => data.push(row))
+          .on("data", async (row) => {
+            data.push(row);
+            await updateJob({
+              actualState: "running",
+              lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+              lastLog: row,
+            });
+          })
           .on("end", async () => {
             console.log("CSV file processed successfully");
             await updateJob(
@@ -354,14 +361,6 @@ export const extractTrayAmount = (date, headless = true) => {
                 actualState: "running",
                 lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
                 lastLog: `CSV file processed successfully!`,
-              },
-              jobName
-            );
-            await updateJob(
-              {
-                actualState: "running",
-                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                lastLog: data,
               },
               jobName
             );
