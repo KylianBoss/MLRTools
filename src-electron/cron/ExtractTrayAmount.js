@@ -152,6 +152,15 @@ export const extractTrayAmount = (date, headless = true) => {
       );
       await sleep(2000);
 
+      console.log("Navigating to report page...");
+      await updateJob(
+        {
+          actualState: "running",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `Navigating to report page...`,
+        },
+        jobName
+      );
       await page.goto(
         "https://10.95.62.134:8443/infosystem/protected/report.jspa?categorizeable=report.1746609396042&pageFlowSequence=54&category=category.myReports&reload=false&view=",
         {
@@ -184,6 +193,16 @@ export const extractTrayAmount = (date, headless = true) => {
       await clearInput(endDateInput, page);
       await endDateInput.type(dateEnd.format("DD.MM.YYYY HH:mm:ss"));
 
+      console.log("Loading the report...");
+      await updateJob(
+        {
+          actualState: "running",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `Loading the report...`,
+        },
+        jobName
+      );
+
       await Promise.all([
         page.waitForNavigation({
           waitUntil: "networkidle0",
@@ -192,11 +211,12 @@ export const extractTrayAmount = (date, headless = true) => {
         page.click('input[name="Search"]'),
       ]);
 
+      console.log("Report loaded!");
       await updateJob(
         {
           actualState: "running",
           lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          lastLog: `Form loaded!`,
+          lastLog: `Report loaded!`,
         },
         jobName
       );
@@ -340,15 +360,22 @@ export const extractTrayAmount = (date, headless = true) => {
             resolve();
           });
       });
+      console.log(data);
+      await updateJob(
+        {
+          actualState: "running",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: data,
+        },
+        jobName
+      );
 
       // Process data
       for (const zone of zones) {
         zone.readPoints = zone.readPoints.split(",");
         zone.total = 0;
 
-        const zoneData = data.filter((d) =>
-          zone.readPoints.includes(d.LABEL)
-        );
+        const zoneData = data.filter((d) => zone.readPoints.includes(d.LABEL));
 
         zone.total = zoneData.reduce((sum, record) => {
           const count = parseInt(record.VALUE, 10);
