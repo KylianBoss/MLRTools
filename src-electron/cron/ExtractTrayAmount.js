@@ -243,7 +243,6 @@ export const extractTrayAmount = (date, headless = true) => {
           `No data to extract for date ${date}`
         );
         await browser.close();
-        resolve(zones);
         return;
       }
 
@@ -367,7 +366,7 @@ export const extractTrayAmount = (date, headless = true) => {
 
       // Process data
       for (const zone of zones) {
-        zone.readPoints = zone.readPoints.split(",");
+        zone.readPoints = zone.readPoints;
         zone.total = 0;
 
         const zoneData = data.filter((d) => zone.readPoints.includes(d.LABEL));
