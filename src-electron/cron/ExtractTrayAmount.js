@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { db } from "../database.js";
-import fs from "fs";
+import fs, { readFileSync } from "fs";
 import path from "path";
 import puppeteer from "puppeteer";
 import csv from "csv-parser";
@@ -302,12 +302,7 @@ export const extractTrayAmount = (date, headless = true) => {
               "downloads",
               "Compteurs scanners.csv"
             ),
-            path.join(
-              process.cwd(),
-              "storage",
-              "downloads",
-              FILENAME(date)
-            )
+            path.join(process.cwd(), "storage", "downloads", FILENAME(date))
           );
           return resolve();
         });
@@ -335,43 +330,41 @@ export const extractTrayAmount = (date, headless = true) => {
       );
       await browser.close();
 
-      if (!fs.existsSync(path.join(process.cwd(), "storage", "downloads", FILENAME(date)))) {
+      if (
+        !fs.existsSync(
+          path.join(process.cwd(), "storage", "downloads", FILENAME(date))
+        )
+      ) {
         throw new Error("Downloaded CSV file not found");
       }
 
-      const data = [];
-      await new Promise((resolve) => {
-        fs.createReadStream(
-          path.join(
-            process.cwd(),
-            "storage",
-            "downloads",
-            FILENAME(date)
-          ),
-          "utf8"
-        )
-          .pipe(csv({ separator: ";" }))
-          .on("data", async (row) => {
-            data.push(row);
-            await updateJob({
-              actualState: "running",
-              lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-              lastLog: row,
-            });
-          })
-          .on("end", async () => {
-            console.log("CSV file processed successfully");
-            await updateJob(
-              {
-                actualState: "running",
-                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                lastLog: `CSV file processed successfully!`,
-              },
-              jobName
-            );
-            resolve();
-          });
-      });
+      // The file look like this:
+      // "LABEL";"VALUE"
+      // "X001";"1234"
+      // ...
+
+      const file = fs.readFileSync(
+        path.join(process.cwd(), "storage", "downloads", FILENAME(date)),
+        "utf8"
+      );
+      const data = file
+        .split("\n")
+        .slice(1)
+        .map((line) => {
+          const [label, value] = line.replace(/"/g, "").split(";");
+          return { LABEL: label, VALUE: Number(value) };
+        });
+
+      console.log("CSV file processed successfully");
+      await updateJob(
+        {
+          actualState: "running",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `CSV file processed successfully!`,
+        },
+        jobName
+      );
+
       console.log(data);
       await updateJob(
         {
