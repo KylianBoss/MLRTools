@@ -357,6 +357,14 @@ export const extractTrayAmount = (date, headless = true) => {
               },
               jobName
             );
+            await updateJob(
+              {
+                actualState: "running",
+                lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                lastLog: data,
+              },
+              jobName
+            );
             resolve();
           });
       });
