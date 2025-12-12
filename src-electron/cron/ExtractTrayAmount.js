@@ -352,7 +352,7 @@ export const extractTrayAmount = (date, headless = true) => {
         .slice(1)
         .map((line) => {
           const [label, value] = line.replace(/"/g, "").split(";");
-          return { LABEL: label, VALUE: Number(value) };
+          return { LABEL: label, VALUE: parseInt(value) };
         });
 
       console.log("CSV file processed successfully");
@@ -365,16 +365,6 @@ export const extractTrayAmount = (date, headless = true) => {
         jobName
       );
 
-      console.log(data);
-      await updateJob(
-        {
-          actualState: "running",
-          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          lastLog: data,
-        },
-        jobName
-      );
-
       // Process data
       for (const zone of zones) {
         zone.readPoints = zone.readPoints.split(",");
@@ -383,7 +373,7 @@ export const extractTrayAmount = (date, headless = true) => {
         const zoneData = data.filter((d) => zone.readPoints.includes(d.LABEL));
 
         zone.total = zoneData.reduce((sum, record) => {
-          const count = parseInt(record.VALUE, 10);
+          const count = record.VALUE;
           return sum + (isNaN(count) ? 0 : count);
         });
       }
