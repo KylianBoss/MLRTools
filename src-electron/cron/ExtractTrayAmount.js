@@ -366,15 +366,10 @@ export const extractTrayAmount = (date, headless = true) => {
 
       // Process data
       for (const zone of zones) {
-        zone.readPoints = zone.readPoints;
         zone.total = 0;
 
         const zoneData = data.filter((d) => zone.readPoints.includes(d.LABEL));
-
-        zone.total = zoneData.reduce((sum, record) => {
-          const count = record.VALUE;
-          return sum + (isNaN(count) ? 0 : count);
-        });
+        zone.total = zoneData.reduce((sum, record) => sum + record.VALUE, 0);
       }
 
       console.log("Extraction completed successfully");
@@ -384,7 +379,7 @@ export const extractTrayAmount = (date, headless = true) => {
       );
       await updateJob(
         {
-          actualState: "idle",
+          actualState: "running",
           lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
           lastLog: `Extraction completed successfully`,
         },
