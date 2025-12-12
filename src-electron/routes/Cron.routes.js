@@ -91,7 +91,8 @@ router.post("/initialize", async (req, res) => {
                     await extractWMS();
                   }
                 }
-              }
+              });
+              job.save();
             } else {
               await extractWMS();
             }
