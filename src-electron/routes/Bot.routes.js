@@ -126,6 +126,47 @@ router.post("/ask/extract", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+router.post("/ask/extractWMS", async (req, res) => {
+  const { date } = req.body;
+  if (!date || !dayjs(date, "YYYY-MM-DD", true).isValid()) {
+    return res.status(400).json({ error: "Valid date (YYYY-MM-DD) is required" });
+  }
+  try {
+    const bots = await db.models.Users.findAll({
+      where: { isBot: true },
+      limit: 1,
+    });
+
+    if (bots.length === 0) {
+      return res.status(404).json({ error: "No bot users found" });
+    }
+
+    const bot = bots[0];
+    bot.needsRestart = true;
+    await bot.save();
+
+    const cronJob = await db.models.CronJobs.findOne({
+      where: { action: "extractWMS" },
+    });
+    if (!cronJob) {
+      return res.status(404).json({ error: "Cron job 'extractTrayAmount' not found" });
+    }
+
+    let args = `date:${date}`;
+    const cronExpression = dayjs().add(3, "minute").format("m H * * *");
+    cronJob.args = args;
+    cronJob.cronExpression = cronExpression;
+    cronJob.lastLog = `Manual trigger for date ${date} at ${dayjs().format(
+      "YYYY-MM-DD HH:mm"
+    )}`;
+    await cronJob.save();
+
+    return res.json({ message: "Extraction job scheduled successfully" });
+  } catch (error) {
+    console.error("Error scheduling extraction job:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 router.post("/ask/restart", async (req, res) => {
   try {
     const bots = await db.models.Users.findAll({
