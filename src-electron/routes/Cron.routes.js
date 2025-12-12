@@ -80,7 +80,7 @@ router.post("/initialize", async (req, res) => {
           case "extractWMS":
             if (job.args) {
               const args = job.args.split(",");
-              args.forEach((arg) => {
+              args.forEach(async (arg) => {
                 const [key, value] = arg.split(":").map((s) => s.trim());
                 if (key === "date") {
                   if (dayjs(value, "YYYY-MM-DD", true).isValid()) {
