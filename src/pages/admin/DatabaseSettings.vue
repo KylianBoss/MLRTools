@@ -37,6 +37,17 @@
     <div class="row q-py-xs">
       <div class="col">
         <q-btn
+          label="Demander au bot d'extraire le WMS pour une date"
+          color="primary"
+          @click="askExtractWMS"
+          class="full-width"
+          :loading="DB.loadingState"
+        />
+      </div>
+    </div>
+    <div class="row q-py-xs">
+      <div class="col">
+        <q-btn
           label="Demander au bot d'extraire le nombre de trays pour une date"
           color="primary"
           @click="askExtractTrayAmount"
@@ -185,6 +196,37 @@ const askExtractTrayAmount = () => {
         $q.notify({
           type: "positive",
           message: `Le bot a été notifié pour extraire les trays le ${date}`,
+        });
+      })
+      .catch((error) => {
+        $q.notify({
+          type: "negative",
+          message: `Erreur: ${error.message}`,
+        });
+      });
+  });
+};
+
+const askExtractWMS = () => {
+  $q.dialog({
+    title: "Demander au bot d'extraire le WMS",
+    message: "Saisir la date pour l'extraction",
+    prompt: {
+      label: "Date",
+      type: "date",
+      mask: "##.##.####",
+      model: null,
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk((data) => {
+    const date = data;
+    api
+      .post(`/bot/ask/extractWMS`, { date })
+      .then((response) => {
+        $q.notify({
+          type: "positive",
+          message: `Le bot a été notifié pour extraire le WMS pour le ${date}`,
         });
       })
       .catch((error) => {
