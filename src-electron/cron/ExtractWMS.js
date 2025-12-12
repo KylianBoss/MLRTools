@@ -179,6 +179,7 @@ export const extractWMS = async (manualDate = null) => {
       lastLog: "WMS extraction completed.",
       endAt: new Date(),
       actualState: "idle",
+      cronExpression: "30 0 * * *",
     },
     jobName
   );
