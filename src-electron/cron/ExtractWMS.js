@@ -23,13 +23,13 @@ const getDatesInDB = async () => {
   return results.map((r) => dayjs(r.date).format("YYYY-MM-DD"));
 };
 
-export const extractWMS = async () => {
+export const extractWMS = async (manualDate = null) => {
   console.log("Starting WMS extraction...");
   await updateJob(
     {
       lastRun: new Date(),
       actualState: "running",
-      lastLog: "Starting WMS extraction...",
+      lastLog: manualDate ? `Starting WMS extraction for the ${dayjs(manualDate).format('DD.MM.YYYY')}...` : "Starting WMS extraction...",
       startAt: new Date(),
       endAt: null,
     },
@@ -37,10 +37,10 @@ export const extractWMS = async () => {
   );
 
   // Get dates already in the database
-  const datesInDB = await getDatesInDB();
+  const datesInDB = manualDate ? null : await getDatesInDB();
 
   // Dates to process since the START_DATE and to yesterday
-  const datesToProcess = Array.from(
+  const datesToProcess = manualDate ? [manualDate] : Array.from(
     { length: dayjs().diff(START_DATE, "day") },
     (_, i) => START_DATE.add(i, "day").format("YYYY-MM-DD")
   ).filter((date) => !datesInDB.includes(date));
@@ -142,7 +142,7 @@ export const extractWMS = async () => {
       );
 
       // Insert or update the data in the database
-      await db.models.ProductionData.create({
+      await db.models.ProductionData.upsert({
         date: dayjs(date).toDate(),
         start: dayjs(date).startOf("day").toDate(),
         end: dayjs(date).endOf("day").toDate(),
