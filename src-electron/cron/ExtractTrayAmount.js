@@ -7,6 +7,7 @@ import csv from "csv-parser";
 import { updateJob } from "./utils.js";
 
 const jobName = "extractTrayAmount";
+const FILENAME = (date) => `Compteurs_${dayjs(date).format("YYYYMMDD")}.csv`;
 
 export const extractTrayAmount = (date, headless = true) => {
   return new Promise(async (resolve, reject) => {
@@ -305,7 +306,7 @@ export const extractTrayAmount = (date, headless = true) => {
               process.cwd(),
               "storage",
               "downloads",
-              `Compteurs_${dateStart.format("YYYYMMDD")}.csv`
+              FILENAME(date)
             )
           );
           return resolve();
@@ -334,6 +335,10 @@ export const extractTrayAmount = (date, headless = true) => {
       );
       await browser.close();
 
+      if (!fs.existsSync(path.join(process.cwd(), "storage", "downloads", FILENAME(date)))) {
+        throw new Error("Downloaded CSV file not found");
+      }
+
       const data = [];
       await new Promise((resolve) => {
         fs.createReadStream(
@@ -341,7 +346,7 @@ export const extractTrayAmount = (date, headless = true) => {
             process.cwd(),
             "storage",
             "downloads",
-            `Compteurs_${dateStart.format("YYYYMMDD")}.csv`
+            FILENAME(date)
           ),
           "utf8"
         )

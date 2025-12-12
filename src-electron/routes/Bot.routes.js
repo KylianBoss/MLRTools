@@ -112,7 +112,7 @@ router.post("/ask/extract", async (req, res) => {
     }
 
     let args = `date:${date}`;
-    const cronExpression = dayjs().add(5, "minute").format("m H * * *");
+    const cronExpression = dayjs().add(3, "minute").format("m H * * *");
     cronJob.args = args;
     cronJob.cronExpression = cronExpression;
     cronJob.lastLog = `Manual trigger for date ${date} at ${dayjs().format(
