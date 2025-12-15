@@ -17,8 +17,8 @@
           @click="rightDrawerOpen = !rightDrawerOpen"
           class="q-ml-sm"
         >
-          <q-badge color="red" floating v-if="errors.length > 0">
-            {{ errors.length }}
+          <q-badge color="red" floating v-if="notifications.length > 0">
+            {{ notifications.length }}
           </q-badge>
         </q-btn>
       </q-toolbar>
@@ -165,39 +165,6 @@
               label="Lieux suspects"
             />
           </q-expansion-item>
-          <!-- MAINTENANCE -->
-          <q-expansion-item
-            expand-separator
-            icon="mdi-wrench"
-            label="Maintenance"
-            v-model="drawers[4]"
-            v-if="App.isTechnician || App.isAdmin"
-          >
-            <drawer-item
-              to="maintenances-scheduled"
-              autorisation="*"
-              icon="mdi-timetable"
-              label="Maintenances plannifiées"
-            />
-            <drawer-item
-              to="maintenance-plans"
-              autorisation="maintenance-plans"
-              icon="mdi-format-list-checks"
-              label="Plans de maintenance"
-            />
-            <!-- <drawer-item
-              to="maintenance-steps"
-              autorisation="*"
-              icon="mdi-content-paste"
-              label="Étapes de maintenance"
-            /> -->
-            <drawer-item
-              to="maintenance-reports"
-              autorisation="maintenance-reports"
-              icon="mdi-file-document-outline"
-              label="Rapports de maintenance"
-            />
-          </q-expansion-item>
           <!-- ADMINISTRATION -->
           <q-expansion-item
             expand-separator
@@ -223,7 +190,7 @@
       </q-scroll-area>
     </q-drawer>
 
-    <!-- ERRORS -->
+    <!-- NOTIFICATIONS -->
     <q-drawer
       v-model="rightDrawerOpen"
       :breakpoint="500"
@@ -232,25 +199,52 @@
       dense
       overlay
     >
-      <q-scroll-area class="fit q-pa-sm">
+      <q-scroll-area class="fit q-py-sm">
         <q-list>
-          <q-item-label class="text-h6 q-mb-md">Erreurs</q-item-label>
-          <q-item v-for="(error, index) in errors" :key="index" class="-mb-sm">
-            <q-item-section avatar>
+          <q-item-label class="text-h6 q-mb-md q-px-sm"
+            >Notifications</q-item-label
+          >
+          <q-item
+            v-for="(notif, index) in notifications"
+            :key="index"
+            class="q-pa-none q-ma-none"
+            :class="{ 'bg-grey-2': !notif.read }"
+          >
+            <q-item-section avatar class="q-px-xs col-auto text-left">
               <q-icon
-                v-if="error.type === 'error'"
-                name="mdi-alert"
-                color="red"
+                :name="getNotificationData(notif).icon"
+                :color="getNotificationData(notif).color"
               />
             </q-item-section>
-            <q-item-section>
-              <q-item-label>{{ error.message }}</q-item-label>
+            <q-item-section class="text-left">
+              <q-item-label>{{ notif.message }}</q-item-label>
             </q-item-section>
-            <q-separator v-if="index < errors.length - 1" class="q-mt-sm" />
+            <q-item-section side class="col-auto text-right">
+              <q-btn
+                flat
+                dense
+                icon="mdi-eye-off-outline"
+                @click="readNotification(notif)"
+                v-if="!notif.read"
+              />
+              <q-btn
+                flat
+                dense
+                icon="mdi-delete-outline"
+                @click="deleteNotification(notif)"
+                v-else
+              />
+            </q-item-section>
+            <q-separator
+              v-if="index < notifications.length - 1"
+              class="q-mt-sm"
+            />
           </q-item>
-          <q-item v-if="errors.length === 0">
+          <q-item v-if="notifications.length === 0">
             <q-item-section>
-              <q-item-label class="text-center">Aucune erreur</q-item-label>
+              <q-item-label class="text-center">
+                Aucune notification
+              </q-item-label>
             </q-item-section>
           </q-item>
         </q-list>
@@ -332,12 +326,11 @@ const dataLogStore = useDataLogStore();
 const banners = ref({
   "tgw-report-zones": false,
 });
+const notifications = ref([]);
 
 const closeDrawers = () => {
   drawers.value = [];
 };
-
-const errors = ref([]);
 
 watch(miniState, (value) => {
   if (value) closeDrawers();
@@ -347,7 +340,7 @@ const getBotsStatus = async () => {
   try {
     const response = await api.get("/bot/status");
     if (response.data && response.data.length === 0) {
-      errors.value.push({
+      notifications.value.push({
         message: "Aucun bot programmé",
         type: "error",
       });
@@ -359,16 +352,73 @@ const getBotsStatus = async () => {
         }
       });
       if (!isOneBotActive) {
-        errors.value.push({
+        notifications.value.push({
           message: "Aucun bot actif",
           type: "error",
         });
       }
-    } else {
-      errors.value = [];
     }
   } catch (error) {
     console.error("Error fetching bot status:", error);
+  }
+};
+
+const getNotifications = async () => {
+  try {
+    const response = await api.get(`/notifications/${App.user.id}`);
+    notifications.value = response.data || [];
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+  }
+};
+
+const getNotificationData = (notification) => {
+  switch (notification.type) {
+    case "error":
+      return {
+        icon: "mdi-alert",
+        color: "red",
+      };
+    case "info":
+      return {
+        icon: "mdi-information-outline",
+        color: "blue",
+      };
+    case "warning":
+      return {
+        icon: "mdi-alert-outline",
+        color: "orange",
+      };
+    case "success":
+      return {
+        icon: "mdi-check-circle-outline",
+        color: "green",
+      };
+    default:
+      return {
+        icon: "mdi-bell-outline",
+        color: "primary",
+      };
+  }
+};
+
+const readNotification = async (notification) => {
+  try {
+    await api.post(`/notifications/read/${notification.id}`);
+    notification.read = true;
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
+  }
+};
+
+const deleteNotification = async (notification) => {
+  try {
+    await api.delete(`/notifications/${notification.id}`);
+    notifications.value = notifications.value.filter(
+      (notif) => notif.id !== notification.id
+    );
+  } catch (error) {
+    console.error("Error deleting notification:", error);
   }
 };
 
@@ -378,7 +428,9 @@ onMounted(async () => {
   loaded.value = true;
   if (App.isAdmin) {
     getBotsStatus();
+    getNotifications();
     setInterval(getBotsStatus, 60000); // every minute
+    setInterval(getNotifications, 60000); // every minute
   }
   if (App.isBot) {
     window.electron.minimizeApp();

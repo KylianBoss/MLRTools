@@ -174,7 +174,9 @@ export const extractSAV = async () => {
     const uniqueAlarmsData = [...uniqueAlarms].map((alarmId) => {
       return alarms.find((a) => a.alarmId === alarmId);
     });
-    console.log(`Updating Alarms table with ${uniqueAlarms.length} unique alarms...`);
+    console.log(
+      `Updating Alarms table with ${uniqueAlarms.length} unique alarms...`
+    );
     await updateJob(
       {
         lastRun: new Date(),
@@ -213,6 +215,18 @@ export const extractSAV = async () => {
       },
       jobName
     );
+    // Send notification to admins
+    const admins = await db.models.Users.findAll({
+      where: { role: "admin" },
+    });
+
+    for (const admin of admins) {
+      await db.models.Notifications.create({
+        userId: admin.id,
+        message: `SAV data extraction for ${dateToGet} has been completed.`,
+        type: "success",
+      });
+    }
   } catch (error) {
     console.error("Error during SAV extraction:", error);
     await updateJob(
@@ -224,5 +238,17 @@ export const extractSAV = async () => {
       },
       jobName
     );
+    // Send notification to admins
+    const admins = await db.models.Users.findAll({
+      where: { role: "admin" },
+    });
+
+    for (const admin of admins) {
+      await db.models.Notifications.create({
+        userId: admin.id,
+        message: `SAV data extraction failed: ${error.message}`,
+        type: "error",
+      });
+    }
   }
 };

@@ -48,6 +48,30 @@ router.get("/status", async (req, res) => {
         lastActive: bot.isBotActive,
       };
     });
+
+    // If bot is inactive, set its needsRestart to true and send notification to admins
+    for (const botStatus of botStatuses) {
+      if (!botStatus.isActive) {
+        const bot = await db.models.Users.findByPk(botStatus.id);
+        if (bot && !bot.needsRestart) {
+          bot.needsRestart = true;
+          await bot.save();
+
+          // Send notification to admins
+          const admins = await db.models.Users.findAll({
+            where: { role: "admin" },
+          });
+
+          for (const admin of admins) {
+            await db.models.Notifications.create({
+              userId: admin.id,
+              message: `Bot ${bot.fullname} has been marked for restart due to inactivity.`,
+              type: "warning",
+            });
+          }
+        }
+      }
+    }
     return res.json(botStatuses);
   } catch (error) {
     console.error("Error fetching bot status:", error);
@@ -79,6 +103,19 @@ router.post("/restart-ack/:userId", async (req, res) => {
     }
     bot.needsRestart = false;
     await bot.save();
+
+    // Send notification to admins
+    const admins = await db.models.Users.findAll({
+      where: { role: "admin" },
+    });
+
+    for (const admin of admins) {
+      await db.models.Notifications.create({
+        userId: admin.id,
+        message: `Bot ${bot.fullname} has acknowledged the restart.`,
+        type: "success",
+      });
+    }
     return res.json({ message: "Bot restart acknowledged" });
   } catch (error) {
     console.error("Error acknowledging bot restart:", error);
@@ -119,6 +156,19 @@ router.post("/ask/extract", async (req, res) => {
       "YYYY-MM-DD HH:mm"
     )}`;
     await cronJob.save();
+
+    // Send notification to admins
+    const admins = await db.models.Users.findAll({
+      where: { role: "admin" },
+    });
+
+    for (const admin of admins) {
+      await db.models.Notifications.create({
+        userId: admin.id,
+        message: `Tray amount extraction for ${date} has been scheduled.`,
+        type: "info",
+      });
+    }
 
     return res.json({ message: "Extraction job scheduled successfully" });
   } catch (error) {
@@ -161,6 +211,19 @@ router.post("/ask/extractWMS", async (req, res) => {
     )}`;
     await cronJob.save();
 
+    // Send notification to admins
+    const admins = await db.models.Users.findAll({
+      where: { role: "admin" },
+    });
+
+    for (const admin of admins) {
+      await db.models.Notifications.create({
+        userId: admin.id,
+        message: `WMS data extraction for ${date} has been scheduled.`,
+        type: "info",
+      });
+    }
+
     return res.json({ message: "Extraction job scheduled successfully" });
   } catch (error) {
     console.error("Error scheduling extraction job:", error);
@@ -180,6 +243,19 @@ router.post("/ask/restart", async (req, res) => {
     for (const bot of bots) {
       bot.needsRestart = true;
       await bot.save();
+    }
+
+    // Send notification to admins
+    const admins = await db.models.Users.findAll({
+      where: { role: "admin" },
+    });
+
+    for (const admin of admins) {
+      await db.models.Notifications.create({
+        userId: admin.id,
+        message: `All bots have been marked for restart.`,
+        type: "info",
+      });
     }
 
     return res.json({ message: "All bots marked for restart" });

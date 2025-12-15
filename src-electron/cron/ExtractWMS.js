@@ -170,6 +170,19 @@ export const extractWMS = async (manualDate = null) => {
       },
       jobName
     );
+    // Send notification to admins
+    const admins = await db.models.Users.findAll({
+      where: { role: "admin" },
+    });
+
+    for (const admin of admins) {
+      await db.models.Notifications.create({
+        userId: admin.id,
+        message: `WMS data extraction failed for date ${date}: ${error.message}`,
+        type: "error",
+      });
+    }
+    return;
   }
 
   console.log("WMS extraction completed.");
@@ -189,5 +202,20 @@ export const extractWMS = async (manualDate = null) => {
   });
   if (bot) {
     bot.update({ needsRestart: true });
+  }
+
+  // Send notification to admins
+  const admins = await db.models.Users.findAll({
+    where: { role: "admin" },
+  });
+
+  for (const admin of admins) {
+    await db.models.Notifications.create({
+      userId: admin.id,
+      message: manualDate
+        ? `WMS data extraction for ${dayjs(manualDate).format('DD.MM.YYYY')} has been completed.`
+        : "WMS data extraction has been completed.",
+      type: "success",
+    });
   }
 };

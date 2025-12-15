@@ -27,4 +27,16 @@ export const sendKPI = async () => {
     },
     jobName
   );
+
+  const admins = await db.models.Users.findAll({
+    where: { role: "admin" },
+  });
+
+  for (const admin of admins) {
+    await db.models.Notifications.create({
+      userId: admin.id,
+      message: "KPI data has been sent by mail.",
+      type: "info",
+    });
+  }
 };

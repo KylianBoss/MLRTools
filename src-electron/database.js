@@ -1355,6 +1355,54 @@ function initDB(config) {
       return setting ? setting.value : null;
     };
 
+    // Notifications
+    const Notifications = db.define(
+      "Notifications",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        type: {
+          type: DataTypes.ENUM("info", "warning", "error", "success"),
+          allowNull: false,
+          defaultValue: "info",
+          comment:
+            "Type of notification, e.g. 'info', 'warning', 'error', 'success'",
+        },
+        message: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Notification message",
+        },
+        read: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+          comment: "If true, the notification has been read",
+        },
+        userId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: Users,
+            key: "id",
+          },
+          comment: "ID of the user to whom the notification is addressed",
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.NOW,
+          comment: "Time when the notification was created",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
     Users.hasMany(UserAccess, {
       foreignKey: "userId",
     });

@@ -469,6 +469,20 @@ export const extractTrayAmount = (date, headless = true) => {
           },
           jobName
         );
+        // send notification to admins
+        const admins = await db.models.Users.findAll({
+          where: { role: "admin" },
+        });
+
+        for (const admin of admins) {
+          await db.models.Notifications.create({
+            userId: admin.id,
+            message: `Tray amount extraction for ${dayToExtract.format(
+              "DD.MM.YYYY"
+            )} has been scheduled.`,
+            type: "info",
+          });
+        }
       }
 
       // Set the bot to restart
@@ -479,6 +493,21 @@ export const extractTrayAmount = (date, headless = true) => {
         bot.update({ needsRestart: true });
       }
 
+      // Send notification to admins
+      const admins = await db.models.Users.findAll({
+        where: { role: "admin" },
+      });
+
+      for (const admin of admins) {
+        await db.models.Notifications.create({
+          userId: admin.id,
+          message: `Tray amount extraction for ${dayjs(date).format(
+            "DD.MM.YYYY"
+          )} has been completed.`,
+          type: "success",
+        });
+      }
+
       resolve(zones);
     } catch (error) {
       console.error("Error extracting tray amount:", error);
@@ -486,12 +515,26 @@ export const extractTrayAmount = (date, headless = true) => {
         "Extract tray amount",
         `Error extracting tray amount: ${error.message}`
       );
-      await updateJob({
-        actualState: "error",
-        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        lastLog: `Error extracting tray amount: ${error.message}`,
-      }),
-        jobName;
+      await updateJob(
+        {
+          actualState: "error",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `Error extracting tray amount: ${error.message}`,
+        },
+        jobName
+      );
+      // Send notification to admins
+      const admins = await db.models.Users.findAll({
+        where: { role: "admin" },
+      });
+
+      for (const admin of admins) {
+        await db.models.Notifications.create({
+          userId: admin.id,
+          message: `Tray amount extraction failed for date ${date}: ${error.message}`,
+          type: "error",
+        });
+      }
       reject(error);
     }
   });
