@@ -17,8 +17,8 @@
           @click="rightDrawerOpen = !rightDrawerOpen"
           class="q-ml-sm"
         >
-          <q-badge color="red" floating v-if="notifications.length > 0">
-            {{ notifications.length }}
+          <q-badge color="red" floating v-if="notifications.filter((n) => !n.read).length > 0">
+            {{ notifications.filter((n) => !n.read).length }}
           </q-badge>
         </q-btn>
       </q-toolbar>
