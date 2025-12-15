@@ -13,7 +13,7 @@ const SAV_EXPORT_PATH = path.join(
 );
 const jobName = "extractSAV";
 
-export const extractSAV = async () => {
+export const extractSAV = async (date = dayjs().format('YYYY-MM-DD')) => {
   console.log("Starting SAV extraction...");
   await updateJob(
     {
@@ -27,7 +27,7 @@ export const extractSAV = async () => {
   );
 
   try {
-    const dateToGet = dayjs().format("YYYY-MM-DD");
+    const dateToGet = dayjs(date).format("YYYY-MM-DD");
     const fileName = `SAV-Export-AlarmLog_${dayjs(dateToGet).format(
       "YYYYMMDD"
     )}_000000.csv`;
@@ -175,12 +175,12 @@ export const extractSAV = async () => {
       return alarms.find((a) => a.alarmId === alarmId);
     });
     console.log(
-      `Updating Alarms table with ${uniqueAlarms.length} unique alarms...`
+      `Updating Alarms table with ${uniqueAlarmsData.length} unique alarms...`
     );
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: `Updating Alarms table with ${uniqueAlarms.length} unique alarms...`,
+        lastLog: `Updating Alarms table with ${uniqueAlarmsData.length} unique alarms...`,
       },
       jobName
     );

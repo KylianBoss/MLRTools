@@ -59,6 +59,17 @@
     <div class="row q-py-xs">
       <div class="col">
         <q-btn
+          label="Demander au bot d'extraire les données SAV pour une date"
+          color="primary"
+          @click="askExtractSAV"
+          class="full-width"
+          :loading="DB.loadingState"
+        />
+      </div>
+    </div>
+    <div class="row q-py-xs">
+      <div class="col">
+        <q-btn
           label="Demander aux bots de redémarrer"
           color="primary"
           @click="askBotToRestart"
@@ -227,6 +238,37 @@ const askExtractWMS = () => {
         $q.notify({
           type: "positive",
           message: `Le bot a été notifié pour extraire le WMS pour le ${date}`,
+        });
+      })
+      .catch((error) => {
+        $q.notify({
+          type: "negative",
+          message: `Erreur: ${error.message}`,
+        });
+      });
+  });
+};
+
+const askExtractSAV = () => {
+  $q.dialog({
+    title: "Demander au bot d'extraire les données SAV",
+    message: "Saisir la date pour l'extraction",
+    prompt: {
+      label: "Date",
+      type: "date",
+      mask: "##.##.####",
+      model: null,
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk((data) => {
+    const date = data;
+    api
+      .post(`/bot/ask/extractSAV`, { date })
+      .then((response) => {
+        $q.notify({
+          type: "positive",
+          message: `Le bot a été notifié pour extraire les données SAV pour le ${date}`,
         });
       })
       .catch((error) => {

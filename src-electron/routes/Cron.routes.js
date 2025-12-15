@@ -98,7 +98,24 @@ router.post("/initialize", async (req, res) => {
             }
             break;
           case "extractSAV":
-            await extractSAV();
+            if (job.args) {
+              const args = job.args.split(",");
+              args.forEach(async (arg) => {
+                const [key, value] = arg.split(":").map((s) => s.trim());
+                if (key === "date") {
+                  if (dayjs(value, "YYYY-MM-DD", true).isValid()) {
+                    job.lastLog = `Using date from cron job args: ${value}`;
+                    await extractSAV(value);
+                  } else {
+                    job.lastLog = `Invalid date format in cron job args: ${value}`;
+                    await extractSAV();
+                  }
+                }
+              });
+              job.save();
+            } else {
+              await extractSAV();
+            }
             break;
           case "sendKPI":
             await sendKPI();
