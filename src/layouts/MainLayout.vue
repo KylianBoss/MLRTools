@@ -193,7 +193,7 @@
     <!-- NOTIFICATIONS -->
     <q-drawer
       v-model="rightDrawerOpen"
-      :breakpoint="500"
+      width="500"
       bordered
       side="right"
       dense
@@ -201,13 +201,13 @@
     >
       <q-scroll-area class="fit q-py-sm">
         <q-list>
-          <q-item-label class="text-h6 q-mb-md q-px-sm"
-            >Notifications</q-item-label
-          >
+          <q-item-label class="text-h6 q-mb-md q-px-sm">
+            Notifications
+          </q-item-label>
           <q-item
             v-for="(notif, index) in notifications"
             :key="index"
-            class="q-pa-none q-ma-none"
+            class="q-pa-none q-ma-none q-mb-xs"
             :class="{ 'bg-grey-2': !notif.read }"
           >
             <q-item-section avatar class="q-px-xs col-auto text-left">
@@ -218,6 +218,9 @@
             </q-item-section>
             <q-item-section class="text-left">
               <q-item-label>{{ notif.message }}</q-item-label>
+              <q-item-label caption>
+                {{ new Date(notif.createdAt).toLocaleString() }}
+              </q-item-label>
             </q-item-section>
             <q-item-section side class="col-auto text-right">
               <q-btn
