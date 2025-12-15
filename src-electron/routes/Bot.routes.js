@@ -59,7 +59,7 @@ router.get("/status", async (req, res) => {
 
           // Send notification to admins
           const admins = await db.models.Users.findAll({
-            where: { isAdmin },
+            where: { isAdmin: true },
           });
 
           for (const admin of admins) {
@@ -106,7 +106,7 @@ router.post("/restart-ack/:userId", async (req, res) => {
 
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { isAdmin },
+      where: { isAdmin: true },
     });
 
     for (const admin of admins) {
@@ -125,7 +125,9 @@ router.post("/restart-ack/:userId", async (req, res) => {
 router.post("/ask/extract", async (req, res) => {
   const { date } = req.body;
   if (!date || !dayjs(date, "YYYY-MM-DD", true).isValid()) {
-    return res.status(400).json({ error: "Valid date (YYYY-MM-DD) is required" });
+    return res
+      .status(400)
+      .json({ error: "Valid date (YYYY-MM-DD) is required" });
   }
   try {
     const bots = await db.models.Users.findAll({
@@ -145,7 +147,9 @@ router.post("/ask/extract", async (req, res) => {
       where: { action: "extractTrayAmount" },
     });
     if (!cronJob) {
-      return res.status(404).json({ error: "Cron job 'extractTrayAmount' not found" });
+      return res
+        .status(404)
+        .json({ error: "Cron job 'extractTrayAmount' not found" });
     }
 
     let args = `date:${date}`;
@@ -159,7 +163,7 @@ router.post("/ask/extract", async (req, res) => {
 
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { isAdmin },
+      where: { isAdmin: true },
     });
 
     for (const admin of admins) {
@@ -179,7 +183,9 @@ router.post("/ask/extract", async (req, res) => {
 router.post("/ask/extractWMS", async (req, res) => {
   const { date } = req.body;
   if (!date || !dayjs(date, "YYYY-MM-DD", true).isValid()) {
-    return res.status(400).json({ error: "Valid date (YYYY-MM-DD) is required" });
+    return res
+      .status(400)
+      .json({ error: "Valid date (YYYY-MM-DD) is required" });
   }
   try {
     const bots = await db.models.Users.findAll({
@@ -199,7 +205,9 @@ router.post("/ask/extractWMS", async (req, res) => {
       where: { action: "extractWMS" },
     });
     if (!cronJob) {
-      return res.status(404).json({ error: "Cron job 'extractTrayAmount' not found" });
+      return res
+        .status(404)
+        .json({ error: "Cron job 'extractTrayAmount' not found" });
     }
 
     let args = `date:${date}`;
@@ -213,7 +221,7 @@ router.post("/ask/extractWMS", async (req, res) => {
 
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { isAdmin },
+      where: { isAdmin: true },
     });
 
     for (const admin of admins) {
@@ -247,7 +255,7 @@ router.post("/ask/restart", async (req, res) => {
 
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { isAdmin },
+      where: { isAdmin: true },
     });
 
     for (const admin of admins) {

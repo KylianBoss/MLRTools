@@ -29,7 +29,11 @@ export const extractWMS = async (manualDate = null) => {
     {
       lastRun: new Date(),
       actualState: "running",
-      lastLog: manualDate ? `Starting WMS extraction for the ${dayjs(manualDate).format('DD.MM.YYYY')}...` : "Starting WMS extraction...",
+      lastLog: manualDate
+        ? `Starting WMS extraction for the ${dayjs(manualDate).format(
+            "DD.MM.YYYY"
+          )}...`
+        : "Starting WMS extraction...",
       startAt: new Date(),
       endAt: null,
     },
@@ -40,10 +44,11 @@ export const extractWMS = async (manualDate = null) => {
   const datesInDB = manualDate ? null : await getDatesInDB();
 
   // Dates to process since the START_DATE and to yesterday
-  const datesToProcess = manualDate ? [manualDate] : Array.from(
-    { length: dayjs().diff(START_DATE, "day") },
-    (_, i) => START_DATE.add(i, "day").format("YYYY-MM-DD")
-  ).filter((date) => !datesInDB.includes(date));
+  const datesToProcess = manualDate
+    ? [manualDate]
+    : Array.from({ length: dayjs().diff(START_DATE, "day") }, (_, i) =>
+        START_DATE.add(i, "day").format("YYYY-MM-DD")
+      ).filter((date) => !datesInDB.includes(date));
   console.log("Dates to process:", datesToProcess);
   await updateJob(
     {
@@ -172,7 +177,7 @@ export const extractWMS = async (manualDate = null) => {
     );
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { isAdmin },
+      where: { isAdmin: true },
     });
 
     for (const admin of admins) {
@@ -206,14 +211,16 @@ export const extractWMS = async (manualDate = null) => {
 
   // Send notification to admins
   const admins = await db.models.Users.findAll({
-    where: { isAdmin },
+    where: { isAdmin: true },
   });
 
   for (const admin of admins) {
     await db.models.Notifications.create({
       userId: admin.id,
       message: manualDate
-        ? `WMS data extraction for ${dayjs(manualDate).format('DD.MM.YYYY')} has been completed.`
+        ? `WMS data extraction for ${dayjs(manualDate).format(
+            "DD.MM.YYYY"
+          )} has been completed.`
         : "WMS data extraction has been completed.",
       type: "success",
     });

@@ -217,7 +217,7 @@ export const extractSAV = async () => {
     );
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { isAdmin },
+      where: { isAdmin: true },
     });
 
     for (const admin of admins) {
@@ -240,7 +240,7 @@ export const extractSAV = async () => {
     );
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { isAdmin },
+      where: { isAdmin: true },
     });
 
     for (const admin of admins) {
