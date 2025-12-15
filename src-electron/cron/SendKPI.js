@@ -29,7 +29,7 @@ export const sendKPI = async () => {
   );
 
   const admins = await db.models.Users.findAll({
-    where: { role: "admin" },
+    where: { isAdmin },
   });
 
   for (const admin of admins) {

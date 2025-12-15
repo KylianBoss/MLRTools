@@ -471,7 +471,7 @@ export const extractTrayAmount = (date, headless = true) => {
         );
         // send notification to admins
         const admins = await db.models.Users.findAll({
-          where: { role: "admin" },
+          where: { isAdmin },
         });
 
         for (const admin of admins) {
@@ -495,7 +495,7 @@ export const extractTrayAmount = (date, headless = true) => {
 
       // Send notification to admins
       const admins = await db.models.Users.findAll({
-        where: { role: "admin" },
+        where: { isAdmin },
       });
 
       for (const admin of admins) {
@@ -525,7 +525,7 @@ export const extractTrayAmount = (date, headless = true) => {
       );
       // Send notification to admins
       const admins = await db.models.Users.findAll({
-        where: { role: "admin" },
+        where: { isAdmin },
       });
 
       for (const admin of admins) {

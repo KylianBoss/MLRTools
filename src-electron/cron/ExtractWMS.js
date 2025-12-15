@@ -172,7 +172,7 @@ export const extractWMS = async (manualDate = null) => {
     );
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { role: "admin" },
+      where: { isAdmin },
     });
 
     for (const admin of admins) {
@@ -206,7 +206,7 @@ export const extractWMS = async (manualDate = null) => {
 
   // Send notification to admins
   const admins = await db.models.Users.findAll({
-    where: { role: "admin" },
+    where: { isAdmin },
   });
 
   for (const admin of admins) {

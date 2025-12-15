@@ -59,7 +59,7 @@ router.get("/status", async (req, res) => {
 
           // Send notification to admins
           const admins = await db.models.Users.findAll({
-            where: { role: "admin" },
+            where: { isAdmin },
           });
 
           for (const admin of admins) {
@@ -106,7 +106,7 @@ router.post("/restart-ack/:userId", async (req, res) => {
 
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { role: "admin" },
+      where: { isAdmin },
     });
 
     for (const admin of admins) {
@@ -159,7 +159,7 @@ router.post("/ask/extract", async (req, res) => {
 
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { role: "admin" },
+      where: { isAdmin },
     });
 
     for (const admin of admins) {
@@ -213,7 +213,7 @@ router.post("/ask/extractWMS", async (req, res) => {
 
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { role: "admin" },
+      where: { isAdmin },
     });
 
     for (const admin of admins) {
@@ -247,7 +247,7 @@ router.post("/ask/restart", async (req, res) => {
 
     // Send notification to admins
     const admins = await db.models.Users.findAll({
-      where: { role: "admin" },
+      where: { isAdmin },
     });
 
     for (const admin of admins) {
