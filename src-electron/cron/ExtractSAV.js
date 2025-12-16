@@ -13,7 +13,7 @@ const SAV_EXPORT_PATH = path.join(
 );
 const jobName = "extractSAV";
 
-export const extractSAV = async (date = dayjs().format('YYYY-MM-DD')) => {
+export const extractSAV = async (date = null) => {
   console.log("Starting SAV extraction...");
   await updateJob(
     {
@@ -27,7 +27,9 @@ export const extractSAV = async (date = dayjs().format('YYYY-MM-DD')) => {
   );
 
   try {
-    const dateToGet = dayjs(date).format("YYYY-MM-DD");
+    const dateToGet = date
+      ? dayjs(date).format("YYYY-MM-DD")
+      : dayjs().subtract(1, "day").format("YYYY-MM-DD");
     const fileName = `SAV-Export-AlarmLog_${dayjs(dateToGet).format(
       "YYYYMMDD"
     )}_000000.csv`;
