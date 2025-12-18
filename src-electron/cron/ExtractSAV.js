@@ -27,9 +27,10 @@ export const extractSAV = async (date = null) => {
   );
 
   try {
-    const dateToGet = date
-      ? dayjs(date).format("YYYY-MM-DD")
-      : dayjs().format("YYYY-MM-DD");
+    const dateToGet =
+      date != null
+        ? dayjs(date).add(1, "day").format("YYYY-MM-DD")
+        : dayjs().format("YYYY-MM-DD");
     const fileName = `SAV-Export-AlarmLog_${dayjs(dateToGet).format(
       "YYYYMMDD"
     )}_000000.csv`;
