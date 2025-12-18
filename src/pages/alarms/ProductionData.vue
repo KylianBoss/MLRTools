@@ -1,8 +1,6 @@
 <template>
   <q-page padding>
     <div class="text-h4">Données de production</div>
-    <!-- <pre>1: {{ dataLogStore.productionTimes }}</pre> -->
-    <!-- <pre>2: {{ missingProductionTimes }}</pre> -->
     <q-table
       :rows="productionData"
       :columns="columns"

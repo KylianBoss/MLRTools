@@ -585,11 +585,7 @@ const getData = (filter) => {
       from = dayjs(filter.from).format("YYYY-MM-DD");
       to = dayjs(filter.to).format("YYYY-MM-DD");
     }
-    // const productionTime = dataLogStore.productionTimes(
-    //   dayjs(filter).format("YYYY-MM-DD")
-    // );
-    // const from = dayjs(productionTime.from).format("YYYY-MM-DD");
-    // const to = dayjs(productionTime.from).format("YYYY-MM-DD");
+
     const kpiTop3Count = await dataLogStore.getKPItop3Count({
       from,
       to,
