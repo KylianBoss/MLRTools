@@ -1189,6 +1189,42 @@ function initDB(config) {
       }
     );
 
+    const cache_CustomCharts = db.define(
+      "cache_CustomCharts",
+      {
+        chartId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          primaryKey: true,
+          references: {
+            model: "CustomCharts",
+            key: "id",
+          },
+          comment: "ID of the custom chart",
+        },
+        date: {
+          type: DataTypes.DATEONLY,
+          allowNull: false,
+          primaryKey: true,
+        },
+        data: {
+          type: DataTypes.FLOAT,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "Cached data value for the chart on the date",
+        },
+        calculatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.NOW,
+          comment: "Time when the data was calculated",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
     const AlarmDataLast7DaysSaved = db.define(
       "AlarmDataLast7DaysSaved",
       {

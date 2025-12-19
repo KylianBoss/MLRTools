@@ -208,6 +208,23 @@ export const extractSAV = async (date = null) => {
       jobName
     );
 
+    // Flush cache tables
+    await db.models.cache_ErrorsByThousand.destroy({
+      where: {
+        date: dateToGet
+      }
+    });
+    await db.models.cache_DowntimeMinutesByThousand.destroy({
+      where: {
+        date: dateToGet
+      }
+    });
+    await db.models.cache_CustomCharts.destroy({
+      where: {
+        date: dateToGet
+      }
+    });
+
     console.log("SAV extraction completed.");
     await updateJob(
       {
@@ -215,6 +232,7 @@ export const extractSAV = async (date = null) => {
         lastLog: "SAV extraction completed.",
         endAt: new Date(),
         actualState: "idle",
+        cronExpression: "15 5 * * *",
       },
       jobName
     );

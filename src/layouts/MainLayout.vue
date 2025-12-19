@@ -17,7 +17,11 @@
           @click="rightDrawerOpen = !rightDrawerOpen"
           class="q-ml-sm"
         >
-          <q-badge color="red" floating v-if="notifications.filter((n) => !n.read).length > 0">
+          <q-badge
+            color="red"
+            floating
+            v-if="notifications.filter((n) => !n.read).length > 0"
+          >
             {{ notifications.filter((n) => !n.read).length }}
           </q-badge>
         </q-btn>
@@ -204,6 +208,18 @@
           <q-item-label class="text-h6 q-mb-md q-px-sm">
             Notifications
           </q-item-label>
+          <q-item
+            v-if="notifications.length > 3"
+            clickable
+            v-ripple
+            @click="notifications.forEach((n) => readNotification(n))"
+          >
+            <q-item-section>
+              <q-item-label class="text-center">
+                Tout marquer comme lu
+              </q-item-label>
+            </q-item-section>
+          </q-item>
           <q-item
             v-for="(notif, index) in notifications"
             :key="index"
