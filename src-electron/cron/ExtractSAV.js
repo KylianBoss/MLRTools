@@ -211,17 +211,17 @@ export const extractSAV = async (date = null) => {
     // Flush cache tables
     await db.models.cache_ErrorsByThousand.destroy({
       where: {
-        date: dateToGet
+        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD")
       }
     });
     await db.models.cache_DowntimeMinutesByThousand.destroy({
       where: {
-        date: dateToGet
+        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD")
       }
     });
     await db.models.cache_CustomCharts.destroy({
       where: {
-        date: dateToGet
+        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD")
       }
     });
 

@@ -209,7 +209,7 @@
             Notifications
           </q-item-label>
           <q-item
-            v-if="notifications.length > 3"
+            v-if="notifications.filter((n) => !n.read).length > 3"
             clickable
             v-ripple
             @click="notifications.forEach((n) => readNotification(n))"
