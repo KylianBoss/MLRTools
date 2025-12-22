@@ -257,6 +257,8 @@ export const extractSAV = async (date = null) => {
         lastLog: `Error during SAV extraction: ${error.message}`,
         endAt: new Date(),
         actualState: "error",
+        cronExpression: "15 5 * * *",
+        args: null,
       },
       jobName
     );
