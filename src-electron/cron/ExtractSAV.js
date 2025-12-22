@@ -47,7 +47,7 @@ export const extractSAV = async (date = null) => {
         },
         jobName
       );
-      return;
+      throw new Error(`File ${fileName} does not exist.`);
     }
 
     await updateJob(
