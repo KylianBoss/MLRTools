@@ -233,6 +233,7 @@ export const extractSAV = async (date = null) => {
         endAt: new Date(),
         actualState: "idle",
         cronExpression: "15 5 * * *",
+        args: null,
       },
       jobName
     );
@@ -244,7 +245,7 @@ export const extractSAV = async (date = null) => {
     for (const admin of admins) {
       await db.models.Notifications.create({
         userId: admin.id,
-        message: `SAV data extraction for ${dateToGet} has been completed.`,
+        message: `SAV data extraction for ${dayjs(dateToGet).subtract(1, 'day').format("DD.MM.YYYY")} has been completed.`,
         type: "success",
       });
     }
