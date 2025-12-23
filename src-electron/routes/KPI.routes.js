@@ -7,6 +7,9 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
 import nodemailer from "nodemailer";
+import minMax from "dayjs/plugin/minMax.js";
+
+dayjs.extend(minMax);
 
 const router = Router();
 const STORAGE_PATH = path.join(process.cwd(), "storage");
@@ -310,7 +313,10 @@ router.get("/charts/custom/:chartId", async (req, res) => {
   const CUSTOM_CHART_WINDOW = await db.models.Settings.getValue(
     "CUSTOM_CHART_WINDOW"
   );
-  const GRAPH_TABLE_WINDOW = await db.models.Settings.getValue("GRAPH_TABLE_WINDOW");
+  const GRAPH_TABLE_WINDOW = await db.models.Settings.getValue(
+    "GRAPH_TABLE_WINDOW"
+  );
+  const MIN_DATE = await db.models.Settings.getValue("MIN_DATE");
 
   try {
     const customChartData = await db.models.CustomChart.findByPk(chartId);
@@ -319,46 +325,64 @@ router.get("/charts/custom/:chartId", async (req, res) => {
     }
 
     const chartData = await db.query(
-      "CALL getAlarmDataLast7Days(:window, :alarmsIds)",
+      "CALL getCustomChartsData(:startDate, :endDate, :chartId)",
       {
         replacements: {
-          alarmsIds: customChartData.alarms,
-          window: CUSTOM_CHART_WINDOW,
+          startDate: dayjs
+            .max(dayjs().subtract(CUSTOM_CHART_WINDOW, "day"), dayjs(MIN_DATE))
+            .startOf("day")
+            .format("YYYY-MM-DD HH:mm:ss"),
+          endDate: dayjs()
+            .subtract(1, "day")
+            .endOf("day")
+            .format("YYYY-MM-DD HH:mm:ss"),
+          chartId,
         },
       }
     );
 
+    const tableData = await db.query(
+      "CALL getAlarmDataLast7Days(:window, :alarmsIds)",
+      {
+        replacements: {
+          alarmsIds: customChartData.alarms,
+          window: GRAPH_TABLE_WINDOW,
+        },
+      }
+    );
+
+    console.log(tableData);
+
     function calculateMovingAverage(data, windowSize = 7) {
-      const dailyBreakdown = JSON.parse(data.dailyBreakdown);
+      // const dailyBreakdown = JSON.parse(data.dailyBreakdown);
 
-      return {
-        ...data,
-        graphTableWindow: GRAPH_TABLE_WINDOW,
-        dailyBreakdown: dailyBreakdown.map((item, index) => {
-          const start = Math.max(0, index - windowSize + 1);
-          const window = dailyBreakdown
-            .slice(start, index + 1)
-            .filter((d) => d.total_count > 0);
+      // return {
+      //   ...data,
+      //   dailyBreakdown: dailyBreakdown.map((item, index) => {
+      //     const start = Math.max(0, index - windowSize + 1);
+      //     const window = dailyBreakdown
+      //       .slice(start, index + 1)
+      //       .filter((d) => d.total_count > 0);
 
-          const averageNumber =
-            window.reduce((sum, point) => sum + point.total_count, 0) /
-            window.length;
+      //     const averageNumber =
+      //       window.reduce((sum, point) => sum + point.total_count, 0) /
+      //       window.length;
 
-          return {
-            ...item,
-            movingAverage: Math.round(averageNumber * 100) / 100,
-          };
-        }),
-      };
+      //     return {
+      //       ...item,
+      //       movingAverage: Math.round(averageNumber * 100) / 100,
+      //     };
+      //   }),
+      // };
 
       return data.map((item, index) => {
         const start = Math.max(0, index - windowSize + 1);
         const window = data
           .slice(start, index + 1)
-          .filter((d) => d.total_count > 0);
+          // .filter((d) => d.data > 0);
 
         const averageNumber =
-          window.reduce((sum, point) => sum + point.total_count, 0) /
+          window.reduce((sum, point) => sum + point.data, 0) /
           window.length;
 
         return {
@@ -368,7 +392,10 @@ router.get("/charts/custom/:chartId", async (req, res) => {
       });
     }
 
-    res.json(calculateMovingAverage(chartData[0], MOVING_AVERAGE_WINDOW));
+    res.json({
+      chartData: calculateMovingAverage(chartData, MOVING_AVERAGE_WINDOW),
+      tableData,
+    });
   } catch (error) {
     console.error("Error fetching custom chart data:", error);
     res.status(500).json({ error: error.message });

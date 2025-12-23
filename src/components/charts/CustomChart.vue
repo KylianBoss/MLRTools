@@ -172,57 +172,42 @@ const getData = async () => {
   chartSeries.value = [];
   const response = await api
     .get(`/kpi/charts/custom/${props.chartData.id}`)
-    .catch(() => ({ data: [] }));
-  const dailyBreakdown = response.data.dailyBreakdown;
-  const graphTableWindow = response.data.graphTableWindow;
+    .catch(() => {
+      emits("loaded");
+      return;
+    });
 
-  const { tableRows, tableColumns } = formatDataForTable(
-    dailyBreakdown.slice(dailyBreakdown.length - graphTableWindow),
-    response.data.totalOccurrences
-  );
+  const chartData = response.data.chartData;
+  const tableData = response.data.tableData;
+
+  const { tableRows, tableColumns } = formatDataForTable(tableData);
   rows.value = tableRows;
   columns.value = tableColumns;
-  const max = Math.round(
-    Math.max(...dailyBreakdown.map((item) => item.total_count)) * 1.5
-  );
+  const errorValues = chartData
+    .map((item) => parseFloat(item.data))
+    .sort((a, b) => a - b);
+  const percentile90Index = Math.floor(errorValues.length * 0.9);
+  const max = Math.round(errorValues[percentile90Index] * 1.5);
 
   chartSeries.value.push(
     {
       name: "Nombre d'erreurs",
       type: "column",
-      data: dailyBreakdown.map((item) => {
-        return { x: item.date, y: item.total_count };
+      data: chartData.map((item) => {
+        return { x: item.date, y: item.data };
       }),
     },
-    // {
-    //   name:
-    //     errorsByThousand.data[0].transportType === "tray"
-    //       ? "Pannes / 1000 trays (temps [minutes])"
-    //       : "Pannes / 100 palettes (temps [minutes])",
-    //   type: "column",
-    //   data: errorsByThousand.data
-    //     .filter((d) => d.minProdReached && d.number > 0 && d.time > 0)
-    //     .map((item) => item.time.toFixed(2)),
-    // },
     {
       name: "Moyenne 7 jours (nombre)",
       type: "line",
-      data: dailyBreakdown.map((item) => {
+      data: chartData.map((item) => {
         return { x: item.date, y: item.movingAverage };
       }),
       color: "#C10015",
     }
-    // {
-    //   name: "Quantité de trays",
-    //   type: "column",
-    //   data: errorsByThousand.data.map((item) => item.trayAmount),
-    //   color: "#00C100",
-    // }
   );
   chartOptions.value.xaxis = {
-    categories: dailyBreakdown.map((item) =>
-      dayjs(item.date).format("YYYY-MM-DD")
-    ),
+    categories: chartData.map((item) => dayjs(item.date).format("YYYY-MM-DD")),
     labels: {
       show: true,
       rotate: -90,
@@ -247,26 +232,6 @@ const getData = async () => {
       min: 0,
       max: max,
     },
-    // {
-    //   opposite: true,
-    //   seriesName:
-    //     errorsByThousand.data[0].transportType === "tray"
-    //       ? "Pannes / 1000 trays (temps [minutes])"
-    //       : "Pannes / 100 palettes (temps [minutes])",
-    //   axisTicks: {
-    //     show: true,
-    //   },
-    //   axisBorder: {
-    //     show: true,
-    //   },
-    //   title: {
-    //     text:
-    //       errorsByThousand.data[0].transportType === "tray"
-    //         ? "Temps de pannes / 1000 trays (minutes)"
-    //         : "Temps de pannes / 100 palettes (minutes)",
-    //     rotate: 90,
-    //   },
-    // },
     {
       opposite: true,
       seriesName: "Moyenne mobile 7 jours",
@@ -282,33 +247,19 @@ const getData = async () => {
       min: 0,
       max: max,
     },
-    // {
-    //   opposite: true,
-    //   seriesName: "Quantité de trays",
-    //   axisTicks: {
-    //     show: true,
-    //   },
-    //   axisBorder: {
-    //     show: true,
-    //   },
-    //   title: {
-    //     text: "Quantité de trays",
-    //   },
-    //   show: false,
-    // },
   ];
   chartVisibility.value = true;
   emits("loaded");
 };
 
-const formatDataForTable = (data, totalOccurrences) => {
+const formatDataForTable = (data) => {
   let alarmMap = new Map();
   const dates = new Set();
 
   data.forEach((row) => {
-    dates.add(row.date);
+    dates.add(row.day_date);
 
-    row.alarms_detail.forEach((alarm) => {
+    JSON.parse(`[${row.alarms_detail}]`).forEach((alarm) => {
       if (!alarmMap.has(alarm.alarm_id)) {
         alarmMap.set(alarm.alarm_id, {
           dailyBreakdown: {},
@@ -316,7 +267,7 @@ const formatDataForTable = (data, totalOccurrences) => {
         });
       }
 
-      alarmMap.get(alarm.alarm_id).dailyBreakdown[row.date] = alarm.count;
+      alarmMap.get(alarm.alarm_id).dailyBreakdown[row.day_date] = alarm.count;
     });
   });
 
@@ -333,6 +284,8 @@ const formatDataForTable = (data, totalOccurrences) => {
   alarmMap = new Map(
     Array.from(alarmMap.entries()).sort((a, b) => b[1].count - a[1].count)
   );
+
+  console.log(alarmMap);
 
   const sortedDates = Array.from(dates).sort();
 
@@ -395,13 +348,18 @@ const formatDataForTable = (data, totalOccurrences) => {
       return row;
     });
 
-  tableRows.unshift({
-    alarmId: "header",
-    dataSource: "Total erreurs",
-    alarmArea: "----",
-    error: totalOccurrences,
-    ...Object.fromEntries(sortedDates.map((date) => [date, data.find((d) => d.date === date)?.total_count || -1])),
-  });
+  // tableRows.unshift({
+  //   alarmId: "header",
+  //   dataSource: "Total erreurs",
+  //   alarmArea: "----",
+  //   error: totalOccurrences,
+  //   ...Object.fromEntries(
+  //     sortedDates.map((date) => [
+  //       date,
+  //       data.find((d) => d.date === date)?.total_count || -1,
+  //     ])
+  //   ),
+  // });
 
   return { tableRows, tableColumns };
 };
