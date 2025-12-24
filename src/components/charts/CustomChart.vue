@@ -177,7 +177,7 @@ const getData = async () => {
       return;
     });
 
-  const chartData = response.data.chartData;
+  const chartData = response.data.chartData.filter((item) => item.data > 0);
   const tableData = response.data.tableData;
 
   const { tableRows, tableColumns } = formatDataForTable(tableData);
@@ -212,8 +212,9 @@ const getData = async () => {
       show: true,
       rotate: -90,
       rotateAlways: true,
+      hideOverlappingLabels: true,
       formatter: (value) => {
-        return dayjs(value).format("DD/MM");
+        return dayjs(value).format("DD.MM.YY");
       },
     },
   };
@@ -284,8 +285,6 @@ const formatDataForTable = (data) => {
   alarmMap = new Map(
     Array.from(alarmMap.entries()).sort((a, b) => b[1].count - a[1].count)
   );
-
-  console.log(alarmMap);
 
   const sortedDates = Array.from(dates).sort();
 

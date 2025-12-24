@@ -317,6 +317,7 @@ router.get("/charts/custom/:chartId", async (req, res) => {
     "GRAPH_TABLE_WINDOW"
   );
   const MIN_DATE = await db.models.Settings.getValue("MIN_DATE");
+  const MIN_ALARM_DURATION = await db.models.Settings.getValue("MIN_ALARM_DURATION");
 
   try {
     const customChartData = await db.models.CustomChart.findByPk(chartId);
@@ -325,7 +326,7 @@ router.get("/charts/custom/:chartId", async (req, res) => {
     }
 
     const chartData = await db.query(
-      "CALL getCustomChartsData(:startDate, :endDate, :chartId)",
+      "CALL getCustomChartsData(:startDate, :endDate, :chartId, :minTime, NULL)",
       {
         replacements: {
           startDate: dayjs
@@ -337,16 +338,18 @@ router.get("/charts/custom/:chartId", async (req, res) => {
             .endOf("day")
             .format("YYYY-MM-DD HH:mm:ss"),
           chartId,
+          minTime: MIN_ALARM_DURATION,
         },
       }
     );
 
     const tableData = await db.query(
-      "CALL getAlarmDataLast7Days(:window, :alarmsIds)",
+      "CALL getAlarmDataLast7Days(:window, :alarmsIds, :minTime)",
       {
         replacements: {
           alarmsIds: customChartData.alarms,
           window: GRAPH_TABLE_WINDOW,
+          minTime: MIN_ALARM_DURATION,
         },
       }
     );
@@ -377,13 +380,11 @@ router.get("/charts/custom/:chartId", async (req, res) => {
 
       return data.map((item, index) => {
         const start = Math.max(0, index - windowSize + 1);
-        const window = data
-          .slice(start, index + 1)
-          // .filter((d) => d.data > 0);
+        const window = data.slice(start, index + 1)
+        .filter((d) => d.data > 0);
 
         const averageNumber =
-          window.reduce((sum, point) => sum + point.data, 0) /
-          window.length;
+          window.reduce((sum, point) => sum + point.data, 0) / window.length;
 
         return {
           ...item,
@@ -393,7 +394,9 @@ router.get("/charts/custom/:chartId", async (req, res) => {
     }
 
     res.json({
-      chartData: calculateMovingAverage(chartData, MOVING_AVERAGE_WINDOW),
+      chartData: calculateMovingAverage(chartData, MOVING_AVERAGE_WINDOW).sort(
+        (a, b) => a.date.localeCompare(b.date)
+      ),
       tableData,
     });
   } catch (error) {
