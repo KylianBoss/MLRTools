@@ -190,6 +190,7 @@ const getData = async () => {
   const filteredData = data.chartData.filter(
     (d) => d.minProdReached && d.errors > 0 && d.downtime > 0
   );
+  const options = data.options || {};
 
   const { tableRows, tableColumns } = formatDataForTable(data);
   rows.value = tableRows;
@@ -279,6 +280,8 @@ const getData = async () => {
         return dayjs(value).format("DD/MM");
       },
     },
+    hideOverlappingLabels: true,
+    tickAmount: options.xTickAmount || 30,
   };
 
   chartOptions.value.stroke = {

@@ -1320,26 +1320,32 @@ function initDB(config) {
     const Target = db.define(
       "Target",
       {
-        id: {
+        chartId: {
           type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "ID of the custom chart",
           primaryKey: true,
-          autoIncrement: true,
         },
         groupName: {
           type: DataTypes.STRING,
           allowNull: false,
+          defaultValue: 0,
           comment: "Name of the zone group, e.g. 'Group 1', 'Group 2', etc.",
+          primaryKey: true,
         },
         value: {
           type: DataTypes.FLOAT,
           allowNull: false,
           defaultValue: 0,
-          comment: "Target value, e.g. 99.5 for 99.5%",
+          comment: "Target value, e.g. 99.5",
         },
         setAt: {
-          type: DataTypes.DATE,
+          type: DataTypes.DATEONLY,
           allowNull: false,
           defaultValue: Sequelize.NOW,
+          comment: "Date when the target was set",
+          primaryKey: true,
         },
       },
       {

@@ -154,7 +154,7 @@ const chartOptions = ref({
   },
   plotOptions: {
     bar: {
-      columnWidth: "20%",
+      columnWidth: "10%",
     },
   },
 });
@@ -179,6 +179,7 @@ const getData = async () => {
 
   const chartData = response.data.chartData.filter((item) => item.data > 0);
   const tableData = response.data.tableData;
+  const options = response.data.options || {};
 
   const { tableRows, tableColumns } = formatDataForTable(tableData);
   rows.value = tableRows;
@@ -194,8 +195,19 @@ const getData = async () => {
       name: "Nombre d'erreurs",
       type: "column",
       data: chartData.map((item) => {
-        return { x: item.date, y: item.data };
+        return {
+          x: item.date,
+          y: item.data,
+        };
       }),
+    },
+    {
+      name: "Target",
+      type: "line",
+      data: chartData.map((item) => {
+        return { x: item.date, y: item.target || 0 };
+      }),
+      color: "#00C853",
     },
     {
       name: "Moyenne 7 jours (nombre)",
@@ -212,11 +224,11 @@ const getData = async () => {
       show: true,
       rotate: -90,
       rotateAlways: true,
-      hideOverlappingLabels: true,
       formatter: (value) => {
         return dayjs(value).format("DD.MM.YY");
       },
     },
+    tickAmount: options.xTickAmount || 30,
   };
   chartOptions.value.yaxis = [
     {
@@ -232,6 +244,21 @@ const getData = async () => {
       },
       min: 0,
       max: max,
+    },
+    {
+      seriesName: "Target",
+      axisTicks: {
+        show: true,
+      },
+      axisBorder: {
+        show: true,
+      },
+      title: {
+        text: "Target",
+      },
+      min: 0,
+      max: max,
+      show: false,
     },
     {
       opposite: true,

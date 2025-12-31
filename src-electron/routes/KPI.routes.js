@@ -216,6 +216,9 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
     "MIN_PROD_TO_TAKE"
   );
   const WINDOW = await db.models.Settings.getValue("GRAPH_WINDOW");
+  const CHART_X_TICK_AMOUNT = await db.models.Settings.getValue(
+    "CHART_X_TICK_AMOUNT"
+  );
   const { groupName } = req.params;
   const from = dayjs()
     .subtract(GRAPH_TABLE_WINDOW, "day")
@@ -298,6 +301,9 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
     res.json({
       alarms,
       chartData: filledChartData,
+      options: {
+        xTickAmount: parseInt(CHART_X_TICK_AMOUNT),
+      },
     });
   } catch (error) {
     console.error("Error fetching KPI alarms by group:", error);
@@ -317,7 +323,12 @@ router.get("/charts/custom/:chartId", async (req, res) => {
     "GRAPH_TABLE_WINDOW"
   );
   const MIN_DATE = await db.models.Settings.getValue("MIN_DATE");
-  const MIN_ALARM_DURATION = await db.models.Settings.getValue("MIN_ALARM_DURATION");
+  const MIN_ALARM_DURATION = await db.models.Settings.getValue(
+    "MIN_ALARM_DURATION"
+  );
+  const CHART_X_TICK_AMOUNT = await db.models.Settings.getValue(
+    "CHART_X_TICK_AMOUNT"
+  );
 
   try {
     const customChartData = await db.models.CustomChart.findByPk(chartId);
@@ -354,34 +365,10 @@ router.get("/charts/custom/:chartId", async (req, res) => {
       }
     );
 
-    console.log(tableData);
-
     function calculateMovingAverage(data, windowSize = 7) {
-      // const dailyBreakdown = JSON.parse(data.dailyBreakdown);
-
-      // return {
-      //   ...data,
-      //   dailyBreakdown: dailyBreakdown.map((item, index) => {
-      //     const start = Math.max(0, index - windowSize + 1);
-      //     const window = dailyBreakdown
-      //       .slice(start, index + 1)
-      //       .filter((d) => d.total_count > 0);
-
-      //     const averageNumber =
-      //       window.reduce((sum, point) => sum + point.total_count, 0) /
-      //       window.length;
-
-      //     return {
-      //       ...item,
-      //       movingAverage: Math.round(averageNumber * 100) / 100,
-      //     };
-      //   }),
-      // };
-
       return data.map((item, index) => {
         const start = Math.max(0, index - windowSize + 1);
-        const window = data.slice(start, index + 1)
-        .filter((d) => d.data > 0);
+        const window = data.slice(start, index + 1).filter((d) => d.data > 0);
 
         const averageNumber =
           window.reduce((sum, point) => sum + point.data, 0) / window.length;
@@ -393,11 +380,53 @@ router.get("/charts/custom/:chartId", async (req, res) => {
       });
     }
 
+    async function addTargetsToChartData(data) {
+      const targets = await db.models.Target.findAll({
+        where: {
+          chartId,
+        },
+        order: [["setAt", "ASC"]],
+        raw: true,
+      });
+
+      console.log(targets);
+
+      // Example for targets:
+      // [
+      //   { chartId: 1, groupName: null, value: 5, date: '2025-01-01' },
+      //   { chartId: 1, groupName: null, value: 3, date: '2025-11-01' },
+      // ]
+
+      let actualTarget = {
+        setAt: '1970-01-01',
+        value: 0
+      }
+      return data.map((dataPoint) => {
+        // Check if there's a new target for this date
+        const newTarget = targets.find(
+          (t) => dayjs(t.setAt).isSame(dayjs(dataPoint.date), 'day')
+        );
+        if (newTarget) {
+          actualTarget = newTarget;
+        }
+
+        return {
+          ...dataPoint,
+          target: actualTarget.value,
+        };
+      });
+    }
+
     res.json({
-      chartData: calculateMovingAverage(chartData, MOVING_AVERAGE_WINDOW).sort(
-        (a, b) => a.date.localeCompare(b.date)
+      chartData: await addTargetsToChartData(
+        calculateMovingAverage(chartData, MOVING_AVERAGE_WINDOW).sort((a, b) =>
+          a.date.localeCompare(b.date)
+        )
       ),
       tableData,
+      options: {
+        xTickAmount: parseInt(CHART_X_TICK_AMOUNT),
+      },
     });
   } catch (error) {
     console.error("Error fetching custom chart data:", error);
