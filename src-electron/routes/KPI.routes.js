@@ -368,7 +368,7 @@ router.get("/charts/custom/:chartId", async (req, res) => {
     function calculateMovingAverage(data, windowSize = 7) {
       return data.map((item, index) => {
         const start = Math.max(0, index - windowSize + 1);
-        const window = data.slice(start, index + 1).filter((d) => d.data > 0);
+        const window = data.slice(start, index + 1);
 
         const averageNumber =
           window.reduce((sum, point) => sum + point.data, 0) / window.length;

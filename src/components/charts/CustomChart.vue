@@ -177,7 +177,7 @@ const getData = async () => {
       return;
     });
 
-  const chartData = response.data.chartData.filter((item) => item.data > 0);
+  const chartData = response.data.chartData;
   const tableData = response.data.tableData;
   const options = response.data.options || {};
 
