@@ -389,8 +389,6 @@ router.get("/charts/custom/:chartId", async (req, res) => {
         raw: true,
       });
 
-      console.log(targets);
-
       // Example for targets:
       // [
       //   { chartId: 1, groupName: null, value: 5, date: '2025-01-01' },

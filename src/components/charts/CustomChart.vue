@@ -140,21 +140,19 @@ const chartOptions = ref({
   },
   series: [],
   stroke: {
-    width: 2,
+    width: [2, 3, 3],
     curve: "smooth",
   },
   legend: {
-    horizontalAlign: "left",
     offsetX: 40,
-  },
-  legend: {
     show: true,
     position: "bottom",
     horizontalAlign: "center",
   },
   plotOptions: {
     bar: {
-      columnWidth: "10%",
+      columnWidth: "30%",
+      distributed: true,
     },
   },
 });
@@ -190,6 +188,13 @@ const getData = async () => {
   const percentile90Index = Math.floor(errorValues.length * 0.9);
   const max = Math.round(errorValues[percentile90Index] * 1.5);
 
+  const barColors = chartData.map((item) => {
+    const value = parseFloat(item.data);
+    const target = parseFloat(item.target) || 0;
+    const above = value >= target;
+    return above ? "#E74C3C" : "#27AE60";
+  });
+
   chartSeries.value.push(
     {
       name: "Nombre d'erreurs",
@@ -207,7 +212,7 @@ const getData = async () => {
       data: chartData.map((item) => {
         return { x: item.date, y: item.target || 0 };
       }),
-      color: "#FB5800",
+      color: "#3498DB",
     },
     {
       name: "Moyenne 7 jours (nombre)",
@@ -215,9 +220,13 @@ const getData = async () => {
       data: chartData.map((item) => {
         return { x: item.date, y: item.movingAverage };
       }),
-      color: "#C10015",
+      color: "#F39C12",
     }
   );
+  chartOptions.value = {
+    ...chartOptions.value,
+    colors: barColors,
+  }
   chartOptions.value.xaxis = {
     categories: chartData.map((item) => dayjs(item.date).format("YYYY-MM-DD")),
     labels: {
