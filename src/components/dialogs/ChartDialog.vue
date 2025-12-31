@@ -12,7 +12,6 @@
           outlined
           dense
           class="full-width"
-          :disable="!!chart.id"
         />
         <q-input
           v-model="chart.createdByName"
@@ -23,6 +22,52 @@
           :disable="!!chart.id"
           v-if="!!chart.createdBy"
         />
+        <q-input
+          v-model="chart.actualTarget"
+          label="Target (optionnel)"
+          outlined
+          dense
+          class="full-width q-mt-sm"
+          type="number"
+          min="0"
+        />
+        <q-table
+          :rows="chart.targets"
+          row-key="setAt"
+          :columns="[
+            {
+              name: 'setAt',
+              label: 'Date',
+              field: 'setAt',
+              align: 'left',
+              format: (val) => dayjs(val).format('DD.MM.YYYY'),
+            },
+            { name: 'value', label: 'Valeur', field: 'value', align: 'center' },
+            {
+              name: 'setBy',
+              label: 'Défini par',
+              field: 'setBy',
+              align: 'right',
+            },
+          ]"
+          flat
+          bordered
+          dense
+          wrap-cells
+          virtual-scroll
+          :rows-per-page-options="[0]"
+          style="height: 200px"
+          class="q-mt-sm"
+          :pagination="{ sortBy: 'setAt', descending: true }"
+        >
+          <template v-slot:no-data>
+            <div class="text-center full-width q-pa-md">
+              <div class="text-h6 text-grey-4 q-mt-md">
+                Aucun target défini.
+              </div>
+            </div>
+          </template>
+        </q-table>
       </q-card-section>
       <!-- Alarm selection -->
       <q-card-section>
@@ -98,6 +143,7 @@
 import { useDialogPluginComponent } from "quasar";
 import { ref, onMounted } from "vue";
 import { api } from "boot/axios";
+import dayjs from "dayjs";
 
 const props = defineProps({
   chartData: {
@@ -106,13 +152,13 @@ const props = defineProps({
   },
 });
 
-const chart = ref(
-  {
-    chartName: "",
-    alarms: [],
-    ...props.chartData,
-  }
-);
+const chart = ref({
+  chartName: "",
+  targets: [],
+  actualTarget: 0,
+  alarms: [],
+  ...props.chartData,
+});
 const alarmList = ref([]);
 const columns = [
   {
@@ -131,6 +177,7 @@ const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent();
 const onOk = () => {
   const data = { ...chart.value };
   data.alarms = data.alarms.map((alarm) => alarm.alarmId);
+  data.newTarget = chart.value.actualTarget;
   onDialogOK(data);
 };
 
@@ -141,6 +188,11 @@ onMounted(() => {
       chart.value.alarms = alarmList.value.filter((alarm) =>
         props.chartData.alarms.includes(alarm.alarmId)
       );
+    }
+    if (props.chartData?.targets?.length) {
+      chart.value.actualTarget =
+        props.chartData.targets[props.chartData.targets.length - 1].value;
+      chart.value.targets = props.chartData.targets;
     }
   });
 });

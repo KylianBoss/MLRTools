@@ -25,7 +25,22 @@ router.get("/custom-charts/", async (req, res) => {
       return chartData;
     });
 
-    res.json(chartsWithUser);
+    // Set the targets to charts
+    const chartsWithTargets = chartsWithUser.map(async (chart) => {
+      const targets = await db.models.Target.findAll({
+        where: { chartId: chart.id },
+        order: [["setAt", "ASC"]],
+      })
+
+      chart.targets = targets.map((target) => target.toJSON());
+
+      chart.targets.forEach(target => {
+        target.setBy = userMap[target.setBy] || "Unknown";
+      });
+      return chart;
+    });
+
+    res.json(await Promise.all(chartsWithTargets));
   } catch (error) {
     console.error("Error fetching custom charts:", error);
     res.status(500).json({ error: error.message });
@@ -59,7 +74,7 @@ router.post("/custom-charts/", async (req, res) => {
 });
 router.put("/custom-charts/:id", async (req, res) => {
   const { id } = req.params;
-  const { alarms } = req.body;
+  const { alarms, newTarget, setBy } = req.body;
 
   if (!id || !Array.isArray(alarms) || alarms.length === 0) {
     res.status(400).json({ error: "Valid id and alarms are required" });
@@ -72,8 +87,26 @@ router.put("/custom-charts/:id", async (req, res) => {
       res.status(404).json({ error: "Custom chart not found" });
       return;
     }
+    const target = await db.models.Target.findOne({
+      where: {
+        chartId: id,
+      },
+      order: [["setAt", "DESC"]],
+      limit: 1,
+    });
+    if (target) chart.target = target.value;
 
     chart.alarms = alarms;
+
+    if (newTarget !== undefined && setBy && newTarget !== chart.target) {
+      await db.models.Target.upsert({
+        chartId: id,
+        value: newTarget,
+        setBy: setBy,
+      })
+      chart.target = newTarget;
+    }
+
     await chart.save();
     res.json(chart.toJSON());
   } catch (error) {

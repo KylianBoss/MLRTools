@@ -37,9 +37,16 @@
         >
           <q-td>{{ props.row.chartName }}</q-td>
           <q-td>{{ props.row.createdByName }}</q-td>
-          <q-td class="text-center">{{
-            JSON.parse(props.row.alarms).length
-          }}</q-td>
+          <q-td class="text-center">
+            {{ JSON.parse(props.row.alarms).length }}
+          </q-td>
+          <q-td class="text-center">
+            {{
+              props.row.targets && props.row.targets.length > 0
+                ? props.row.targets[props.row.targets.length - 1].value
+                : 'N/A'
+            }}
+          </q-td>
           <q-td class="text-center">
             <q-btn
               icon="mdi-pencil"
@@ -100,6 +107,14 @@ const columns = [
     label: "Nombre d'alarmes",
     field: (row) => row.alarmCount,
     format: (val) => `${val}`,
+    sortable: true,
+  },
+  {
+    name: "target",
+    align: "center",
+    label: "Target",
+    field: (row) => row.targets[row.targets.length - 1].value,
+    format: (val) => (val !== null ? `${val}` : 'N/A'),
     sortable: true,
   },
   {
@@ -164,6 +179,8 @@ const updateChart = async (chart) => {
       id: chart.id,
       chartName: chartData.chartName,
       alarms: chartData.alarms,
+      newTarget: chartData.newTarget,
+      setBy: App.user.id,
     };
 
     try {

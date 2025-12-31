@@ -207,7 +207,7 @@ const getData = async () => {
       data: chartData.map((item) => {
         return { x: item.date, y: item.target || 0 };
       }),
-      color: "#00C853",
+      color: "#FB5800",
     },
     {
       name: "Moyenne 7 jours (nombre)",

@@ -1347,6 +1347,15 @@ function initDB(config) {
           comment: "Date when the target was set",
           primaryKey: true,
         },
+        setBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: Users,
+            key: "id",
+          },
+          comment: "ID of the user who set the target",
+        },
       },
       {
         timestamps: false,
