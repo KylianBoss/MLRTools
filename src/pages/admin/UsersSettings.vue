@@ -293,7 +293,7 @@ const access = [
   {
     section: "graphiques",
     label: "Peut modifier un graphique personnalisé",
-    value: "canEditCustomCharts",
+    value: "canUpdateCustomCharts",
   },
   // Alarms accesses
   {

@@ -26,7 +26,7 @@
               icon="mdi-plus"
               @click="createChart()"
               class="full-width"
-              :disable="App.userHasAccess('create-custom-chart') === false"
+              :disable="App.userHasAccess('canCreateCustomCharts') === false"
             />
           </q-td>
         </q-tr>
@@ -54,7 +54,7 @@
               dense
               flat
               @click="updateChart(props.row)"
-              :disable="App.userHasAccess('edit-custom-chart') === false"
+              :disable="App.userHasAccess('canUpdateCustomCharts') === false"
             />
             <q-btn
               icon="mdi-delete"
@@ -62,7 +62,7 @@
               dense
               flat
               @click="deleteChart(props.row)"
-              :disable="App.userHasAccess('delete-custom-chart') === false"
+              :disable="App.userHasAccess('canDeleteCustomCharts') === false"
             />
           </q-td>
         </q-tr>
