@@ -113,7 +113,7 @@
           <q-menu
             touch-position
             context-menu
-            v-if="App.user.UserAccesses.includes('importMessages')"
+            v-if="App.userHasAccess('canClassifyAlarms')"
           >
             <q-list dense style="min-width: 100px">
               <q-item

@@ -312,6 +312,11 @@ const access = [
     label: "Liste des alarmes",
     value: "canAccessAlarmList",
   },
+  {
+    section: "alarmes",
+    label: "Peut classer les alarmes",
+    value: "canClassifyAlarms",
+  },
   // TGW accesses
   {
     section: "tgw",
