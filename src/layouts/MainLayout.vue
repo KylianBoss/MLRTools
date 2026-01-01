@@ -60,18 +60,13 @@
             v-if="App.userHasAccess('kpi')"
           />
           <!-- SEARCH -->
-          <q-item
-            clickable
-            v-ripple
-            :to="{ name: 'search' }"
-            :active="$route.name == 'search'"
+          <drawer-item
+            to="search"
+            autorisation="searchMessages"
+            icon="mdi-magnify"
+            label="Recherche alarmes"
             v-if="App.userHasAccess('searchMessages')"
-          >
-            <q-item-section avatar>
-              <q-icon name="mdi-magnify" />
-            </q-item-section>
-            <q-item-section>Recherche alarmes</q-item-section>
-          </q-item>
+          />
           <!-- CHARTS -->
           <q-expansion-item
             expand-separator
@@ -88,13 +83,13 @@
             />
             <drawer-item
               to="faillures-charts"
-              autorisation="charts"
+              autorisation="canAccessCharts"
               icon="mdi-chart-bell-curve"
               label="Graphiques des pannes"
             />
             <drawer-item
               to="custom-charts"
-              autorisation="custom-charts"
+              autorisation="canAccessCustomCharts"
               icon="mdi-chart-line"
               label="Graphiques personnalisés"
             />
@@ -105,36 +100,38 @@
             icon="mdi-bell-outline"
             label="Alarmes"
             v-model="drawers[1]"
-            v-if="
-              App.userHaveAccessToOneOf([
-                'importMessages',
-                'alarmList',
-                'excludedAlarms',
-                'tgwReportZones',
-              ])
-            "
+            v-if="App.userHasAccess('alarms')"
           >
             <drawer-item
               to="import"
-              autorisation="importMessages"
+              autorisation="canImportMessages"
               icon="mdi-file-import-outline"
               label="Importer des messages"
             />
             <drawer-item
               to="alarm-list"
-              autorisation="alarmList"
+              autorisation="canAccessAlarmList"
               icon="mdi-format-list-bulleted-type"
               label="Liste des alarmes"
             />
+          </q-expansion-item>
+          <!-- TGW -->
+          <q-expansion-item
+            expand-separator
+            icon="mdi-router-wireless"
+            label="TGW"
+            v-model="drawers[4]"
+            v-if="App.userHasAccess('tgw')"
+          >
             <drawer-item
               to="tgw-report-zones"
-              autorisation="tgwReportZones"
+              autorisation="canAccessTgwReportZones"
               icon="mdi-order-bool-ascending-variant"
               label="TGW Rapport zones"
             />
             <drawer-item
               to="tgw-report"
-              autorisation="tgwReportZones"
+              autorisation="canAccessTgwReportAlarms"
               icon="mdi-order-bool-ascending-variant"
               label="TGW Rapport"
             />
@@ -145,7 +142,7 @@
             icon="mdi-database"
             label="Données"
             v-model="drawers[3]"
-            v-if="App.userHaveAccessToOneOf(['productionData'])"
+            v-if="App.userHasAccess('data')"
           >
             <drawer-item
               to="production-data"
@@ -158,13 +155,13 @@
           <q-expansion-item
             expand-separator
             icon="mdi-toolbox-outline"
-            label="Utilitaires"
+            label="Outils"
             v-model="drawers[2]"
-            v-if="App.userHaveAccessToOneOf(['suspiciousPlaces'])"
+            v-if="App.userHasAccess('tools')"
           >
             <drawer-item
               to="suspicious_places"
-              autorisation="suspiciousPlaces"
+              autorisation="canAccessSuspiciousPlaces"
               icon="mdi-map-marker-alert-outline"
               label="Lieux suspects"
             />
@@ -179,15 +176,27 @@
           >
             <drawer-item
               to="admin-db"
-              autorisation="admin-db"
+              autorisation="canAccessAdminDB"
               icon="mdi-database-settings-outline"
               label="Database"
             />
             <drawer-item
               to="admin-users"
-              autorisation="admin-users"
+              autorisation="canAccessAdminUser"
               icon="mdi-account-group-outline"
               label="Users"
+            />
+            <drawner-item
+              to="admin-bots"
+              autorisation="canAccessAdminBots"
+              icon="mdi-robot-outline"
+              label="Bots"
+            />
+            <drawer-item
+              to="admin-settings"
+              autorisation="canAccessAdminSettings"
+              icon="mdi-cog-outline"
+              label="Settings"
             />
           </q-expansion-item>
         </q-list>

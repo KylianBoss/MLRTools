@@ -43,9 +43,6 @@ export const useAppStore = defineStore("App", {
             if (response.data && response.data.config === true) {
               this.notConfigured = false;
               this.user = response.data.user;
-              this.user.UserAccesses = this.user.UserAccesses.map(
-                (access) => access.menuId
-              );
               if (this.isBot)
                 api
                   .post("/cron/initialize", {

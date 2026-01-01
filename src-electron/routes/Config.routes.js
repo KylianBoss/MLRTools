@@ -1,4 +1,4 @@
-import e, { Router } from "express";
+import e, { raw, Router } from "express";
 import path from "path";
 import fs from "fs/promises";
 import { initDB } from "../database.js";
@@ -28,7 +28,10 @@ router.get("/", async (req, res) => {
 
     res.json({
       config: true,
-      user: user.toJSON(),
+      user: {
+        ...user.toJSON(),
+        UserAccesses: user.UserAccesses.map((access) => access.menuId),
+      },
     });
   } catch (error) {
     console.error("Error reading config file:", error);
