@@ -146,7 +146,7 @@
           >
             <drawer-item
               to="production-data"
-              autorisation="productionData"
+              autorisation="canAccessProductionData"
               icon="mdi-timetable"
               label="Données de production"
             />
