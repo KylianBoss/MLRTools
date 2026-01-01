@@ -277,7 +277,7 @@ const getData = async () => {
       rotate: -90,
       rotateAlways: true,
       formatter: (value) => {
-        return dayjs(value).format("DD/MM");
+        return dayjs(value).format("DD.MM.YY");
       },
     },
     hideOverlappingLabels: true,

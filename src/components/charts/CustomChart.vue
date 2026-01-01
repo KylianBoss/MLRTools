@@ -191,8 +191,8 @@ const getData = async () => {
   const barColors = chartData.map((item) => {
     const value = parseFloat(item.data);
     const target = parseFloat(item.target) || 0;
-    const above = value >= target;
-    return above ? "#E74C3C" : "#27AE60";
+    const above = value > target;
+    return above ? "#E74C3CA0" : "#27AE60A0";
   });
 
   chartSeries.value.push(

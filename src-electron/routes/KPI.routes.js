@@ -131,6 +131,9 @@ router.get("/groups", async (req, res) => {
   try {
     const groups = await db.models.ZoneGroups.findAll({
       attributes: ["zoneGroupName", "zones"],
+      where: {
+        display: true,
+      },
       order: [["order", "ASC"]],
     });
 
@@ -396,13 +399,13 @@ router.get("/charts/custom/:chartId", async (req, res) => {
       // ]
 
       let actualTarget = {
-        setAt: '1970-01-01',
-        value: 0
-      }
+        setAt: "1970-01-01",
+        value: 0,
+      };
       return data.map((dataPoint) => {
         // Check if there's a new target for this date
-        const newTarget = targets.find(
-          (t) => dayjs(t.setAt).isSame(dayjs(dataPoint.date), 'day')
+        const newTarget = targets.find((t) =>
+          dayjs(t.setAt).isSame(dayjs(dataPoint.date), "day")
         );
         if (newTarget) {
           actualTarget = newTarget;

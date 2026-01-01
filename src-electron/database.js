@@ -319,6 +319,12 @@ function initDB(config) {
           defaultValue: 0,
           comment: "Order of the group in the list, used for sorting",
         },
+        display: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: true,
+          comment: "If true, the group will be displayed in the charts page",
+        },
       },
       {
         timestamps: false,
