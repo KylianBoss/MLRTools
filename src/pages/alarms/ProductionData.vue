@@ -25,9 +25,21 @@
           <q-td>
             {{ dayjs(props.row.date).format("dd DD.MM.YYYY").toUpperCase() }}
           </q-td>
-          <q-td key="start" :props="props" class="cursor-pointer">
+          <q-td
+            key="start"
+            :props="props"
+            :class="
+              App.userHasAccess('canUpdateProductionData')
+                ? 'cursor-pointer'
+                : 'cursor-not-allowed'
+            "
+          >
             {{ dayjs(props.row.start).format("HH:mm") }}
-            <q-popup-edit v-model="props.row.start" v-slot="scope">
+            <q-popup-edit
+              v-model="props.row.start"
+              v-slot="scope"
+              v-if="App.userHasAccess('canUpdateProductionData')"
+            >
               <q-input
                 filled
                 v-model="scope.value"
@@ -53,9 +65,21 @@
               /> -->
             </q-popup-edit>
           </q-td>
-          <q-td key="end" :props="props" class="cursor-pointer">
+          <q-td
+            key="end"
+            :props="props"
+            :class="
+              App.userHasAccess('canUpdateProductionData')
+                ? 'cursor-pointer'
+                : 'cursor-not-allowed'
+            "
+          >
             {{ dayjs(props.row.end).format("HH:mm") }}
-            <q-popup-edit v-model="props.row.end" v-slot="scope">
+            <q-popup-edit
+              v-model="props.row.end"
+              v-slot="scope"
+              v-if="App.userHasAccess('canUpdateProductionData')"
+            >
               <q-input
                 filled
                 v-model="scope.value"
@@ -85,11 +109,24 @@
             <q-checkbox
               v-model="props.row.dayOff"
               @update:model-value="updateRow(props.row, 'dayOff', $event)"
+              :disable="
+                App.userHasAccess('canUpdateProductionData') ? false : true
+              "
             />
           </q-td>
-          <q-td class="cursor-pointer">
+          <q-td
+            :class="
+              App.userHasAccess('canUpdateProductionData')
+                ? 'cursor-pointer'
+                : 'cursor-not-allowed'
+            "
+          >
             {{ Number(props.row.boxTreated).toLocaleString() }}
-            <q-popup-edit v-model="props.row.boxTreated" v-slot="scope">
+            <q-popup-edit
+              v-model="props.row.boxTreated"
+              v-slot="scope"
+              v-if="App.userHasAccess('canUpdateProductionData')"
+            >
               <q-input
                 filled
                 v-model="scope.value"
@@ -103,7 +140,7 @@
               />
             </q-popup-edit>
           </q-td>
-          <q-td class="cursor-pointer">
+          <q-td>
             {{
               props.row.boxTreated > 0
                 ? Math.round(
@@ -168,10 +205,12 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useDataLogStore } from "stores/datalog";
 import dayjs from "dayjs";
 import weekday from "dayjs/plugin/weekday";
+import { useAppStore } from "src/stores/app";
 
 dayjs.extend(weekday);
 
 const dataLogStore = useDataLogStore();
+const App = useAppStore();
 const productionData = ref([]);
 const columns = [
   {
