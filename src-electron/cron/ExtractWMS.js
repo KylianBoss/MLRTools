@@ -147,13 +147,39 @@ export const extractWMS = async (manualDate = null) => {
       );
 
       // Insert or update the data in the database
-      await db.models.ProductionData.upsert({
-        date: dayjs(date).toDate(),
-        start: dayjs(date).startOf("day").toDate(),
-        end: dayjs(date).endOf("day").toDate(),
-        dayOff: totalBoxes === 0,
-        boxTreated: totalBoxes,
+      const d = await db.models.ProductionData.findOrCreate({
+        where: { date: dayjs(date).toDate() },
       });
+      if (d[1] === false) {
+        console.log(`Data for ${date} already exists, updating...`);
+        await updateJob(
+          {
+            lastRun: new Date(),
+            lastLog: `Data for ${date} already exists, updating...`,
+          },
+          jobName
+        );
+        d[0].boxTreated = totalBoxes;
+        d[0].dayOff = totalBoxes === 0;
+        await d[0].save();
+        continue;
+      } else {
+        console.log(`Inserting data for ${date}...`);
+        await updateJob(
+          {
+            lastRun: new Date(),
+            lastLog: `Inserting data for ${date}...`,
+          },
+          jobName
+        );
+        await db.models.ProductionData.create({
+          date: dayjs(date).toDate(),
+          start: dayjs(date).startOf("day").toDate(),
+          end: dayjs(date).endOf("day").toDate(),
+          dayOff: totalBoxes === 0,
+          boxTreated: totalBoxes,
+        });
+      }
 
       console.log(`Data for ${date} inserted into database.`);
       await updateJob(
