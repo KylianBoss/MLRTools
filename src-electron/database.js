@@ -331,6 +331,39 @@ function initDB(config) {
       }
     );
 
+    const ScheduleProduction = db.define(
+      "ScheduleProduction",
+      {
+        day: {
+          type: DataTypes.ENUM(
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday"
+          ),
+          primaryKey: true,
+          allowNull: false,
+          comment: "Day of the week",
+        },
+        startTime: {
+          type: DataTypes.TIME,
+          allowNull: false,
+          comment: "Scheduled start time for production on this day",
+        },
+        endTime: {
+          type: DataTypes.TIME,
+          allowNull: false,
+          comment: "Scheduled end time for production on this day",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
     const ZoneReadPoints = db.define(
       "ZoneReadPoints",
       {

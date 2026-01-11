@@ -172,10 +172,15 @@ export const extractWMS = async (manualDate = null) => {
           },
           jobName
         );
+        const schedule = await db.models.Schedules.findOne({
+          where: { day: dayjs(date).format("dddd").toLocaleLowerCase() },
+        });
+        const startTime = schedule ? schedule.startTime : "00:00";
+        const endTime = schedule ? schedule.endTime : "23:59";
         await db.models.ProductionData.create({
           date: dayjs(date).toDate(),
-          start: dayjs(date).startOf("day").toDate(),
-          end: dayjs(date).endOf("day").toDate(),
+          start: dayjs(`${date}T${startTime}`).toDate(),
+          end: dayjs(`${date}T${endTime}`).toDate(),
           dayOff: totalBoxes === 0,
           boxTreated: totalBoxes,
         });
