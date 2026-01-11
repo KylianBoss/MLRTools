@@ -5,5 +5,8 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": ["source.fixAll.eslint"],
   "eslint.validate": ["javascript", "javascriptreact", "typescript", "vue"],
-  "i18n-ally.localesPaths": ["src/i18n"]
+  "i18n-ally.localesPaths": ["src/i18n"],
+  "github-actions.workflows.pinned.workflows": [
+    ".github/workflows/quasar-release.yml"
+  ]
 }

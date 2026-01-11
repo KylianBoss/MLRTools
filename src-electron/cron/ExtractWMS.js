@@ -172,11 +172,14 @@ export const extractWMS = async (manualDate = null) => {
           },
           jobName
         );
-        const schedule = await db.models.Schedules.findOne({
+        const schedule = await db.models.ScheduleProduction.findOne({
           where: { day: dayjs(date).format("dddd").toLowerCase() },
         });
-        const startTime = schedule ? schedule.startTime : "00:00";
-        const endTime = schedule ? schedule.endTime : "23:59";
+        console.log(schedule)
+        const startTime = schedule ? schedule.startTime : "00:00:00";
+        const endTime = schedule ? schedule.endTime : "23:59:00";
+        console.log(dayjs(`${date} ${startTime}`).toDate())
+        console.log(dayjs(`${date} ${endTime}`).toDate())
         await db.models.ProductionData.create({
           date: dayjs(date).toDate(),
           start: dayjs(`${date} ${startTime}`).toDate(),
@@ -229,6 +232,7 @@ export const extractWMS = async (manualDate = null) => {
       endAt: new Date(),
       actualState: "idle",
       cronExpression: "30 0 * * *",
+      args: null,
     },
     jobName
   );
