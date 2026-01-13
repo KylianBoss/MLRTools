@@ -335,15 +335,7 @@ function initDB(config) {
       "ScheduleProduction",
       {
         day: {
-          type: DataTypes.ENUM(
-            "monday",
-            "tuesday",
-            "wednesday",
-            "thursday",
-            "friday",
-            "saturday",
-            "sunday"
-          ),
+          type: DataTypes.INTEGER.UNSIGNED,
           primaryKey: true,
           allowNull: false,
           comment: "Day of the week",

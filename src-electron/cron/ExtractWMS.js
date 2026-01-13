@@ -59,8 +59,10 @@ export const extractWMS = async (manualDate = null) => {
   );
 
   // Process each date
+  let currentDate = null;
   try {
     for (const date of datesToProcess) {
+      currentDate = date;
       const data = [];
       let getFile = false;
       for (let i = 0; i < 24; i++) {
@@ -173,19 +175,20 @@ export const extractWMS = async (manualDate = null) => {
           jobName
         );
         const schedule = await db.models.ScheduleProduction.findOne({
-          where: { day: dayjs(date).format("dddd").toLowerCase() },
+          where: { day: dayjs(date).format("d") },
         });
-        console.log(schedule)
-        const startTime = schedule ? schedule.startTime : "00:00:00";
-        const endTime = schedule ? schedule.endTime : "23:59:00";
-        console.log(dayjs(`${date} ${startTime}`).toDate())
-        console.log(dayjs(`${date} ${endTime}`).toDate())
-        await db.models.ProductionData.create({
-          date: dayjs(date).toDate(),
-          start: dayjs(`${date} ${startTime}`).toDate(),
-          end: dayjs(`${date} ${endTime}`).toDate(),
-          dayOff: totalBoxes === 0,
+        const startTime = schedule
+          ? `${date} ${schedule.startTime}`
+          : `${date} 00:00:00`;
+        const endTime = schedule
+          ? `${date} ${schedule.endTime}`
+          : `${date} 23:59:59`;
+        await db.models.ProductionData.upsert({
+          date: date,
           boxTreated: totalBoxes,
+          dayOff: totalBoxes === 0,
+          start: dayjs(startTime).toDate(),
+          end: dayjs(endTime).toDate(),
         });
       }
 
@@ -199,11 +202,11 @@ export const extractWMS = async (manualDate = null) => {
       );
     }
   } catch (error) {
-    console.error(`Failed to process data for date ${date}:`, error);
+    console.error(`Failed to process data for date ${currentDate}:`, error);
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: `Failed to process data for date ${date}: ${error.message}`,
+        lastLog: `Failed to process data for date ${currentDate}: ${error.message}`,
         endAt: new Date(),
         actualState: "error",
       },
@@ -217,7 +220,7 @@ export const extractWMS = async (manualDate = null) => {
     for (const admin of admins) {
       await db.models.Notifications.create({
         userId: admin.id,
-        message: `WMS data extraction failed for date ${date}: ${error.message}`,
+        message: `WMS data extraction failed for date ${currentDate}: ${error.message}`,
         type: "error",
       });
     }
