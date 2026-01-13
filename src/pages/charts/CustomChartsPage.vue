@@ -126,7 +126,7 @@ const columns = [
 ];
 
 const createChart = async () => {
-  if (App.userHasAccess("create-custom-chart") === false) {
+  if (App.userHasAccess("canCreateCustomCharts") === false) {
     $q.notify({
       type: "negative",
       message: "Vous n'avez pas la permission de créer un graphique.",
@@ -162,7 +162,7 @@ const createChart = async () => {
 };
 
 const updateChart = async (chart) => {
-  if (App.userHasAccess("edit-custom-chart") === false) {
+  if (App.userHasAccess("canUpdateCustomCharts") === false) {
     $q.notify({
       type: "negative",
       message: "Vous n'avez pas la permission de modifier un graphique.",
@@ -200,7 +200,7 @@ const updateChart = async (chart) => {
 };
 
 const deleteChart = async (chart) => {
-  if (App.userHasAccess("delete-custom-chart") === false) {
+  if (App.userHasAccess("canDeleteCustomCharts") === false) {
     $q.notify({
       type: "negative",
       message: "Vous n'avez pas la permission de supprimer un graphique.",
