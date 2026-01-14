@@ -173,6 +173,30 @@ const routes = [
           },
         ],
       },
+      // === SETTINGS === //
+      // === DEV === //
+      {
+        path: "dev",
+        beforeEnter: (to, from, next) => {
+          const App = useAppStore();
+          if (App.user && App.user.UserAccesses.includes("admin")) {
+            next();
+          } else {
+            App.feedBackNotification(
+              "Vous n'avez pas les droits pour accéder à cette page",
+              "negative"
+            );
+            next({ name: "home" });
+          }
+        },
+        children: [
+          {
+            path: "command",
+            name: "command-tool",
+            component: () => import("src/pages/dev/CommandTool.vue"),
+          },
+        ],
+      },
     ],
   },
 

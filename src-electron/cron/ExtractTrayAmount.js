@@ -440,10 +440,13 @@ export const extractTrayAmount = (date, headless = true) => {
       );
 
       // Check if all last days since the last extract have been extracted
-      const lastExtract = await db.models.ZoneData.findOne({
+      const lastExtract = await db.models.ZoneData.findAll({
+        attributes: ["date"],
         order: [["date", "DESC"]],
+        limit: 1,
+        raw: true,
       });
-      const daysDiff = dayjs().diff(dayjs(lastExtract.date), "day");
+      const daysDiff = dayjs().diff(dayjs(lastExtract[0].date), "day");
       if (daysDiff > 1) {
         console.log(
           `There are ${
@@ -452,7 +455,7 @@ export const extractTrayAmount = (date, headless = true) => {
         );
 
         // Start the extraction for missing days, start with the oldest day and set the bot for only one extraction at a time
-        const dayToExtract = dayjs(lastExtract.date).add(1, "day");
+        const dayToExtract = dayjs(lastExtract[0].date).add(1, "day");
         console.log(
           `Setting extraction for date ${dayToExtract.format("YYYY-MM-DD")}`
         );

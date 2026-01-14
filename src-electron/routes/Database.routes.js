@@ -134,4 +134,86 @@ router.post("/empty-day-resume-at-date", async (req, res) => {
   }
 });
 
+router.post("/execute-code", async (req, res) => {
+  const { code } = req.body;
+
+  if (!code) {
+    res.status(400).json({ error: "No code provided" });
+    return;
+  }
+
+  // Validate code - only allow read operations and stored procedures
+  const codeToCheck = code.toLowerCase();
+
+  // List of forbidden operations
+  const forbiddenPatterns = [
+    /\.update\s*\(/,
+    /\.destroy\s*\(/,
+    /\.delete\s*\(/,
+    /\.create\s*\(/,
+    /\.bulkCreate\s*\(/,
+    /\.bulkUpdate\s*\(/,
+    /\.bulkDelete\s*\(/,
+    /\.upsert\s*\(/,
+    /\.truncate\s*\(/,
+    /\.drop\s*\(/,
+    /\.sync\s*\(/,
+    /insert\s+into/i,
+    /update\s+\w+\s+set/i,
+    /delete\s+from/i,
+    /drop\s+(table|database)/i,
+    /truncate\s+table/i,
+    /alter\s+table/i,
+    /create\s+(table|database)/i,
+  ];
+
+  for (const pattern of forbiddenPatterns) {
+    if (pattern.test(code)) {
+      res.status(403).json({
+        error:
+          "Opération non autorisée. Seules les opérations de lecture et les procédures stockées sont autorisées.",
+        details:
+          "Les opérations UPDATE, DELETE, CREATE et INSERT sont interdites.",
+      });
+      return;
+    }
+  }
+
+  try {
+    // Create an async function from the code
+    const AsyncFunction = Object.getPrototypeOf(
+      async function () {}
+    ).constructor;
+
+    // Wrap the code with a return statement if it doesn't have one
+    const wrappedCode = code.trim().startsWith("return")
+      ? code
+      : `return (${code})`;
+
+    const fn = new AsyncFunction(
+      "db",
+      "Op",
+      "dayjs",
+      wrappedCode.replace(";", "")
+    );
+
+    // Execute the function with db, Op, and dayjs in scope
+    let result = await fn(db, Op, dayjs);
+
+    // If result is a Promise, wait for it
+    if (result && typeof result.then === "function") {
+      result = await result;
+    }
+
+    // Send the result back
+    res.json({ result });
+  } catch (error) {
+    console.error("Error executing code:", error);
+    res.status(500).json({
+      error: error.message,
+      stack: error.stack,
+    });
+  }
+});
+
 export default router;

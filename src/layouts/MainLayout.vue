@@ -199,6 +199,21 @@
               label="Settings"
             />
           </q-expansion-item>
+          <!-- DEV -->
+           <q-expansion-item
+            expand-separator
+            icon="mdi-code-tags"
+            label="Développement"
+            v-model="drawers[100]"
+            v-if="App.isAdmin"
+          >
+            <drawer-item
+              to="command-tool"
+              autorisation="*"
+              icon="mdi-console"
+              label="Command tool"
+            />
+          </q-expansion-item>
         </q-list>
       </q-scroll-area>
     </q-drawer>
