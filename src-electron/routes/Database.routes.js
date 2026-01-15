@@ -216,4 +216,15 @@ router.post("/execute-code", async (req, res) => {
   }
 });
 
+router.get("/models", async (req, res) => {
+  try {
+    // Get all model names
+    const models = Object.keys(db.models);
+    res.json({ models });
+  } catch (error) {
+    console.error("Error getting models:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

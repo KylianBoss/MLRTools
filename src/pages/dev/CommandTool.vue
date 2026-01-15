@@ -106,12 +106,48 @@ const result = ref(null);
 const error = ref(null);
 const loading = ref(false);
 const executionTime = ref(0);
+const dbModels = ref([]);
 
 let editorView = null;
+
+// Charger les models de la base de données
+const loadModels = async () => {
+  try {
+    const response = await api.get("/db/models");
+    dbModels.value = response.data.models;
+  } catch (err) {
+    console.error("Erreur lors du chargement des models:", err);
+  }
+};
 
 // Autocomplétion personnalisée pour les objets disponibles
 const customCompletions = (context) => {
   const word = context.matchBefore(/\w*/);
+
+  // Vérifier si on est après "db.models."
+  const textBefore = context.state.doc.sliceString(
+    Math.max(0, context.pos - 20),
+    context.pos
+  );
+  const isAfterDbModels = /db\.models\.\w*$/.test(textBefore);
+
+  if (isAfterDbModels) {
+    // Si on est après "db.models.", proposer uniquement les noms de models
+    const modelMatch = context.matchBefore(/db\.models\.(\w*)/);
+    if (modelMatch) {
+      const completions = dbModels.value.map((model) => ({
+        label: model,
+        type: "class",
+        info: `Model ${model} from database`,
+      }));
+
+      return {
+        from: modelMatch.from + 10, // Position après "db.models."
+        options: completions,
+      };
+    }
+  }
+
   if (!word || (word.from === word.to && !context.explicit)) {
     return null;
   }
@@ -190,7 +226,10 @@ const customCompletions = (context) => {
   };
 };
 
-onMounted(() => {
+onMounted(async () => {
+  // Charger les models de la base de données
+  await loadModels();
+
   if (!editorContainer.value) return;
 
   const startState = EditorState.create({
