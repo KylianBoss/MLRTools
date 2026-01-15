@@ -23,45 +23,67 @@
             </div>
             <div ref="editorContainer" class="editor-container"></div>
 
-            <div class="q-mt-md">
-              <q-btn
-                color="primary"
-                label="Exécuter"
-                icon="play_arrow"
-                @click="executeCode"
-                :loading="loading"
-              />
-              <q-btn
-                flat
-                color="grey"
-                label="Effacer"
-                icon="clear"
-                @click="clearCode"
-                class="q-ml-sm"
-              />
-              <q-btn
-                flat
-                color="grey"
-                label="Effacer Résultat"
-                icon="delete_sweep"
-                @click="clearResult"
-                class="q-ml-sm"
-              />
+            <div class="q-mt-md row q-col-gutter-md items-center">
+              <div class="col-auto">
+                <q-btn
+                  color="primary"
+                  label="Exécuter"
+                  icon="play_arrow"
+                  @click="executeCode"
+                  :loading="loading"
+                />
+                <q-btn
+                  flat
+                  color="grey"
+                  label="Effacer"
+                  icon="clear"
+                  @click="clearCode"
+                  class="q-ml-sm"
+                />
+                <q-btn
+                  flat
+                  color="grey"
+                  label="Effacer Résultat"
+                  icon="delete_sweep"
+                  @click="clearResult"
+                  class="q-ml-sm"
+                />
+              </div>
+              <div class="col-auto">
+                <q-separator vertical inset />
+              </div>
+              <div class="col-auto">
+                <q-toggle
+                  v-model="autoRefresh"
+                  label="Répétition auto"
+                  color="primary"
+                  @update:model-value="toggleAutoRefresh"
+                />
+              </div>
+              <div class="col-auto" v-if="autoRefresh">
+                <q-input
+                  v-model.number="refreshInterval"
+                  type="number"
+                  dense
+                  outlined
+                  label="Intervalle (ms)"
+                  :min="100"
+                  style="width: 150px"
+                  hint="Min: 100ms"
+                />
+              </div>
             </div>
           </q-card-section>
         </q-card>
       </div>
 
-      <div class="col-12" v-if="result || error">
+      <!-- Affichage des erreurs -->
+      <div class="col-12" v-if="error">
         <q-card>
           <q-card-section class="bg-grey-3">
             <div class="text-h6">
-              <q-icon
-                :name="error ? 'error' : 'check_circle'"
-                :color="error ? 'negative' : 'positive'"
-                class="q-mr-sm"
-              />
-              {{ error ? "Erreur" : "Résultat" }}
+              <q-icon name="error" color="negative" class="q-mr-sm" />
+              Erreur
             </div>
             <div class="text-caption">
               Temps d'exécution: {{ executionTime }}ms
@@ -69,12 +91,33 @@
           </q-card-section>
 
           <q-card-section>
-            <div v-if="error" class="text-negative">
+            <div class="text-negative">
               <pre class="result-pre">{{ error }}</pre>
             </div>
-            <div v-else>
-              <pre class="result-pre">{{ formattedResult }}</pre>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <!-- Affichage des résultats -->
+      <div class="col-12" v-if="!error && result && Array.isArray(result)">
+        <q-card>
+          <q-card-section class="bg-grey-3">
+            <div class="text-h6">
+              <q-icon name="check_circle" color="positive" class="q-mr-sm" />
+              {{
+                result.length === 1 ? "Résultat" : `${result.length} Résultats`
+              }}
             </div>
+            <div class="text-caption">
+              Temps d'exécution: {{ executionTime }}ms
+            </div>
+          </q-card-section>
+
+          <q-card-section
+            v-for="(queryResult, index) in result"
+            :key="index"
+          >
+            <pre class="result-pre">{{ formatSingleResult(queryResult) }}</pre>
           </q-card-section>
         </q-card>
       </div>
@@ -107,8 +150,11 @@ const error = ref(null);
 const loading = ref(false);
 const executionTime = ref(0);
 const dbModels = ref([]);
+const autoRefresh = ref(false);
+const refreshInterval = ref(1000);
 
 let editorView = null;
+let intervalId = null;
 
 // Charger les models de la base de données
 const loadModels = async () => {
@@ -270,6 +316,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  stopAutoRefresh();
   if (editorView) {
     editorView.destroy();
   }
@@ -280,15 +327,17 @@ const getCode = () => {
   return editorView.state.doc.toString();
 };
 
-const executeCode = async () => {
+const executeCode = async (silent = false) => {
   const code = getCode();
   if (!code.trim()) {
     return;
   }
 
   loading.value = true;
-  result.value = null;
-  error.value = null;
+  if (!silent) {
+    result.value = null;
+    error.value = null;
+  }
   executionTime.value = 0;
 
   try {
@@ -301,22 +350,78 @@ const executeCode = async () => {
     executionTime.value = endTime - startTime;
     result.value = response.data.result;
 
-    $q.notify({
-      type: "positive",
-      message: "Code exécuté avec succès",
-      position: "top-right",
-    });
+    // Afficher un avertissement si les résultats sont tronqués
+    if (response.data.truncated && !silent) {
+      $q.notify({
+        type: "warning",
+        message: response.data.message,
+        position: "top-right",
+        timeout: 3000,
+      });
+    }
+
+    if (!silent) {
+      $q.notify({
+        type: "positive",
+        message: "Code exécuté avec succès",
+        position: "top-right",
+      });
+    }
   } catch (err) {
     executionTime.value = 0;
     error.value = err.response?.data?.error || err.message;
 
-    $q.notify({
-      type: "negative",
-      message: "Erreur lors de l'exécution",
-      position: "top-right",
-    });
+    if (!silent) {
+      $q.notify({
+        type: "negative",
+        message: "Erreur lors de l'exécution",
+        position: "top-right",
+      });
+    }
+    // Arrêter la répétition en cas d'erreur
+    if (autoRefresh.value) {
+      autoRefresh.value = false;
+      stopAutoRefresh();
+    }
   } finally {
     loading.value = false;
+  }
+};
+
+const toggleAutoRefresh = (value) => {
+  if (value) {
+    startAutoRefresh();
+  } else {
+    stopAutoRefresh();
+  }
+};
+
+const startAutoRefresh = async () => {
+  // Exécuter immédiatement
+  await executeCode(true);
+
+  // Puis répéter à intervalle
+  const scheduleNext = () => {
+    if (!autoRefresh.value) return;
+
+    // Utiliser le max entre l'intervalle défini et le temps d'exécution
+    const delay = Math.max(refreshInterval.value, executionTime.value);
+
+    intervalId = setTimeout(async () => {
+      if (autoRefresh.value) {
+        await executeCode(true);
+        scheduleNext();
+      }
+    }, delay);
+  };
+
+  scheduleNext();
+};
+
+const stopAutoRefresh = () => {
+  if (intervalId) {
+    clearTimeout(intervalId);
+    intervalId = null;
   }
 };
 
@@ -338,12 +443,12 @@ const clearResult = () => {
   executionTime.value = 0;
 };
 
-const formattedResult = computed(() => {
-  if (result.value === null || result.value === undefined) {
+const formatSingleResult = (queryResult) => {
+  if (queryResult === null || queryResult === undefined) {
     return "null";
   }
-  return JSON.stringify(result.value, null, 2);
-});
+  return JSON.stringify(queryResult, null, 2);
+};
 </script>
 
 <script>

@@ -486,6 +486,19 @@ export const extractTrayAmount = (date, headless = true) => {
             type: "info",
           });
         }
+      } else {
+        await updateJob(
+          {
+            actualState: "idle",
+            lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+            lastLog: `Tray amount extration finished, no missing days found.`,
+            endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+            args: null,
+            cronExpression: "0 1 * * *",
+          },
+          jobName
+        );
+        console.log("No missing days found.");
       }
 
       // Set the bot to restart

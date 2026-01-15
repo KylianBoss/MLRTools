@@ -180,33 +180,91 @@ router.post("/execute-code", async (req, res) => {
   }
 
   try {
+    const MAX_RESULTS = 5000;
+
+    // Créer un proxy de db qui ajoute automatiquement un limit aux requêtes
+    const dbProxy = new Proxy(db, {
+      get(target, prop) {
+        if (prop === "models") {
+          // Créer un proxy pour chaque model
+          return new Proxy(target.models, {
+            get(modelsTarget, modelName) {
+              const model = modelsTarget[modelName];
+              if (!model) return model;
+
+              // Créer un proxy pour le model qui intercepte les méthodes
+              return new Proxy(model, {
+                get(modelTarget, methodName) {
+                  const originalMethod = modelTarget[methodName];
+
+                  // Intercepter les méthodes de lecture
+                  if (["findAll", "findAndCountAll"].includes(methodName)) {
+                    return function (options = {}) {
+                      // Ajouter un limit par défaut si non spécifié
+                      if (!options.limit) {
+                        options.limit = MAX_RESULTS;
+                      } else if (options.limit > MAX_RESULTS) {
+                        // Limiter même si un limit supérieur est spécifié
+                        options.limit = MAX_RESULTS;
+                      }
+                      return originalMethod.call(modelTarget, options);
+                    };
+                  }
+
+                  return originalMethod;
+                },
+              });
+            },
+          });
+        }
+        return target[prop];
+      },
+    });
+
     // Create an async function from the code
     const AsyncFunction = Object.getPrototypeOf(
       async function () {}
     ).constructor;
 
-    // Wrap the code with a return statement if it doesn't have one
-    const wrappedCode = code.trim().startsWith("return")
-      ? code
-      : `return (${code})`;
+    // Détecter si le code contient plusieurs instructions (séparées par des points-virgules)
+    const codeLines = code
+      .split(";")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
 
-    const fn = new AsyncFunction(
-      "db",
-      "Op",
-      "dayjs",
-      wrappedCode.replace(";", "")
-    );
+    // Toujours exécuter et retourner un tableau de résultats
+    const resultsCode = codeLines
+      .map((line, index) => `const result${index} = await (${line});`)
+      .join("\n");
+    const returnCode = `return [${codeLines
+      .map((_, index) => `result${index}`)
+      .join(", ")}];`;
+    const wrappedCode = `${resultsCode}\n${returnCode}`;
 
-    // Execute the function with db, Op, and dayjs in scope
-    let result = await fn(db, Op, dayjs);
+    const fn = new AsyncFunction("db", "Op", "dayjs", wrappedCode);
+
+    // Execute the function with db proxy, Op, and dayjs in scope
+    let result = await fn(dbProxy, Op, dayjs);
 
     // If result is a Promise, wait for it
     if (result && typeof result.then === "function") {
       result = await result;
     }
 
+    // Vérifier si les résultats ont été limités (pour information)
+    let truncated = false;
+    if (Array.isArray(result) && result.length === MAX_RESULTS) {
+      truncated = true;
+    }
+
     // Send the result back
-    res.json({ result });
+    res.json({
+      result,
+      truncated,
+      message: truncated
+        ? `Résultats limités à ${MAX_RESULTS} entrées`
+        : undefined,
+    });
   } catch (error) {
     console.error("Error executing code:", error);
     res.status(500).json({
