@@ -72,6 +72,9 @@
                   hint="Min: 100ms"
                 />
               </div>
+              <div class="col-auto" v-if="loading">
+                Temps d'exécution: {{ currentExecutionTime }}ms
+              </div>
             </div>
           </q-card-section>
         </q-card>
@@ -113,10 +116,7 @@
             </div>
           </q-card-section>
 
-          <q-card-section
-            v-for="(queryResult, index) in result"
-            :key="index"
-          >
+          <q-card-section v-for="(queryResult, index) in result" :key="index">
             <pre class="result-pre">{{ formatSingleResult(queryResult) }}</pre>
           </q-card-section>
         </q-card>
@@ -149,12 +149,14 @@ const result = ref(null);
 const error = ref(null);
 const loading = ref(false);
 const executionTime = ref(0);
+const currentExecutionTime = ref(0);
 const dbModels = ref([]);
 const autoRefresh = ref(false);
 const refreshInterval = ref(1000);
 
 let editorView = null;
 let intervalId = null;
+let timeUpdateInterval = null;
 
 // Charger les models de la base de données
 const loadModels = async () => {
@@ -317,6 +319,10 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   stopAutoRefresh();
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval);
+    timeUpdateInterval = null;
+  }
   if (editorView) {
     editorView.destroy();
   }
@@ -339,15 +345,31 @@ const executeCode = async (silent = false) => {
     error.value = null;
   }
   executionTime.value = 0;
+  result.value = null;
 
   try {
     const startTime = Date.now();
-    const response = await api.post("/db/execute-code", {
-      code: code,
-    });
+    currentExecutionTime.value = 0;
+
+    // Mettre à jour le temps d'exécution en temps réel
+    timeUpdateInterval = setInterval(() => {
+      if (loading.value) {
+        currentExecutionTime.value = Date.now() - startTime;
+      }
+    }, 10);
+
+    // Set timeout to 10minutes (600000ms)
+    const response = await api.post(
+      "/db/execute-code",
+      {
+        code: code,
+      },
+      { timeout: 600000 }
+    );
     const endTime = Date.now();
 
     executionTime.value = endTime - startTime;
+    currentExecutionTime.value = executionTime.value;
     result.value = response.data.result;
 
     // Afficher un avertissement si les résultats sont tronqués
@@ -385,6 +407,10 @@ const executeCode = async (silent = false) => {
     }
   } finally {
     loading.value = false;
+    if (timeUpdateInterval) {
+      clearInterval(timeUpdateInterval);
+      timeUpdateInterval = null;
+    }
   }
 };
 
