@@ -11,6 +11,7 @@
             </div>
             <div class="text-caption text-warning q-mt-xs">
               ⚠️ Les opérations UPDATE, DELETE, CREATE et INSERT sont interdites
+              (nécessitent 2FA)
             </div>
           </q-card-section>
 
@@ -122,6 +123,9 @@
         </q-card>
       </div>
     </div>
+
+    <!-- Dialog 2FA -->
+    <TotpDialog ref="totpDialogRef" />
   </q-page>
 </template>
 
@@ -141,6 +145,7 @@ import {
 import { basicSetup } from "codemirror";
 import { indentWithTab } from "@codemirror/commands";
 import { indentOnInput } from "@codemirror/language";
+import TotpDialog from "components/dialogs/TotpDialog.vue";
 
 const $q = useQuasar();
 
@@ -153,6 +158,7 @@ const currentExecutionTime = ref(0);
 const dbModels = ref([]);
 const autoRefresh = ref(false);
 const refreshInterval = ref(1000);
+const totpDialogRef = ref(null);
 
 let editorView = null;
 let intervalId = null;
@@ -391,19 +397,104 @@ const executeCode = async (silent = false) => {
     }
   } catch (err) {
     executionTime.value = 0;
-    error.value = err.response?.data?.error || err.message;
 
-    if (!silent) {
-      $q.notify({
-        type: "negative",
-        message: "Erreur lors de l'exécution",
-        position: "top-right",
-      });
-    }
-    // Arrêter la répétition en cas d'erreur
-    if (autoRefresh.value) {
-      autoRefresh.value = false;
-      stopAutoRefresh();
+    // Vérifier si l'erreur nécessite 2FA
+    if (err.response?.status === 403 && err.response?.data?.requires2FA) {
+      // Arrêter le timer d'exécution
+      if (timeUpdateInterval) {
+        clearInterval(timeUpdateInterval);
+        timeUpdateInterval = null;
+      }
+      loading.value = false;
+
+      // Ouvrir le dialog 2FA
+      try {
+        const totpCode = await totpDialogRef.value.open();
+
+        // Réessayer avec le code 2FA
+        loading.value = true;
+        const startTime = Date.now();
+        currentExecutionTime.value = 0;
+
+        // Mettre à jour le temps d'exécution en temps réel
+        timeUpdateInterval = setInterval(() => {
+          if (loading.value) {
+            currentExecutionTime.value = Date.now() - startTime;
+          }
+        }, 10);
+
+        const response = await api.post(
+          "/db/execute-code-override",
+          { code: code },
+          {
+            headers: { "x-totp-code": totpCode },
+            timeout: 600000,
+          }
+        );
+
+        const endTime = Date.now();
+        executionTime.value = endTime - startTime;
+        currentExecutionTime.value = executionTime.value;
+        result.value = response.data.result;
+
+        if (response.data.truncated && !silent) {
+          $q.notify({
+            type: "warning",
+            message: response.data.message,
+            position: "top-right",
+            timeout: 3000,
+          });
+        }
+
+        if (!silent) {
+          $q.notify({
+            type: "positive",
+            message: "Code exécuté avec succès (avec 2FA)",
+            position: "top-right",
+          });
+        }
+      } catch (totpErr) {
+        // Si annulé ou code invalide
+        if (totpErr.message === "Cancelled") {
+          error.value = "Vérification 2FA annulée";
+        } else if (totpErr.response?.status === 401) {
+          error.value = "Code 2FA invalide";
+          // Afficher l'erreur dans le dialog
+          totpDialogRef.value?.showError("Code 2FA invalide");
+        } else {
+          error.value = totpErr.response?.data?.error || totpErr.message;
+        }
+
+        if (!silent) {
+          $q.notify({
+            type: "negative",
+            message: "Erreur lors de la vérification 2FA",
+            position: "top-right",
+          });
+        }
+
+        // Arrêter la répétition en cas d'erreur
+        if (autoRefresh.value) {
+          autoRefresh.value = false;
+          stopAutoRefresh();
+        }
+      }
+    } else {
+      // Erreur normale
+      error.value = err.response?.data?.error || err.message;
+
+      if (!silent) {
+        $q.notify({
+          type: "negative",
+          message: "Erreur lors de l'exécution",
+          position: "top-right",
+        });
+      }
+      // Arrêter la répétition en cas d'erreur
+      if (autoRefresh.value) {
+        autoRefresh.value = false;
+        stopAutoRefresh();
+      }
     }
   } finally {
     loading.value = false;

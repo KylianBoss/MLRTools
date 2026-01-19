@@ -12,6 +12,7 @@ import ImageRouter from "./Image.routes.js";
 import LocationRouter from "./Locations.routes.js";
 import ChartsRouter from "./Charts.routes.js";
 import NotificationsRouter from "./Notifications.routes.js";
+import AuthRouter from "./Auth.routes.js";
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use("/images", ImageRouter);
 router.use("/locations", LocationRouter);
 router.use("/charts", ChartsRouter);
 router.use("/notifications", NotificationsRouter);
+router.use("/auth", AuthRouter);
 
 export default router;

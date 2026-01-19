@@ -200,7 +200,7 @@
             />
           </q-expansion-item>
           <!-- DEV -->
-           <q-expansion-item
+          <q-expansion-item
             expand-separator
             icon="mdi-code-tags"
             label="Développement"
@@ -212,6 +212,12 @@
               autorisation="*"
               icon="mdi-console"
               label="Command tool"
+            />
+            <drawer-item
+              to="admin-2fa-setup"
+              autorisation="*"
+              icon="mdi-shield-lock-outline"
+              label="Configuration 2FA"
             />
           </q-expansion-item>
         </q-list>
@@ -244,6 +250,20 @@
               </q-item-label>
             </q-item-section>
           </q-item>
+          <q-item
+            v-if="
+              notifications.filter((n) => !n.read).length === 0 &&
+              notifications.length > 3
+            "
+            clickable
+            v-ripple
+            @click="notifications.forEach((n) => deleteNotification(n))"
+          >
+            <q-item-section>
+              <q-item-label class="text-center"> Tout supprimer </q-item-label>
+            </q-item-section>
+          </q-item>
+
           <q-item
             v-for="(notif, index) in notifications"
             :key="index"

@@ -171,6 +171,11 @@ const routes = [
             name: "admin-users",
             component: () => import("src/pages/admin/UsersSettings.vue"),
           },
+          {
+            path: "2fa-setup",
+            name: "admin-2fa-setup",
+            component: () => import("src/pages/admin/TwoFactorSetup.vue"),
+          },
         ],
       },
       // === SETTINGS === //
