@@ -12,8 +12,48 @@ const SAV_EXPORT_PATH = path.join(
   "MLR Export WMS - SAV-Export-AlarmLog"
 );
 const jobName = "extractSAV";
+const MAX_RETRY = 5;
 
 export const extractSAV = async (date = null) => {
+  // Get the args of the job to check the retry count
+  const job = await db.models.CronJobs.findOne({
+    where: { name: jobName },
+  });
+  const args = job.args
+    ? job.args.split(",").map((a) => {
+        const [key, value] = a.split(":").map((s) => s.trim());
+        return { key, value };
+      })
+    : [];
+  let retryCount = 0;
+  args.forEach((arg) => {
+    if (arg.key === "retry") {
+      retryCount = parseInt(arg.value) || 0;
+    }
+  });
+
+  if (retryCount >= MAX_RETRY) {
+    console.warn(
+      `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
+    );
+    await updateJob(
+      {
+        actualState: "error",
+        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        lastLog: `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`,
+        endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        cronExpression: "30 0 * * *",
+        args: null,
+      },
+      jobName
+    );
+    return reject(
+      new Error(
+        `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
+      )
+    );
+  }
+
   console.log("Starting SAV extraction...");
   await updateJob(
     {
@@ -211,18 +251,18 @@ export const extractSAV = async (date = null) => {
     // Flush cache tables
     await db.models.cache_ErrorsByThousand.destroy({
       where: {
-        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD")
-      }
+        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD"),
+      },
     });
     await db.models.cache_DowntimeMinutesByThousand.destroy({
       where: {
-        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD")
-      }
+        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD"),
+      },
     });
     await db.models.cache_CustomCharts.destroy({
       where: {
-        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD")
-      }
+        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD"),
+      },
     });
 
     console.log("SAV extraction completed.");
@@ -245,20 +285,41 @@ export const extractSAV = async (date = null) => {
     for (const admin of admins) {
       await db.models.Notifications.create({
         userId: admin.id,
-        message: `SAV data extraction for ${dayjs(dateToGet).subtract(1, 'day').format("DD.MM.YYYY")} has been completed.`,
+        message: `SAV data extraction for ${dayjs(dateToGet)
+          .subtract(1, "day")
+          .format("DD.MM.YYYY")} has been completed.`,
         type: "success",
       });
     }
+
+    // Update args in job sendKPI to validate that SAV extraction is successful
+    const sendKPIJob = await db.models.CronJobs.findOne({
+      where: { name: "sendKPI" },
+    });
+    const sendKPIArgs = sendKPIJob.args
+      ? sendKPIJob.args.split(",").map((a) => {
+          const [key, value] = a.split(":").map((s) => s.trim());
+          return { key, value };
+        })
+      : [];
+    const newSendKPIArgs = sendKPIArgs.filter((arg) => arg.key !== "sav");
+    newSendKPIArgs.push({ key: "sav", value: "done" });
+    await updateJob(
+      {
+        args: newSendKPIArgs.map((arg) => `${arg.key}:${arg.value}`).join(", "),
+      },
+      "sendKPI"
+    );
   } catch (error) {
     console.error("Error during SAV extraction:", error);
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: `Error during SAV extraction: ${error.message}`,
+        lastLog: `Error during SAV extraction: ${error.message}, retrying in 20 minutes...`,
         endAt: new Date(),
         actualState: "error",
-        cronExpression: "15 5 * * *",
-        args: null,
+        cronExpression: dayjs().add(20, "minute").format("m H * * *"),
+        args: `date:${date},retry:${retryCount + 1}`,
       },
       jobName
     );

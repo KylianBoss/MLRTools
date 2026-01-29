@@ -13,6 +13,7 @@ const WMS_HISTORY_PATH = path.join(
 );
 const START_DATE = dayjs("2025-06-30");
 const jobName = "extractWMS";
+const MAX_RETRY = 5;
 
 const getDatesInDB = async () => {
   const results = await db.models.ProductionData.findAll({
@@ -24,6 +25,45 @@ const getDatesInDB = async () => {
 };
 
 export const extractWMS = async (manualDate = null) => {
+  // Get the args of the job to check the retry count
+  const job = await db.models.CronJobs.findOne({
+    where: { name: jobName },
+  });
+  const args = job.args
+    ? job.args.split(",").map((a) => {
+        const [key, value] = a.split(":").map((s) => s.trim());
+        return { key, value };
+      })
+    : [];
+  let retryCount = 0;
+  args.forEach((arg) => {
+    if (arg.key === "retry") {
+      retryCount = parseInt(arg.value) || 0;
+    }
+  });
+
+  if (retryCount >= MAX_RETRY) {
+    console.warn(
+      `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
+    );
+    await updateJob(
+      {
+        actualState: "error",
+        lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        lastLog: `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`,
+        endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        cronExpression: "30 0 * * *",
+        args: null,
+      },
+      jobName
+    );
+    return reject(
+      new Error(
+        `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
+      )
+    );
+  }
+
   console.log("Starting WMS extraction...");
   await updateJob(
     {
@@ -201,14 +241,34 @@ export const extractWMS = async (manualDate = null) => {
         jobName
       );
     }
+    // Update args in job sendKPI to validate that WMS extraction is successful
+    const sendKPIJob = await db.models.CronJobs.findOne({
+      where: { name: "sendKPI" },
+    });
+    const sendKPIArgs = sendKPIJob.args
+      ? sendKPIJob.args.split(",").map((a) => {
+          const [key, value] = a.split(":").map((s) => s.trim());
+          return { key, value };
+        })
+      : [];
+    const newSendKPIArgs = sendKPIArgs.filter((arg) => arg.key !== "wms");
+    newSendKPIArgs.push({ key: "wms", value: "done" });
+    await updateJob(
+      {
+        args: newSendKPIArgs.map((arg) => `${arg.key}:${arg.value}`).join(", "),
+      },
+      "sendKPI"
+    );
   } catch (error) {
     console.error(`Failed to process data for date ${currentDate}:`, error);
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: `Failed to process data for date ${currentDate}: ${error.message}`,
+        lastLog: `Failed to process data for date ${currentDate}: ${error.message}, retrying in 20 minutes...`,
         endAt: new Date(),
         actualState: "error",
+        cronExpression: dayjs().add(20, "minute").format("m H * * *"),
+        args: `date:${currentDate},retry:${retryCount + 1}`,
       },
       jobName
     );

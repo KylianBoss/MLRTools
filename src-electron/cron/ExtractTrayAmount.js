@@ -8,9 +8,53 @@ import { updateJob } from "./utils.js";
 
 const jobName = "extractTrayAmount";
 const FILENAME = (date) => `Compteurs_${dayjs(date).format("YYYYMMDD")}.csv`;
+const MAX_RETRY = 5;
 
 export const extractTrayAmount = (date, headless = true) => {
   return new Promise(async (resolve, reject) => {
+    // Get the args of the job to check the retry count
+    const job = await db.models.CronJobs.findOne({
+      where: { name: jobName },
+    });
+    const args = job.args
+      ? job.args.split(",").map((a) => {
+          const [key, value] = a.split(":").map((s) => s.trim());
+          return { key, value };
+        })
+      : [];
+    let retryCount = 0;
+    args.forEach((arg) => {
+      if (arg.key === "retry") {
+        retryCount = parseInt(arg.value) || 0;
+      }
+    });
+
+    if (retryCount >= MAX_RETRY) {
+      console.warn(
+        `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
+      );
+      global.sendNotificationToElectron(
+        "Extract tray amount",
+        `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
+      );
+      await updateJob(
+        {
+          actualState: "error",
+          lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          lastLog: `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`,
+          endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          cronExpression: "0 1 * * *",
+          args: null,
+        },
+        jobName
+      );
+      return reject(
+        new Error(
+          `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
+        )
+      );
+    }
+
     try {
       await updateJob(
         {
@@ -166,7 +210,7 @@ export const extractTrayAmount = (date, headless = true) => {
         "https://10.95.62.134:8443/infosystem/protected/report.jspa?categorizeable=report.1746609396042&pageFlowSequence=54&category=category.myReports&reload=false&view=",
         {
           waitUntil: "networkidle0",
-          timeout: 120000,
+          timeout: 180000,
         }
       );
 
@@ -524,6 +568,29 @@ export const extractTrayAmount = (date, headless = true) => {
         });
       }
 
+      // Update args in job sendKPI to validate that Tray amount extraction is successful
+      const sendKPIJob = await db.models.CronJobs.findOne({
+        where: { name: "sendKPI" },
+      });
+      const sendKPIArgs = sendKPIJob.args
+        ? sendKPIJob.args.split(",").map((a) => {
+            const [key, value] = a.split(":").map((s) => s.trim());
+            return { key, value };
+          })
+        : [];
+      const newSendKPIArgs = sendKPIArgs.filter(
+        (arg) => arg.key !== "trayAmount"
+      );
+      newSendKPIArgs.push({ key: "trayAmount", value: "done" });
+      await updateJob(
+        {
+          args: newSendKPIArgs
+            .map((arg) => `${arg.key}:${arg.value}`)
+            .join(", "),
+        },
+        "sendKPI"
+      );
+
       resolve(zones);
     } catch (error) {
       console.error("Error extracting tray amount:", error);
@@ -535,7 +602,10 @@ export const extractTrayAmount = (date, headless = true) => {
         {
           actualState: "error",
           lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          lastLog: `Error extracting tray amount: ${error.message}`,
+          lastLog: `Error extracting tray amount: ${error.message} retrying in 20 minutes...`,
+          endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+          args: `date:${date},retry:${retryCount + 1}`,
+          cronExpression: dayjs().add(20, "minute").format("m H * * *"),
         },
         jobName
       );
@@ -550,6 +620,14 @@ export const extractTrayAmount = (date, headless = true) => {
           message: `Tray amount extraction failed for date ${date}: ${error.message}`,
           type: "error",
         });
+      }
+
+      // Set the bot to restart
+      const bot = await db.models.Users.findOne({
+        where: { isBot: true },
+      });
+      if (bot) {
+        bot.update({ needsRestart: true });
       }
       reject(error);
     }
