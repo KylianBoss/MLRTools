@@ -1,6 +1,6 @@
 import { updateJob } from "./utils.js";
 
-const jobName = "SendKPI";
+const jobName = "sendKPI";
 
 export const sendKPI = async () => {
   console.log("Starting SendKPI job...");
@@ -18,7 +18,7 @@ export const sendKPI = async () => {
   try {
     // Get args of the job
     const job = await db.models.CronJobs.findOne({
-      where: { name: jobName },
+      where: { action: jobName },
     });
     const args = job.args
       ? job.args.split(",").map((a) => {
