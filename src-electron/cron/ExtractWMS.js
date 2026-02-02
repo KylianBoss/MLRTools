@@ -229,11 +229,9 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: `Failed to process data for date ${currentDate}: ${error.message}, retrying in 20 minutes...`,
+        lastLog: `Failed to process data for date ${currentDate}: ${error.message}`,
         endAt: new Date(),
         actualState: "error",
-        cronExpression: dayjs().add(20, "minute").format("m H * * *"),
-        args: `date:${currentDate},retry:${retryCount + 1}`,
       },
       jobName
     );
@@ -245,7 +243,9 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
     for (const admin of admins) {
       await db.models.Notifications.create({
         userId: admin.id,
-        message: `WMS data extraction failed for date ${currentDate}: ${error.message}`,
+        message: `WMS data extraction failed for date ${currentDate}: ${
+          error.message
+        } (Retry ${retryCount + 1}/${MAX_RETRY})`,
         type: "error",
       });
     }
@@ -259,8 +259,6 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
       lastLog: "WMS extraction completed.",
       endAt: new Date(),
       actualState: "idle",
-      cronExpression: "30 0 * * *",
-      args: null,
     },
     jobName
   );

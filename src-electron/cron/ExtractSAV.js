@@ -255,8 +255,6 @@ export const extractSAV = async (date = null, retryCount = 0) => {
         lastLog: "SAV extraction completed.",
         endAt: new Date(),
         actualState: "idle",
-        cronExpression: "15 5 * * *",
-        args: null,
       },
       jobName
     );
@@ -279,11 +277,9 @@ export const extractSAV = async (date = null, retryCount = 0) => {
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: `Error during SAV extraction: ${error.message}, retrying in 20 minutes...`,
+        lastLog: `Error during SAV extraction: ${error.message}`,
         endAt: new Date(),
         actualState: "error",
-        cronExpression: dayjs().add(20, "minute").format("m H * * *"),
-        args: `date:${date},retry:${retryCount + 1}`,
       },
       jobName
     );
@@ -295,7 +291,9 @@ export const extractSAV = async (date = null, retryCount = 0) => {
     for (const admin of admins) {
       await db.models.Notifications.create({
         userId: admin.id,
-        message: `SAV data extraction failed: ${error.message}`,
+        message: `SAV data extraction failed: ${error.message} (Retry ${
+          retryCount + 1
+        }/${MAX_RETRY})`,
         type: "error",
       });
     }

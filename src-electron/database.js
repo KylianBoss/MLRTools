@@ -719,6 +719,12 @@ function initDB(config) {
           defaultValue: Sequelize.NOW,
           comment: "Timestamp when the job was requested",
         },
+        scheduledFor: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          comment:
+            "Timestamp when the job should be executed (NULL for immediate execution)",
+        },
         startedAt: {
           type: DataTypes.DATE,
           allowNull: true,

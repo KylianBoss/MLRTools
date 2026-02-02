@@ -479,24 +479,40 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
           } days since the last extraction, starting extraction for missing days...`
         );
 
-        // Start the extraction for missing days, start with the oldest day and set the bot for only one extraction at a time
+        // Créer un job dans la queue pour le jour manquant le plus ancien
         const dayToExtract = dayjs(lastExtract[0].date).add(1, "day");
         console.log(
-          `Setting extraction for date ${dayToExtract.format("YYYY-MM-DD")}`
+          `Queuing extraction for date ${dayToExtract.format("YYYY-MM-DD")}`
         );
+
+        // Trouver l'utilisateur bot
+        const bot = await db.models.Users.findOne({
+          where: { isBot: true },
+        });
+
+        await db.models.JobQueue.create({
+          jobName: `Extract Tray Amount - ${dayToExtract.format("DD/MM/YYYY")}`,
+          action: "extractTrayAmount",
+          args: {
+            date: dayToExtract.format("YYYY-MM-DD"),
+            headless: true,
+            retryCount: 0,
+          },
+          requestedBy: bot ? bot.id : null,
+        });
+
         await updateJob(
           {
             actualState: "idle",
             lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-            lastLog: `Setting extraction for date ${dayToExtract.format(
+            lastLog: `Queued extraction for date ${dayToExtract.format(
               "YYYY-MM-DD"
             )}`,
             endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-            args: `date:${dayToExtract.format("YYYY-MM-DD")}`,
-            cronExpression: dayjs().add(3, "minute").format("m H * * *"),
           },
           jobName
         );
+
         // send notification to admins
         const admins = await db.models.Users.findAll({
           where: { isAdmin: true },
@@ -507,7 +523,7 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
             userId: admin.id,
             message: `Tray amount extraction for ${dayToExtract.format(
               "DD.MM.YYYY"
-            )} has been scheduled.`,
+            )} has been queued.`,
             type: "info",
           });
         }
@@ -518,8 +534,6 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
             lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
             lastLog: `Tray amount extration finished, no missing days found.`,
             endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-            args: null,
-            cronExpression: "0 1 * * *",
           },
           jobName
         );
@@ -560,10 +574,8 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
         {
           actualState: "error",
           lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          lastLog: `Error extracting tray amount: ${error.message} retrying in 20 minutes...`,
+          lastLog: `Error extracting tray amount: ${error.message}`,
           endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-          args: `date:${date},retry:${retryCount + 1}`,
-          cronExpression: dayjs().add(20, "minute").format("m H * * *"),
         },
         jobName
       );
@@ -575,7 +587,9 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
       for (const admin of admins) {
         await db.models.Notifications.create({
           userId: admin.id,
-          message: `Tray amount extraction failed for date ${date}: ${error.message}`,
+          message: `Tray amount extraction failed for date ${date}: ${
+            error.message
+          } (Retry ${retryCount + 1}/${MAX_RETRY})`,
           type: "error",
         });
       }

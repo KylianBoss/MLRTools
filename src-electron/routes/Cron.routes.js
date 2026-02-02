@@ -61,7 +61,13 @@ async function processJobQueue() {
     }
 
     const pendingJobs = await db.models.JobQueue.findAll({
-      where: { status: "pending" },
+      where: {
+        status: "pending",
+        [db.Sequelize.Op.or]: [
+          { scheduledFor: null },
+          { scheduledFor: { [db.Sequelize.Op.lte]: new Date() } },
+        ],
+      },
       order: [["createdAt", "ASC"]],
       limit: 1,
     });
@@ -96,23 +102,27 @@ async function processJobQueue() {
       const maxRetries = 5;
 
       if (currentRetryCount < maxRetries) {
-        // Créer un nouveau job avec retryCount incrémenté
+        // Créer un nouveau job avec retryCount incrémenté et délai de 10 minutes
         const newArgs = {
           ...(job.args || {}),
           retryCount: currentRetryCount + 1,
         };
+
+        const retryDelay = 10; // minutes
+        const scheduledFor = new Date(Date.now() + retryDelay * 60 * 1000);
 
         await db.models.JobQueue.create({
           jobName: `${job.jobName} (Retry ${currentRetryCount + 1})`,
           action: job.action,
           args: newArgs,
           requestedBy: job.requestedBy,
+          scheduledFor: scheduledFor,
         });
 
         console.log(
           `Scheduled retry ${currentRetryCount + 1}/${maxRetries} for job: ${
             job.jobName
-          }`
+          } at ${scheduledFor.toLocaleString()}`
         );
 
         // Marquer le job actuel comme échoué mais avec info de retry

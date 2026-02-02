@@ -124,6 +124,9 @@
                     Dernier run:
                     {{ job.lastRun ? formatDate(job.lastRun) : "Jamais" }}
                   </q-item-label>
+                  <q-item-label caption>
+                    Dernier log: {{ job.lastLog || "Aucun" }}
+                  </q-item-label>
                 </q-item-section>
                 <q-item-section side>
                   <q-badge
@@ -158,7 +161,7 @@
           </q-card-section>
 
           <q-card-section class="q-pt-none">
-            <q-scroll-area style="height: 600px">
+            <q-scroll-area style="height: 800px">
               <q-list bordered separator>
                 <q-item v-for="job in jobHistory" :key="job.id">
                   <q-item-section>
@@ -381,11 +384,11 @@ const loadCronJobs = async () => {
 };
 
 const startAutoRefresh = () => {
-  // Rafraîchir toutes les 2 secondes
+  // Rafraîchir toutes les 10 secondes
   refreshInterval = setInterval(() => {
     loadCronJobs();
     loadJobHistory();
-  }, 2000);
+  }, 10000);
 };
 
 const formatDate = (date) => {
