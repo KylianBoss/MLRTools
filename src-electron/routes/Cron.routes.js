@@ -10,6 +10,121 @@ import { sendKPI } from "../cron/SendKPI.js";
 
 const router = Router();
 
+// Map pour stocker les références des cron jobs actifs
+const activeCronJobs = new Map();
+
+// Intervalle de polling pour la queue (5 secondes)
+let queuePollingInterval = null;
+
+/**
+ * Fonction réutilisable pour exécuter une action de job avec des arguments
+ */
+async function executeJobAction(action, args = {}) {
+  console.log(`Executing job action: ${action}`, args);
+
+  switch (action) {
+    case "extractTrayAmount":
+      const date = args.date || dayjs().subtract(1, "day").format("YYYY-MM-DD");
+      const headless = args.headless !== undefined ? args.headless : true;
+      const retryCount = args.retryCount || 0;
+      return await extractTrayAmount(date, headless, retryCount);
+
+    case "extractWMS":
+      return await extractWMS(args.date, args.retryCount || 0);
+
+    case "extractSAV":
+      return await extractSAV(args.date, args.retryCount || 0);
+
+    case "sendKPI":
+      return await sendKPI();
+
+    default:
+      throw new Error(`Unknown action: ${action}`);
+  }
+}
+
+/**
+ * Traiter la queue de jobs en attente
+ */
+async function processJobQueue() {
+  try {
+    const pendingJobs = await db.models.JobQueue.findAll({
+      where: { status: "pending" },
+      order: [["createdAt", "ASC"]],
+      limit: 1,
+    });
+
+    if (pendingJobs.length === 0) return;
+
+    const job = pendingJobs[0];
+    console.log(`Processing queued job: ${job.jobName} (ID: ${job.id})`);
+
+    // Mettre à jour le statut à "running"
+    await job.update({
+      status: "running",
+      startedAt: new Date(),
+    });
+
+    try {
+      // Exécuter le job avec les args (incluant retryCount)
+      await executeJobAction(job.action, job.args || {});
+
+      // Marquer comme complété
+      await job.update({
+        status: "completed",
+        completedAt: new Date(),
+      });
+
+      console.log(`Job completed: ${job.jobName} (ID: ${job.id})`);
+    } catch (error) {
+      console.error(`Job failed: ${job.jobName} (ID: ${job.id})`, error);
+
+      // Vérifier si on doit retry
+      const currentRetryCount = (job.args && job.args.retryCount) || 0;
+      const maxRetries = 5;
+
+      if (currentRetryCount < maxRetries) {
+        // Créer un nouveau job avec retryCount incrémenté
+        const newArgs = {
+          ...(job.args || {}),
+          retryCount: currentRetryCount + 1,
+        };
+
+        await db.models.JobQueue.create({
+          jobName: `${job.jobName} (Retry ${currentRetryCount + 1})`,
+          action: job.action,
+          args: newArgs,
+          requestedBy: job.requestedBy,
+        });
+
+        console.log(
+          `Scheduled retry ${currentRetryCount + 1}/${maxRetries} for job: ${
+            job.jobName
+          }`
+        );
+
+        // Marquer le job actuel comme échoué mais avec info de retry
+        await job.update({
+          status: "failed",
+          error: `${error.message} (Retry ${
+            currentRetryCount + 1
+          }/${maxRetries} scheduled)`,
+          completedAt: new Date(),
+        });
+      } else {
+        // Max retries atteint, marquer comme échoué définitivement
+        await job.update({
+          status: "failed",
+          error: `${error.message} (Max retries reached: ${maxRetries})`,
+          completedAt: new Date(),
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error processing job queue:", error);
+  }
+}
+
 router.post("/initialize", async (req, res) => {
   const { user } = req.body;
   if (!user) {
@@ -39,6 +154,21 @@ router.post("/initialize", async (req, res) => {
     }
 
     console.log("Initializing cron jobs for user:", user);
+
+    // Arrêter tous les jobs existants avant de réinitialiser
+    activeCronJobs.forEach((task, jobName) => {
+      console.log(`Stopping existing cron job: ${jobName}`);
+      task.stop();
+      task.destroy();
+    });
+    activeCronJobs.clear();
+
+    // Arrêter le polling de la queue s'il existe
+    if (queuePollingInterval) {
+      clearInterval(queuePollingInterval);
+      queuePollingInterval = null;
+    }
+
     const cronJobs = await db.models.CronJobs.findAll({
       where: {
         enabled: true,
@@ -46,85 +176,58 @@ router.post("/initialize", async (req, res) => {
     });
 
     for (const job of cronJobs) {
-      console.log(`Starting cron job: ${job.jobName}`);
-      cron.schedule(job.cronExpression, async () => {
-        switch (job.action) {
-          case "extractTrayAmount":
-            let date = dayjs().subtract(1, "day").format("YYYY-MM-DD");
-            let headless = true;
-            if (job.args) {
-              // date: YYYY-MM-DD, runNow: true/false (this is just a string)
-              const args = job.args.split(",");
-              args.forEach((arg) => {
-                const [key, value] = arg.split(":").map((s) => s.trim());
-                if (key === "date") {
-                  if (dayjs(value, "YYYY-MM-DD", true).isValid()) {
-                    date = value;
-                    job.lastLog = `Using date from cron job args: ${date}`;
-                  } else {
-                    console.warn(
-                      `Invalid date format in cron job args: ${value}, using default date ${date}`
-                    );
-                  }
-                }
-                if (key === "headless") {
-                  headless = value;
-                  job.lastLog += `, headless mode => ${headless}`;
-                }
-              });
-              job.save();
-            }
-            extractTrayAmount(date, headless);
-            break;
+      // Valider l'expression cron
+      if (!cron.validate(job.cronExpression)) {
+        console.error(
+          `Invalid cron expression for ${job.jobName}: ${job.cronExpression}`
+        );
+        continue;
+      }
 
-          case "extractWMS":
-            if (job.args) {
-              const args = job.args.split(",");
-              args.forEach(async (arg) => {
-                const [key, value] = arg.split(":").map((s) => s.trim());
-                if (key === "date") {
-                  if (dayjs(value, "YYYY-MM-DD", true).isValid()) {
-                    job.lastLog = `Using date from cron job args: ${value}`;
-                    await extractWMS(value);
-                  } else {
-                    job.lastLog = `Invalid date format in cron job args: ${value}`;
-                    await extractWMS();
-                  }
-                }
-              });
-              job.save();
-            } else {
-              await extractWMS();
-            }
-            break;
-          case "extractSAV":
-            if (job.args) {
-              const args = job.args.split(",");
-              args.forEach(async (arg) => {
-                const [key, value] = arg.split(":").map((s) => s.trim());
-                if (key === "date") {
-                  if (dayjs(value, "YYYY-MM-DD", true).isValid()) {
-                    job.lastLog = `Using date from cron job args: ${value}`;
-                    await extractSAV(value);
-                  } else {
-                    job.lastLog = `Invalid date format in cron job args: ${value}`;
-                    await extractSAV();
-                  }
-                }
-              });
-              job.save();
-            } else {
-              await extractSAV();
-            }
-            break;
-          case "sendKPI":
-            await sendKPI();
-            break;
+      console.log(`Starting cron job: ${job.jobName} (${job.cronExpression})`);
+
+      const task = cron.schedule(job.cronExpression, async () => {
+        console.log(`Cron triggered: ${job.jobName}`);
+
+        // Parser les arguments du job si définis
+        let parsedArgs = {};
+        if (job.args) {
+          try {
+            const args = job.args.split(",");
+            args.forEach((arg) => {
+              const [key, value] = arg.split(":").map((s) => s.trim());
+
+              // Conversion des types basiques
+              if (value === "true") parsedArgs[key] = true;
+              else if (value === "false") parsedArgs[key] = false;
+              else if (!isNaN(value)) parsedArgs[key] = Number(value);
+              else parsedArgs[key] = value;
+            });
+          } catch (e) {
+            console.error(`Error parsing args for ${job.jobName}:`, e);
+          }
+        }
+
+        // Exécuter l'action
+        try {
+          await executeJobAction(job.action, parsedArgs);
+        } catch (error) {
+          console.error(`Error executing scheduled job ${job.jobName}:`, error);
         }
       });
+
+      activeCronJobs.set(job.jobName, task);
     }
+
+    // Démarrer le polling de la queue de jobs (toutes les 5 secondes)
+    queuePollingInterval = setInterval(processJobQueue, 5000);
+    console.log("Job queue polling started (every 5 seconds)");
+
     console.log("Cron jobs initialized successfully");
-    res.json({ message: "Cron jobs initialized successfully" });
+    res.json({
+      message: "Cron jobs initialized successfully",
+      jobsCount: activeCronJobs.size,
+    });
   } catch (error) {
     console.error("Error initializing cron jobs:", error);
     res.status(500).json({ error: error.message });
@@ -139,6 +242,94 @@ router.get("/", async (req, res) => {
     res.json(cronJobs);
   } catch (error) {
     console.error("Error fetching cron jobs:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Demander l'exécution d'un job (pour les utilisateurs)
+router.post("/request-job", async (req, res) => {
+  const { action, args, userId } = req.body;
+
+  if (!action) {
+    res.status(400).json({ error: "Action is required" });
+    return;
+  }
+
+  if (!userId) {
+    res.status(400).json({ error: "userId is required" });
+    return;
+  }
+
+  try {
+    // Vérifier que le job existe
+    const cronJob = await db.models.CronJobs.findOne({
+      where: { action },
+    });
+
+    if (!cronJob) {
+      res.status(404).json({ error: "Cron job not found for this action" });
+      return;
+    }
+
+    // Créer une entrée dans la queue
+    const queuedJob = await db.models.JobQueue.create({
+      jobName: cronJob.jobName,
+      action: action,
+      args: args || null,
+      requestedBy: userId,
+      status: "pending",
+      createdAt: new Date(),
+    });
+
+    console.log(`Job queued: ${cronJob.jobName} (Queue ID: ${queuedJob.id})`);
+
+    res.json({
+      message: "Job queued successfully, waiting for bot to process",
+      queueId: queuedJob.id,
+      jobName: cronJob.jobName,
+      estimatedDelay: "5-10 seconds",
+    });
+  } catch (error) {
+    console.error("Error requesting job:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Obtenir le statut d'un job dans la queue
+router.get("/queue/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const queuedJob = await db.models.JobQueue.findByPk(id);
+
+    if (!queuedJob) {
+      res.status(404).json({ error: "Queued job not found" });
+      return;
+    }
+
+    res.json(queuedJob);
+  } catch (error) {
+    console.error("Error fetching queued job:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Obtenir tous les jobs en attente dans la queue
+router.get("/queue", async (req, res) => {
+  try {
+    const { status, limit = 50 } = req.query;
+
+    const where = status ? { status } : {};
+
+    const queuedJobs = await db.models.JobQueue.findAll({
+      where,
+      order: [["createdAt", "DESC"]],
+      limit: parseInt(limit),
+    });
+
+    res.json(queuedJobs);
+  } catch (error) {
+    console.error("Error fetching job queue:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -173,21 +364,39 @@ router.get("/status", (req, res) => {
     });
     res.write(`data: ${data}\n\n`);
   });
+
+  // Envoyer les mises à jour de la queue également
+  db.models.JobQueue.addHook("afterUpdate", (job, options) => {
+    const data = JSON.stringify({
+      type: "jobQueueStatus",
+      job: {
+        id: job.id,
+        jobName: job.jobName,
+        action: job.action,
+        status: job.status,
+        createdAt: job.createdAt,
+        startedAt: job.startedAt,
+        completedAt: job.completedAt,
+        error: job.error,
+      },
+      timestamp: new Date().toISOString(),
+    });
+    res.write(`data: ${data}\n\n`);
+  });
 });
-// Start manually a cron job
+
+// Start manually a cron job with custom arguments
 router.post("/start", async (req, res) => {
-  const { action } = req.body;
+  const { action, args } = req.body;
 
   if (!action) {
-    res.status(400).json({ error: "No action provided" });
+    res.status(400).json({ error: "Action is required" });
     return;
   }
 
   try {
     const cronJob = await db.models.CronJobs.findOne({
-      where: {
-        action,
-      },
+      where: { action },
     });
 
     if (!cronJob) {
@@ -195,26 +404,16 @@ router.post("/start", async (req, res) => {
       return;
     }
 
-    // Execute the action based on the cron job
-    switch (cronJob.action) {
-      case "extractTrayAmount":
-        extractTrayAmount(dayjs().subtract(1, "day").format("YYYY-MM-DD"));
-        break;
-      case "extractWMS":
-        await extractWMS();
-        break;
-      case "extractSAV":
-        await extractSAV();
-        break;
-      case "sendKPI":
-        await sendKPI();
-        break;
-      default:
-        res.status(400).json({ error: "Unknown action" });
-        return;
-    }
+    console.log(`Manual execution requested for: ${cronJob.jobName}`, args);
 
-    res.json({ message: `Cron job ${cronJob.jobName} started successfully` });
+    // Exécuter immédiatement avec les arguments fournis
+    await executeJobAction(action, args || {});
+
+    res.json({
+      message: `Cron job ${cronJob.jobName} executed successfully`,
+      action,
+      args,
+    });
   } catch (error) {
     console.error("Error starting cron job:", error);
     res.status(500).json({ error: error.message });

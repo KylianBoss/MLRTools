@@ -34,7 +34,7 @@
         />
       </div>
     </div>
-    <div class="row q-py-xs">
+    <!-- <div class="row q-py-xs">
       <div class="col">
         <q-btn
           label="Demander au bot d'extraire le WMS pour une date"
@@ -44,8 +44,8 @@
           :loading="DB.loadingState"
         />
       </div>
-    </div>
-    <div class="row q-py-xs">
+    </div> -->
+    <!-- <div class="row q-py-xs">
       <div class="col">
         <q-btn
           label="Demander au bot d'extraire le nombre de trays pour une date"
@@ -55,8 +55,8 @@
           :loading="DB.loadingState"
         />
       </div>
-    </div>
-    <div class="row q-py-xs">
+    </div> -->
+    <!-- <div class="row q-py-xs">
       <div class="col">
         <q-btn
           label="Demander au bot d'extraire les données SAV pour une date"
@@ -66,7 +66,7 @@
           :loading="DB.loadingState"
         />
       </div>
-    </div>
+    </div> -->
     <div class="row q-py-xs">
       <div class="col">
         <q-btn
@@ -89,7 +89,7 @@
         />
       </div>
     </div> -->
-    <div class="row q-py-xs">
+    <!-- <div class="row q-py-xs">
       <div class="col">
         <q-btn
           label="Internal route to charts"
@@ -99,7 +99,7 @@
           :loading="DB.loadingState"
         />
       </div>
-    </div>
+    </div> -->
     <!-- <div class="row q-py-xs">
       <div class="col">
         <q-btn

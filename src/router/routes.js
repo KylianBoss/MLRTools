@@ -12,7 +12,7 @@ const routes = [
         component: () => import("pages/HomePage.vue"),
       },
       // === KPI === //
-      { path: "kpi", name: "kpi", component: () => import("pages/KPI.vue") },
+      { path: "kpi", name: "kpi", component: () => import("src/pages/KPI/KPI.vue") },
       {
         path: "search",
         name: "search",
@@ -175,6 +175,11 @@ const routes = [
             path: "2fa-setup",
             name: "admin-2fa-setup",
             component: () => import("src/pages/admin/TwoFactorSetup.vue"),
+          },
+          {
+            path: "cron-jobs",
+            name: "admin-cron-jobs",
+            component: () => import("src/pages/admin/CronJobsManager.vue"),
           },
         ],
       },

@@ -30,11 +30,11 @@ router.get("/custom-charts/", async (req, res) => {
       const targets = await db.models.Target.findAll({
         where: { chartId: chart.id },
         order: [["setAt", "ASC"]],
-      })
+      });
 
       chart.targets = targets.map((target) => target.toJSON());
 
-      chart.targets.forEach(target => {
+      chart.targets.forEach((target) => {
         target.setBy = userMap[target.setBy] || "Unknown";
       });
       return chart;
@@ -103,7 +103,7 @@ router.put("/custom-charts/:id", async (req, res) => {
         chartId: id,
         value: newTarget,
         setBy: setBy,
-      })
+      });
       chart.target = newTarget;
     }
 
@@ -132,6 +132,52 @@ router.delete("/custom-charts/:id", async (req, res) => {
     res.json({ message: "Custom chart deleted" });
   } catch (error) {
     console.error("Error deleting custom chart:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+router.get("/test-chart-image", async (req, res) => {
+  try {
+    // Import dynamique pour éviter de charger la librairie si pas utilisé
+    const { ChartJSNodeCanvas } = await import("chartjs-node-canvas");
+
+    const width = 800; //px
+    const height = 600; //px
+    const backgroundColour = "white"; // Uses https://www.w3schools.com/tags/canvas_fillstyle.asp
+    const chartJSNodeCanvas = new ChartJSNodeCanvas({
+      width,
+      height,
+      backgroundColour,
+    });
+
+    const configuration = {
+      type: "bar",
+      data: {
+        labels: [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+        ],
+        datasets: [
+          {
+            label: "My First dataset",
+            backgroundColor: "rgb(255, 99, 132)",
+            borderColor: "rgb(255, 99, 132)",
+            data: [0, 10, 5, 2, 20, 30, 45],
+          },
+        ],
+      },
+      options: {},
+    };
+
+    const image = await chartJSNodeCanvas.renderToBuffer(configuration);
+    res.set("Content-Type", "image/png");
+    res.send(image);
+  } catch (error) {
+    console.error("Error generating test chart image:", error);
     res.status(500).json({ error: error.message });
   }
 });

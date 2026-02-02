@@ -222,7 +222,6 @@ export const extractTrayAmount = (date, headless = true) => {
       if (!startDateInput || !endDateInput) {
         await updateJob(
           {
-            actualState: "running",
             lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
             lastLog: `An error has occured, one of the input field was not found on the page`,
             endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
@@ -271,7 +270,6 @@ export const extractTrayAmount = (date, headless = true) => {
       if (pageContent.includes("Aucun jeu de données")) {
         await updateJob(
           {
-            actualState: "running",
             lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
             lastLog: `No data to extract for date ${date}`,
             endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
@@ -567,29 +565,6 @@ export const extractTrayAmount = (date, headless = true) => {
           type: "success",
         });
       }
-
-      // Update args in job sendKPI to validate that Tray amount extraction is successful
-      const sendKPIJob = await db.models.CronJobs.findOne({
-        where: { name: "sendKPI" },
-      });
-      const sendKPIArgs = sendKPIJob.args
-        ? sendKPIJob.args.split(",").map((a) => {
-            const [key, value] = a.split(":").map((s) => s.trim());
-            return { key, value };
-          })
-        : [];
-      const newSendKPIArgs = sendKPIArgs.filter(
-        (arg) => arg.key !== "trayAmount"
-      );
-      newSendKPIArgs.push({ key: "trayAmount", value: "done" });
-      await updateJob(
-        {
-          args: newSendKPIArgs
-            .map((arg) => `${arg.key}:${arg.value}`)
-            .join(", "),
-        },
-        "sendKPI"
-      );
 
       resolve(zones);
     } catch (error) {

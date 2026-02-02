@@ -669,6 +669,77 @@ function initDB(config) {
       }
     );
 
+    const JobQueue = db.define(
+      "JobQueue",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+          comment: "Unique identifier for the job queue entry",
+        },
+        jobName: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Name of the job to execute",
+        },
+        action: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Action to be performed",
+        },
+        args: {
+          type: DataTypes.JSON,
+          allowNull: true,
+          comment: "Arguments to pass to the job",
+        },
+        requestedBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: "Users",
+            key: "id",
+          },
+          comment: "User ID who requested the job",
+        },
+        status: {
+          type: DataTypes.ENUM("pending", "running", "completed", "failed"),
+          allowNull: false,
+          defaultValue: "pending",
+          comment: "Current status of the job",
+        },
+        error: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          comment: "Error message if job failed",
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.NOW,
+          comment: "Timestamp when the job was requested",
+        },
+        startedAt: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          comment: "Timestamp when the job started executing",
+        },
+        completedAt: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          comment: "Timestamp when the job completed",
+        },
+      },
+      {
+        timestamps: false,
+        indexes: [
+          {
+            fields: ["status", "createdAt"],
+          },
+        ],
+      }
+    );
+
     // Maintenance
     const MaintenancePlan = db.define(
       "MaintenancePlan",

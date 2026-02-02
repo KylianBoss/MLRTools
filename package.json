@@ -1,6 +1,6 @@
 {
   "name": "mlr-tool",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "description": "Tools for MLR",
   "productName": "MLR Tools",
   "author": "Kylian Boss <kylian.boss@bossconcepts.ch>",
@@ -28,6 +28,8 @@
     "@quasar/extras": "^1.16.4",
     "apexcharts": "^4.0.0",
     "axios": "^1.7.9",
+    "chart.js": "^4.5.1",
+    "chartjs-node-canvas": "^5.0.0",
     "codemirror": "^6.0.2",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",

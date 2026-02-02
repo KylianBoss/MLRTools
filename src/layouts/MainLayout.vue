@@ -52,13 +52,28 @@
             label="Accueil"
           />
           <!-- KPI -->
-          <drawer-item
-            to="kpi"
-            autorisation="kpi"
+          <q-expansion-item
+            expand-separator
             icon="mdi-chart-arc"
             label="KPI"
+            v-model="drawers[10]"
             v-if="App.userHasAccess('kpi')"
-          />
+          >
+            <drawer-item
+              to="kpi"
+              autorisation="kpi"
+              icon="mdi-chart-arc"
+              label="KPI"
+              v-if="App.userHasAccess('kpi')"
+            />
+            <drawer-item
+              to="dds-board"
+              autorisation="canAccessDdsBoard"
+              icon="mdi-view-dashboard-outline"
+              label="DDS Board"
+              v-if="App.userHasAccess('canAccessDdsBoard')"
+            />
+          </q-expansion-item>
           <!-- SEARCH -->
           <drawer-item
             to="search"
@@ -185,6 +200,12 @@
               autorisation="canAccessAdminUser"
               icon="mdi-account-group-outline"
               label="Users"
+            />
+            <drawer-item
+              to="admin-cron-jobs"
+              autorisation="*"
+              icon="mdi-clock-outline"
+              label="Cron Jobs"
             />
             <drawner-item
               to="admin-bots"

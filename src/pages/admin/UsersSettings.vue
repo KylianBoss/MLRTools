@@ -367,6 +367,17 @@ const access = [
     value: "canStartMaintenance",
     disabled: true,
   },
+  // DDS
+  {
+    section: "DDS",
+    label: "Accès au tableau DDS",
+    value: "canAccessDdsBoard",
+  },
+  {
+    section: "DDS",
+    label: "Peut modifier le tableau DDS",
+    value: "canUpdateDdsBoard",
+  },
   // Admin accesses
   { section: "Admin", label: "DB", value: "canAccessAdminDB" },
   { section: "Admin", label: "Users", value: "canAccessAdminUser" },

@@ -14,24 +14,7 @@ const SAV_EXPORT_PATH = path.join(
 const jobName = "extractSAV";
 const MAX_RETRY = 5;
 
-export const extractSAV = async (date = null) => {
-  // Get the args of the job to check the retry count
-  const job = await db.models.CronJobs.findOne({
-    where: { name: jobName },
-  });
-  const args = job.args
-    ? job.args.split(",").map((a) => {
-        const [key, value] = a.split(":").map((s) => s.trim());
-        return { key, value };
-      })
-    : [];
-  let retryCount = 0;
-  args.forEach((arg) => {
-    if (arg.key === "retry") {
-      retryCount = parseInt(arg.value) || 0;
-    }
-  });
-
+export const extractSAV = async (date = null, retryCount = 0) => {
   if (retryCount >= MAX_RETRY) {
     console.warn(
       `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
@@ -291,25 +274,6 @@ export const extractSAV = async (date = null) => {
         type: "success",
       });
     }
-
-    // Update args in job sendKPI to validate that SAV extraction is successful
-    const sendKPIJob = await db.models.CronJobs.findOne({
-      where: { name: "sendKPI" },
-    });
-    const sendKPIArgs = sendKPIJob.args
-      ? sendKPIJob.args.split(",").map((a) => {
-          const [key, value] = a.split(":").map((s) => s.trim());
-          return { key, value };
-        })
-      : [];
-    const newSendKPIArgs = sendKPIArgs.filter((arg) => arg.key !== "sav");
-    newSendKPIArgs.push({ key: "sav", value: "done" });
-    await updateJob(
-      {
-        args: newSendKPIArgs.map((arg) => `${arg.key}:${arg.value}`).join(", "),
-      },
-      "sendKPI"
-    );
   } catch (error) {
     console.error("Error during SAV extraction:", error);
     await updateJob(
