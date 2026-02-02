@@ -90,7 +90,20 @@
         <!-- Statut des cron jobs -->
         <q-card class="q-mt-md">
           <q-card-section>
-            <div class="text-h6">Statut des cron jobs planifiés</div>
+            <div class="row items-center">
+              <div class="col text-h6">Statut des cron jobs planifiés</div>
+              <div class="col-auto">
+                <q-btn
+                  flat
+                  dense
+                  icon="refresh"
+                  @click="loadCronJobs"
+                  :loading="loadingCronJobs"
+                >
+                  <q-tooltip>Rafraîchir</q-tooltip>
+                </q-btn>
+              </div>
+            </div>
           </q-card-section>
 
           <q-card-section>
@@ -235,9 +248,10 @@ const args = ref({
 });
 const loading = ref(false);
 const loadingHistory = ref(false);
+const loadingCronJobs = ref(false);
 const jobHistory = ref([]);
 const cronJobsStatus = ref([]);
-let eventSource = null;
+let refreshInterval = null;
 
 const availableActions = [
   { label: "Extract Tray Amount", value: "extractTrayAmount" },
@@ -342,43 +356,36 @@ const loadJobHistory = async () => {
   }
 };
 
-const setupSSE = () => {
-  eventSource = new EventSource("/cron/status");
+const loadCronJobs = async () => {
+  loadingCronJobs.value = true;
+  try {
+    const response = await api.get("/cron/");
+    cronJobsStatus.value = response.data.map((job) => ({
+      name: job.jobName,
+      action: job.action,
+      enabled: job.enabled,
+      cronExpression: job.cronExpression,
+      actualState: job.actualState,
+      lastRun: job.lastRun,
+      lastLog: job.lastLog,
+    }));
+  } catch (error) {
+    console.error("Error loading cron jobs:", error);
+    $q.notify({
+      type: "negative",
+      message: "Erreur lors du chargement des cron jobs",
+    });
+  } finally {
+    loadingCronJobs.value = false;
+  }
+};
 
-  eventSource.addEventListener("message", (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.type === "jobQueueStatus") {
-      // Mettre à jour l'historique en temps réel
-      const index = jobHistory.value.findIndex((j) => j.id === data.job.id);
-      if (index !== -1) {
-        jobHistory.value[index] = { ...jobHistory.value[index], ...data.job };
-      } else {
-        // Nouveau job, recharger l'historique
-        loadJobHistory();
-      }
-
-      // Notifier l'utilisateur
-      if (data.job.status === "completed") {
-        $q.notify({
-          type: "positive",
-          message: `Job terminé: ${data.job.jobName}`,
-        });
-      } else if (data.job.status === "failed") {
-        $q.notify({
-          type: "negative",
-          message: `Job échoué: ${data.job.jobName}`,
-          caption: data.job.error,
-        });
-      }
-    } else if (data.type === "cronJobStatus") {
-      cronJobsStatus.value = data.jobs;
-    }
-  });
-
-  eventSource.addEventListener("error", (error) => {
-    console.error("SSE Error:", error);
-  });
+const startAutoRefresh = () => {
+  // Rafraîchir toutes les 2 secondes
+  refreshInterval = setInterval(() => {
+    loadCronJobs();
+    loadJobHistory();
+  }, 2000);
 };
 
 const formatDate = (date) => {
@@ -431,13 +438,14 @@ const getQueueStatusLabel = (status) => {
 };
 
 onMounted(() => {
+  loadCronJobs();
   loadJobHistory();
-  setupSSE();
+  startAutoRefresh();
 });
 
 onUnmounted(() => {
-  if (eventSource) {
-    eventSource.close();
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
   }
 });
 </script>

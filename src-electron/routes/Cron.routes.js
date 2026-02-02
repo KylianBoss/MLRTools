@@ -346,7 +346,7 @@ router.get("/queue", async (req, res) => {
   }
 });
 // SSE for cron job status
-router.get("/status", (req, res) => {
+router.get("/status", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -355,45 +355,65 @@ router.get("/status", (req, res) => {
   console.log("Client connected via SSE for cron job status");
   res.write('data: {"type":"connected","message":"SSE connected"}\n\n');
 
-  req.on("close", () => {
-    console.log("Client disconnected from SSE for cron job status");
-  });
-
-  // Send status every time a cron job is updated in db
-  db.models.CronJobs.addHook("afterUpdate", (job, options) => {
-    const data = JSON.stringify({
-      type: "cronJobStatus",
-      job: {
-        jobName: job.jobName,
+  // Fonction pour envoyer l'état actuel
+  const sendStatus = async () => {
+    try {
+      // Envoyer la liste complète des cron jobs
+      const allCronJobs = await db.models.CronJobs.findAll();
+      const cronJobsData = allCronJobs.map((job) => ({
+        name: job.jobName,
         action: job.action,
         enabled: job.enabled,
         cronExpression: job.cronExpression,
         actualState: job.actualState,
         lastRun: job.lastRun,
         lastLog: job.lastLog,
-      },
-      timestamp: new Date().toISOString(),
-    });
-    res.write(`data: ${data}\n\n`);
-  });
+      }));
 
-  // Envoyer les mises à jour de la queue également
-  db.models.JobQueue.addHook("afterUpdate", (job, options) => {
-    const data = JSON.stringify({
-      type: "jobQueueStatus",
-      job: {
-        id: job.id,
-        jobName: job.jobName,
-        action: job.action,
-        status: job.status,
-        createdAt: job.createdAt,
-        startedAt: job.startedAt,
-        completedAt: job.completedAt,
-        error: job.error,
-      },
-      timestamp: new Date().toISOString(),
-    });
-    res.write(`data: ${data}\n\n`);
+      const cronData = JSON.stringify({
+        type: "cronJobStatus",
+        jobs: cronJobsData,
+        timestamp: new Date().toISOString(),
+      });
+      res.write(`data: ${cronData}\n\n`);
+
+      // Envoyer aussi les jobs en queue
+      const queueJobs = await db.models.JobQueue.findAll({
+        order: [["createdAt", "DESC"]],
+        limit: 50,
+      });
+
+      queueJobs.forEach((job) => {
+        const queueData = JSON.stringify({
+          type: "jobQueueStatus",
+          job: {
+            id: job.id,
+            jobName: job.jobName,
+            action: job.action,
+            status: job.status,
+            createdAt: job.createdAt,
+            startedAt: job.startedAt,
+            completedAt: job.completedAt,
+            error: job.error,
+          },
+          timestamp: new Date().toISOString(),
+        });
+        res.write(`data: ${queueData}\n\n`);
+      });
+    } catch (error) {
+      console.error("Error sending SSE status:", error);
+    }
+  };
+
+  // Envoyer l'état initial
+  await sendStatus();
+
+  // Envoyer l'état toutes les secondes
+  const interval = setInterval(sendStatus, 1000);
+
+  req.on("close", () => {
+    console.log("Client disconnected from SSE for cron job status");
+    clearInterval(interval);
   });
 });
 

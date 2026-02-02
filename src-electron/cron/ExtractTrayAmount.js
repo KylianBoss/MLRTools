@@ -10,25 +10,8 @@ const jobName = "extractTrayAmount";
 const FILENAME = (date) => `Compteurs_${dayjs(date).format("YYYYMMDD")}.csv`;
 const MAX_RETRY = 5;
 
-export const extractTrayAmount = (date, headless = true) => {
+export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
   return new Promise(async (resolve, reject) => {
-    // Get the args of the job to check the retry count
-    const job = await db.models.CronJobs.findOne({
-      where: { name: jobName },
-    });
-    const args = job.args
-      ? job.args.split(",").map((a) => {
-          const [key, value] = a.split(":").map((s) => s.trim());
-          return { key, value };
-        })
-      : [];
-    let retryCount = 0;
-    args.forEach((arg) => {
-      if (arg.key === "retry") {
-        retryCount = parseInt(arg.value) || 0;
-      }
-    });
-
     if (retryCount >= MAX_RETRY) {
       console.warn(
         `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
