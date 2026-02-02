@@ -297,7 +297,15 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
             safe++;
             if (safe > 20) {
               console.warn(`Download took too long...`);
-              return reject();
+              await updateJob(
+                {
+                  actualState: "error",
+                  lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                  lastLog: `Download took too long...`,
+                },
+                jobName
+              );
+              return reject(new Error("Download took too long"));
             }
           } while (
             !fs.existsSync(
