@@ -64,8 +64,6 @@ export const sendKPI = async () => {
 
     console.log("PDF sent by email successfully.");
 
-    global.sendCommandToFrontend("router", { path: "home" });
-
     console.log("SendKPI job completed.");
     await updateJob(
       {
@@ -73,8 +71,6 @@ export const sendKPI = async () => {
         lastLog: "SendKPI job completed.",
         endAt: new Date(),
         actualState: "idle",
-        cronExpression: "30 5 * * *",
-        args: "trayAmount:pending,sav:pending,wms:pending",
       },
       jobName
     );
@@ -95,14 +91,27 @@ export const sendKPI = async () => {
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: `Error during SendKPI job: ${error.message}, retrying in 20 minutes...`,
+        lastLog: `Error during SendKPI job: ${error.message}`,
         endAt: new Date(),
         actualState: "error",
-        cronExpression: dayjs().add(20, "minute").format("m H * * *"),
       },
       jobName
     );
-    return;
+
+    // Send notification to admins
+    const admins = await db.models.Users.findAll({
+      where: { isAdmin: true },
+    });
+
+    for (const admin of admins) {
+      await db.models.Notifications.create({
+        userId: admin.id,
+        message: `SendKPI job failed: ${error.message}`,
+        type: "error",
+      });
+    }
+
+    throw error; // Permet au système de retry automatique de fonctionner
   }
 };
 

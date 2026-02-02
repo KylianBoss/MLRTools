@@ -297,5 +297,6 @@ export const extractSAV = async (date = null, retryCount = 0) => {
         type: "error",
       });
     }
+    throw error; // Permet au système de retry automatique de fonctionner
   }
 };

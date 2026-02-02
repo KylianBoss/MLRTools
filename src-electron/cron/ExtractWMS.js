@@ -249,7 +249,7 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
         type: "error",
       });
     }
-    return;
+    throw error; // Permet au système de retry automatique de fonctionner
   }
 
   console.log("WMS extraction completed.");
