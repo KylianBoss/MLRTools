@@ -48,6 +48,18 @@ async function executeJobAction(action, args = {}) {
  */
 async function processJobQueue() {
   try {
+    // Vérifier s'il y a déjà un job en cours d'exécution
+    const runningJobs = await db.models.JobQueue.findAll({
+      where: { status: "running" },
+    });
+
+    if (runningJobs.length > 0) {
+      console.log(
+        `Skipping queue processing: ${runningJobs.length} job(s) already running`
+      );
+      return;
+    }
+
     const pendingJobs = await db.models.JobQueue.findAll({
       where: { status: "pending" },
       order: [["createdAt", "ASC"]],
