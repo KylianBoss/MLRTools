@@ -5,39 +5,29 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
 import nodemailer from "nodemailer";
+import puppeteer from "puppeteer";
 
 const jobName = "sendKPI";
 const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 
-// Instance unique de ChartJSNodeCanvas (import dynamique pour éviter les problèmes Electron)
-let ChartJSNodeCanvas = null;
-let chartJSInstance = null;
+// Utilisation de puppeteer pour générer les graphiques (plus stable que canvas dans Electron)
+let browserInstance = null;
 
-async function getChartJSInstance() {
-  if (!chartJSInstance) {
-    if (!ChartJSNodeCanvas) {
-      const module = await import("chartjs-node-canvas");
-      ChartJSNodeCanvas = module.ChartJSNodeCanvas;
-    }
-
-    const width = 1200;
-    const height = 450;
-    const backgroundColour = "white";
-
-    chartJSInstance = new ChartJSNodeCanvas({
-      width,
-      height,
-      backgroundColour,
-      chartCallback: (ChartJS) => {
-        ChartJS.defaults.font.size = 14;
-      },
-    });
+/**
+ * Ferme le navigateur puppeteer proprement
+ */
+export async function closePuppeteerBrowser() {
+  if (browserInstance) {
+    await browserInstance.close();
+    browserInstance = null;
+    console.log("Puppeteer browser closed");
   }
-  return chartJSInstance;
 }
 
-export const sendKPI = async () => {
+export const sendKPI = async (options = {}) => {
   console.log("Starting SendKPI job...");
+  const sendEmail = options.sendEmail !== false; // Par défaut true pour compatibilité
+
   updateJob(
     {
       lastRun: new Date(),
@@ -70,25 +60,40 @@ export const sendKPI = async () => {
 
     console.log(`PDF generated: ${pdfPath}`);
 
-    // Envoi du PDF par mail
-    await updateJob(
-      {
-        lastLog: "Sending PDF by email...",
-      },
-      jobName
-    );
+    // Envoi du PDF par mail ou simple génération pour téléchargement
+    if (sendEmail) {
+      await updateJob(
+        {
+          lastLog: "Sending PDF by email...",
+        },
+        jobName
+      );
 
-    console.log("Sending PDF by email...");
-    await sendPDFByEmail(pdfPath);
+      console.log("Sending PDF by email...");
+      await sendPDFByEmail(pdfPath);
 
-    await updateJob(
-      {
-        lastLog: "PDF sent by email successfully.",
-      },
-      jobName
-    );
+      await updateJob(
+        {
+          lastLog: "PDF sent by email successfully.",
+        },
+        jobName
+      );
 
-    console.log("PDF sent by email successfully.");
+      console.log("PDF sent by email successfully.");
+
+      // Fermer le navigateur puppeteer après envoi
+      await closePuppeteerBrowser();
+    } else {
+      await updateJob(
+        {
+          lastLog: "PDF ready for download.",
+        },
+        jobName
+      );
+
+      console.log("PDF ready for download.");
+      // Le navigateur sera fermé après le téléchargement si c'est via l'API
+    }
 
     console.log("SendKPI job completed.");
     await updateJob(
@@ -108,10 +113,15 @@ export const sendKPI = async () => {
     for (const admin of admins) {
       await db.models.Notifications.create({
         userId: admin.id,
-        message: "KPI data has been sent by mail.",
+        message: sendEmail
+          ? "KPI data has been sent by mail."
+          : "KPI report is ready for download.",
         type: "info",
       });
     }
+
+    // Retourner le chemin du PDF pour permettre le téléchargement
+    return { pdfPath, success: true };
   } catch (error) {
     console.error("Error during SendKPI job:", error);
     await updateJob(
@@ -143,8 +153,9 @@ export const sendKPI = async () => {
 
 /**
  * Génère le PDF KPI avec tous les graphiques
+ * @returns {Promise<string>} Chemin du fichier PDF généré
  */
-async function generateKPIPDF() {
+export async function generateKPIPDF() {
   const groups = await db.models.ZoneGroups.findAll({
     where: {
       display: true,
@@ -203,6 +214,27 @@ async function generateKPIPDF() {
         const imageBuffer = await generateImage(data);
         const { tableRows, tableColumns } = formatDataForTable(data);
 
+        // Calculer la hauteur nécessaire pour ce groupe
+        const titleHeight = 30; // Titre + marge
+        const width = 1200;
+        const height = 450;
+        const imgRatio = width / height;
+        let imgWidth = rightColumnWidth;
+        let imgHeight = imgWidth / imgRatio;
+        const rowHeight = 20;
+        const tableHeight = tableRows.length * rowHeight + 50;
+
+        // Hauteur totale nécessaire (prendre le max entre table et image)
+        const contentHeight =
+          imageBuffer !== null ? Math.max(imgHeight, tableHeight) : tableHeight;
+        const totalHeightNeeded = titleHeight + contentHeight + 40; // +40 pour marge de sécurité
+
+        // Vérifier si on a assez d'espace sur la page actuelle
+        if (actualY + totalHeightNeeded > doc.page.height - 60) {
+          doc.addPage();
+          actualY = 30;
+        }
+
         doc
           .fontSize(18)
           .fillColor("#000")
@@ -222,24 +254,26 @@ async function generateKPIPDF() {
         }
 
         // Colonne droite: Graphique
-        const width = 1200;
-        const height = 450;
-        const imgRatio = width / height;
-        const graphStartX = 30 + leftColumnWidth + columnGap;
-        let imgWidth = rightColumnWidth;
-        let imgHeight = imgWidth / imgRatio;
-
         if (imageBuffer !== null) {
+          const width = 1200;
+          const height = 450;
+          const imgRatio = width / height;
+          const graphStartX = 30 + leftColumnWidth + columnGap;
+          let imgWidth = rightColumnWidth;
+          let imgHeight = imgWidth / imgRatio;
+
           doc.image(imageBuffer, graphStartX, actualY, {
             fit: [imgWidth, imgHeight],
           });
+
+          actualY += imgHeight + 10;
+        } else {
+          // Sans graphique, on calcule la hauteur du tableau
+          const rowHeight = 20;
+          const tableHeight = tableRows.length * rowHeight + 50;
+          actualY += tableHeight;
         }
 
-        actualY += imgHeight + 10;
-        if (actualY > doc.page.height - 60) {
-          doc.addPage();
-          actualY = 30;
-        }
         console.log(`Chart for group: ${group.zoneGroupName} added to PDF.`);
       }
 
@@ -279,6 +313,27 @@ async function generateKPIPDF() {
           customChart
         );
 
+        // Calculer la hauteur nécessaire pour ce custom chart
+        const titleHeight = 30;
+        const width = 1200;
+        const height = 450;
+        const imgRatio = width / height;
+        let imgWidth = rightColumnWidth;
+        let imgHeight = imgWidth / imgRatio;
+        const rowHeight = 20;
+        const tableHeight = tableRows.length * rowHeight + 50;
+
+        // Hauteur totale nécessaire
+        const contentHeight =
+          imageBuffer !== null ? Math.max(imgHeight, tableHeight) : tableHeight;
+        const totalHeightNeeded = titleHeight + contentHeight + 40;
+
+        // Vérifier si on a assez d'espace
+        if (actualY + totalHeightNeeded > doc.page.height - 60) {
+          doc.addPage();
+          actualY = 30;
+        }
+
         doc
           .fontSize(18)
           .fillColor("#000")
@@ -298,51 +353,75 @@ async function generateKPIPDF() {
         }
 
         // Colonne droite: Graphique
-        const width = 1200;
-        const height = 450;
-        const imgRatio = width / height;
-        const graphStartX = 30 + leftColumnWidth + columnGap;
-        let imgWidth = rightColumnWidth;
-        let imgHeight = imgWidth / imgRatio;
-
         if (imageBuffer !== null) {
+          const width = 1200;
+          const height = 450;
+          const imgRatio = width / height;
+          const graphStartX = 30 + leftColumnWidth + columnGap;
+          let imgWidth = rightColumnWidth;
+          let imgHeight = imgWidth / imgRatio;
+
           doc.image(imageBuffer, graphStartX, actualY, {
             fit: [imgWidth, imgHeight],
           });
+
+          actualY += imgHeight + 10;
+        } else {
+          // Sans graphique, on calcule la hauteur du tableau
+          const rowHeight = 20;
+          const tableHeight = tableRows.length * rowHeight + 50;
+          actualY += tableHeight;
         }
 
-        actualY += imgHeight + 10;
-        if (actualY > doc.page.height - 60) {
-          doc.addPage();
-          actualY = 30;
-        }
         console.log(`Custom chart: ${customChart.chartName} added to PDF.`);
       }
 
       doc.end();
 
-      stream.on("finish", () => {
+      stream.on("finish", async () => {
         console.log(`PDF successfully saved to: ${filePath}`);
+        // Ne pas fermer le navigateur ici, il sera fermé après l'utilisation du PDF
         resolve(filePath);
       });
 
-      stream.on("error", (err) => {
+      stream.on("error", async (err) => {
         console.error("Error writing PDF:", err);
+        // Fermer le navigateur puppeteer en cas d'erreur
+        if (browserInstance) {
+          await browserInstance.close();
+          browserInstance = null;
+        }
         reject(err);
       });
     } catch (error) {
       console.error("Error generating KPI PDF:", error);
+      // Fermer le navigateur puppeteer en cas d'erreur
+      if (browserInstance) {
+        await browserInstance.close();
+        browserInstance = null;
+      }
       reject(error);
     }
   });
 }
 
 /**
- * Génère l'image du graphique pour un groupe
+ * Obtient ou crée une instance de navigateur puppeteer
+ */
+async function getBrowser() {
+  if (!browserInstance) {
+    browserInstance = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  }
+  return browserInstance;
+}
+
+/**
+ * Génère l'image du graphique pour un groupe en utilisant puppeteer
  */
 async function generateImage(data) {
-  const chartJSNodeCanvas = await getChartJSInstance();
-
   const filteredData = data.chartData.filter(
     (d) => d.minProdReached && d.errors > 0 && d.downtime > 0
   );
@@ -364,6 +443,10 @@ async function generateImage(data) {
     data.chartData[0]?.transportType === "tray" ? "trays" : "palettes";
   const transportDivisor =
     data.chartData[0]?.transportType === "tray" ? "1000" : "100";
+
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1200, height: 450 });
 
   const configuration = {
     type: "bar",
@@ -454,18 +537,52 @@ async function generateImage(data) {
     },
   };
 
-  return await chartJSNodeCanvas.renderToBuffer(configuration);
+  // Générer le HTML avec Chart.js
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+      <style>
+        body { margin: 0; padding: 0; background: white; }
+        #chartContainer { width: 1200px; height: 450px; }
+      </style>
+    </head>
+    <body>
+      <div id="chartContainer">
+        <canvas id="myChart"></canvas>
+      </div>
+      <script>
+        const ctx = document.getElementById('myChart');
+        const config = ${JSON.stringify(configuration)};
+        new Chart(ctx, config);
+      </script>
+    </body>
+    </html>
+  `;
+
+  await page.setContent(htmlContent);
+  // Attendre que le graphique soit rendu (compatibilité Puppeteer)
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  const chartElement = await page.$("#chartContainer");
+  const imageBuffer = await chartElement.screenshot({ type: "png" });
+
+  await page.close();
+  return imageBuffer;
 }
 
 /**
- * Génère l'image du graphique pour un custom chart
+ * Génère l'image du graphique pour un custom chart en utilisant puppeteer
  */
 async function generateCustomChartImage(data) {
   const chartData = data.chartData;
 
   if (!chartData || chartData.length === 0) return null;
 
-  const chartJSNodeCanvas = await getChartJSInstance();
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1200, height: 450 });
 
   const labels = chartData.map((item) => {
     const date = new Date(item.date);
@@ -569,7 +686,39 @@ async function generateCustomChartImage(data) {
     },
   };
 
-  return await chartJSNodeCanvas.renderToBuffer(configuration);
+  // Générer le HTML avec Chart.js
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+      <style>
+        body { margin: 0; padding: 0; background: white; }
+        #chartContainer { width: 1200px; height: 450px; }
+      </style>
+    </head>
+    <body>
+      <div id="chartContainer">
+        <canvas id="myChart"></canvas>
+      </div>
+      <script>
+        const ctx = document.getElementById('myChart');
+        const config = ${JSON.stringify(configuration)};
+        new Chart(ctx, config);
+      </script>
+    </body>
+    </html>
+  `;
+
+  await page.setContent(htmlContent);
+  // Attendre que le graphique soit rendu (compatibilité Puppeteer)
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  const chartElement = await page.$("#chartContainer");
+  const imageBuffer = await chartElement.screenshot({ type: "png" });
+
+  await page.close();
+  return imageBuffer;
 }
 
 /**

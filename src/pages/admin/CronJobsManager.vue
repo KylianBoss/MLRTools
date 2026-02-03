@@ -54,30 +54,27 @@
 
             <!-- Arguments pour sendKPI -->
             <div v-if="selectedAction === 'sendKPI'" class="q-mt-md">
-              <div class="text-caption q-mb-sm">Dépendances :</div>
-              <q-checkbox
-                v-model="args.dependencies.trayAmount"
-                label="Tray Amount"
-                true-value="done"
-                false-value="pending"
+              <q-toggle
+                v-model="args.sendEmail"
+                label="Envoyer par email"
+                class="q-mt-sm"
               />
-              <q-checkbox
-                v-model="args.dependencies.sav"
-                label="SAV"
-                true-value="done"
-                false-value="pending"
-              />
-              <q-checkbox
-                v-model="args.dependencies.wms"
-                label="WMS"
-                true-value="done"
-                false-value="pending"
-              />
+              <div class="text-caption text-grey q-mt-xs">
+                Si désactivé, le PDF sera disponible pour téléchargement
+              </div>
             </div>
           </q-card-section>
 
           <q-card-actions align="right">
             <q-btn label="Réinitialiser" flat @click="resetArgs" />
+            <q-btn
+              v-if="selectedAction === 'sendKPI'"
+              label="Télécharger dernier PDF"
+              color="secondary"
+              flat
+              icon="download"
+              @click="downloadLatestKPI"
+            />
             <q-btn
               label="Demander l'exécution"
               color="primary"
@@ -243,11 +240,7 @@ const selectedAction = ref("extractTrayAmount");
 const args = ref({
   date: dayjs().subtract(1, "day").format("YYYY-MM-DD"),
   headless: true,
-  dependencies: {
-    trayAmount: "pending",
-    sav: "pending",
-    wms: "pending",
-  },
+  sendEmail: true,
 });
 const loading = ref(false);
 const loadingHistory = ref(false);
@@ -278,11 +271,7 @@ const resetArgs = () => {
     };
   } else if (selectedAction.value === "sendKPI") {
     args.value = {
-      dependencies: {
-        trayAmount: "pending",
-        sav: "pending",
-        wms: "pending",
-      },
+      sendEmail: true,
     };
   }
 };
@@ -296,6 +285,27 @@ const requestJob = async () => {
       delete cleanedArgs.date;
     }
 
+    // Si c'est sendKPI sans email, générer directement côté client
+    if (selectedAction.value === "sendKPI" && !cleanedArgs.sendEmail) {
+      $q.notify({
+        type: "info",
+        message: "Génération du PDF en cours...",
+        spinner: true,
+        timeout: 0,
+      });
+
+      await generateAndDownloadKPI();
+
+      $q.notify({
+        type: "positive",
+        message: "PDF téléchargé avec succès",
+      });
+
+      loading.value = false;
+      return;
+    }
+
+    // Sinon, passer par la queue normale
     const response = await api.post("/cron/request-job", {
       action: selectedAction.value,
       userId: appStore.user.id,
@@ -319,6 +329,61 @@ const requestJob = async () => {
     });
   } finally {
     loading.value = false;
+  }
+};
+
+const downloadLatestKPI = async () => {
+  try {
+    const response = await api.get("/cron/download-latest-kpi", {
+      responseType: "blob",
+    });
+
+    // Créer un lien de téléchargement
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `KPI_Report_${dayjs().format("YYYY-MM-DD_HHmmss")}.pdf`
+    );
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    $q.notify({
+      type: "positive",
+      message: "PDF téléchargé avec succès",
+    });
+  } catch (error) {
+    $q.notify({
+      type: "negative",
+      message: "Erreur lors du téléchargement du PDF",
+      caption: error.response?.data?.error || error.message,
+    });
+  }
+};
+
+const generateAndDownloadKPI = async () => {
+  try {
+    const response = await api.get("/kpi/generate-pdf-download", {
+      responseType: "blob",
+    });
+
+    // Créer un lien de téléchargement
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `KPI_Report_${dayjs().format("YYYY-MM-DD_HHmmss")}.pdf`
+    );
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    throw error;
   }
 };
 

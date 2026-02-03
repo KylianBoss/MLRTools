@@ -36,7 +36,8 @@ async function executeJobAction(action, args = {}) {
       return await extractSAV(args.date, args.retryCount || 0);
 
     case "sendKPI":
-      return await sendKPI();
+      const options = args || {};
+      return await sendKPI(options);
 
     default:
       throw new Error(`Unknown action: ${action}`);
@@ -449,18 +450,68 @@ router.post("/start", async (req, res) => {
     console.log(`Manual execution requested for: ${cronJob.jobName}`, args);
 
     // Exécuter immédiatement avec les arguments fournis
-    await executeJobAction(action, args || {});
+    const result = await executeJobAction(action, args || {});
 
     res.json({
       message: `Cron job ${cronJob.jobName} executed successfully`,
       action,
       args,
+      result,
     });
   } catch (error) {
     console.error("Error starting cron job:", error);
     res.status(500).json({ error: error.message });
   }
 });
+
+// Télécharger le dernier PDF KPI généré
+router.get("/download-latest-kpi", async (req, res) => {
+  try {
+    const fs = await import("fs");
+    const path = await import("path");
+
+    const outputDir = path.default.join(process.cwd(), "storage", "prints");
+
+    // Vérifier que le dossier existe
+    if (!fs.default.existsSync(outputDir)) {
+      res.status(404).json({ error: "No KPI reports directory found" });
+      return;
+    }
+
+    // Lister tous les fichiers KPI_Report_*.pdf
+    const files = fs.default
+      .readdirSync(outputDir)
+      .filter((file) => file.startsWith("KPI_Report_") && file.endsWith(".pdf"))
+      .map((file) => ({
+        name: file,
+        path: path.default.join(outputDir, file),
+        mtime: fs.default.statSync(path.default.join(outputDir, file)).mtime,
+      }))
+      .sort((a, b) => b.mtime - a.mtime); // Tri par date décroissante
+
+    if (files.length === 0) {
+      res.status(404).json({ error: "No KPI reports found" });
+      return;
+    }
+
+    const latestFile = files[0];
+
+    console.log(`Downloading latest KPI report: ${latestFile.name}`);
+
+    res.download(latestFile.path, latestFile.name, (err) => {
+      if (err) {
+        console.error("Error downloading file:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Error downloading file" });
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error downloading KPI report:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Test router command
 router.get("/test", (req, res) => {
   global.sendCommandToFrontend("router", { path: "faillures-charts" });

@@ -663,6 +663,13 @@ function initDB(config) {
           comment:
             "If true, the job is enabled and will run according to its schedule",
         },
+        options: {
+          type: DataTypes.JSON,
+          allowNull: true,
+          defaultValue: null,
+          comment:
+            "Job-specific options stored as JSON, e.g. {sendEmail: true} for SendKPI",
+        },
       },
       {
         timestamps: false,

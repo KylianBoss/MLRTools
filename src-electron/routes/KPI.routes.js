@@ -8,12 +8,53 @@ import fs from "fs";
 import path from "path";
 import nodemailer from "nodemailer";
 import minMax from "dayjs/plugin/minMax.js";
+import { generateKPIPDF, closePuppeteerBrowser } from "../cron/SendKPI.js";
 
 dayjs.extend(minMax);
 
 const router = Router();
 const STORAGE_PATH = path.join(process.cwd(), "storage");
 const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
+
+// Générer et télécharger le PDF KPI directement (sans passer par la queue)
+router.get("/generate-pdf-download", async (req, res) => {
+  try {
+    console.log("Generating KPI PDF for direct download...");
+
+    // Générer le PDF
+    const pdfPath = await generateKPIPDF();
+
+    console.log(`PDF generated at: ${pdfPath}`);
+
+    // Vérifier que le fichier existe
+    if (!fs.existsSync(pdfPath)) {
+      res.status(404).json({ error: "PDF file not found after generation" });
+      return;
+    }
+
+    // Envoyer le fichier au client
+    const fileName = path.basename(pdfPath);
+    res.download(pdfPath, fileName, async (err) => {
+      // Fermer le navigateur puppeteer après l'envoi du fichier
+      await closePuppeteerBrowser();
+
+      if (err) {
+        console.error("Error downloading file:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Error downloading file" });
+        }
+      }
+
+      // Optionnel: Supprimer le fichier après téléchargement pour économiser l'espace
+      // fs.unlinkSync(pdfPath);
+    });
+  } catch (error) {
+    console.error("Error generating KPI PDF:", error);
+    // Fermer le navigateur en cas d'erreur
+    await closePuppeteerBrowser();
+    res.status(500).json({ error: error.message });
+  }
+});
 
 router.get("/count", async (req, res) => {
   const { from, to, includesExcluded = false } = req.query;
