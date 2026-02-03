@@ -146,16 +146,6 @@ export const useDataLogStore = defineStore("datalog", {
         return false;
       };
     },
-    productionTimes() {
-      return (date) => {
-        const productionData = this.productionData.find(
-          (p) => p.date === dayjs(date).format("YYYY-MM-DD")
-        );
-        return productionData
-          ? { from: productionData.start, to: productionData.end }
-          : { from: "00:00", to: "23:59" };
-      };
-    },
   },
   actions: {
     async getData(startRow, count, filter, sortBy, descending, sum) {
@@ -455,21 +445,6 @@ export const useDataLogStore = defineStore("datalog", {
             };
             resolve(true);
           });
-      });
-    },
-    getProductionData() {
-      return new Promise((resolve, reject) => {
-        api.get("/production/data").then((response) => {
-          this.productionData = response.data;
-          resolve(response.data);
-        });
-      });
-    },
-    getProductionData(date) {
-      return new Promise((resolve, reject) => {
-        api.get(`/production/data/${date}`).then((response) => {
-          resolve(response.data);
-        });
       });
     },
     setProductionData(data) {

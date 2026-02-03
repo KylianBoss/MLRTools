@@ -1,7 +1,6 @@
 import { updateJob } from "./utils.js";
 import { db } from "../database.js";
 import dayjs from "dayjs";
-import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
@@ -9,6 +8,33 @@ import nodemailer from "nodemailer";
 
 const jobName = "sendKPI";
 const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
+
+// Instance unique de ChartJSNodeCanvas (import dynamique pour éviter les problèmes Electron)
+let ChartJSNodeCanvas = null;
+let chartJSInstance = null;
+
+async function getChartJSInstance() {
+  if (!chartJSInstance) {
+    if (!ChartJSNodeCanvas) {
+      const module = await import("chartjs-node-canvas");
+      ChartJSNodeCanvas = module.ChartJSNodeCanvas;
+    }
+
+    const width = 1200;
+    const height = 450;
+    const backgroundColour = "white";
+
+    chartJSInstance = new ChartJSNodeCanvas({
+      width,
+      height,
+      backgroundColour,
+      chartCallback: (ChartJS) => {
+        ChartJS.defaults.font.size = 14;
+      },
+    });
+  }
+  return chartJSInstance;
+}
 
 export const sendKPI = async () => {
   console.log("Starting SendKPI job...");
@@ -315,17 +341,7 @@ async function generateKPIPDF() {
  * Génère l'image du graphique pour un groupe
  */
 async function generateImage(data) {
-  const width = 1200;
-  const height = 450;
-  const backgroundColour = "white";
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({
-    width,
-    height,
-    backgroundColour,
-    chartCallback: (ChartJS) => {
-      ChartJS.defaults.font.size = 14;
-    },
-  });
+  const chartJSNodeCanvas = await getChartJSInstance();
 
   const filteredData = data.chartData.filter(
     (d) => d.minProdReached && d.errors > 0 && d.downtime > 0
@@ -449,17 +465,7 @@ async function generateCustomChartImage(data) {
 
   if (!chartData || chartData.length === 0) return null;
 
-  const width = 1200;
-  const height = 450;
-  const backgroundColour = "white";
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({
-    width,
-    height,
-    backgroundColour,
-    chartCallback: (ChartJS) => {
-      ChartJS.defaults.font.size = 14;
-    },
-  });
+  const chartJSNodeCanvas = await getChartJSInstance();
 
   const labels = chartData.map((item) => {
     const date = new Date(item.date);

@@ -23,7 +23,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Middleware de logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} ${req.query ? JSON.stringify(req.query) : ""}`);
+  console.log(
+    `${new Date().toISOString()} - ${req.method} ${req.path} ${
+      req.query ? JSON.stringify(req.query) : ""
+    }`
+  );
   if (db) {
     db.models.RequestLogs.create({
       method: req.method,
@@ -180,11 +184,40 @@ app.get("/alarms/:alarmIdCode", async (req, res) => {
 // PRODUCTION DATA
 app.get("/production/data", async (req, res) => {
   try {
+    // Support pagination si les paramètres sont fournis
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
+    const sortBy = req.query.sortBy || "date";
+    const order = req.query.order === "ASC" ? "ASC" : "DESC";
+
+    // Si pas de pagination, retourner toutes les données (pour compatibilité)
+    if (!page || !limit) {
+      const data = await db.models.ProductionData.findAll({
+        order: [["date", "ASC"]],
+        raw: true,
+      });
+      res.json(data);
+      return;
+    }
+
+    // Avec pagination
+    const offset = (page - 1) * limit;
+    const total = await db.models.ProductionData.count();
+
     const data = await db.models.ProductionData.findAll({
-      order: [["date", "ASC"]],
+      order: [[sortBy, order]],
+      limit,
+      offset,
       raw: true,
     });
-    res.json(data);
+
+    res.json({
+      data,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error("Error fetching production data:", error);
     res.status(500).json({ error: error.message });

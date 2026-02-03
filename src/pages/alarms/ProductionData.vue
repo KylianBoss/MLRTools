@@ -4,12 +4,14 @@
     <q-table
       :rows="productionData"
       :columns="columns"
-      :rows-per-page-options="pagination.rowsPerPage"
+      v-model:pagination="pagination"
+      :rows-per-page-options="[7, 14, 21, 28, 50, 100]"
       row-key="date"
       wrap-cells
       flat
       bordered
-      :loading="productionData.length === 0"
+      :loading="loading"
+      @request="onRequest"
     >
       <template v-slot:body="props">
         <q-tr
@@ -201,17 +203,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, onMounted } from "vue";
+import { api } from "boot/axios";
 import { useDataLogStore } from "stores/datalog";
 import dayjs from "dayjs";
-import weekday from "dayjs/plugin/weekday";
 import { useAppStore } from "src/stores/app";
-
-dayjs.extend(weekday);
 
 const dataLogStore = useDataLogStore();
 const App = useAppStore();
 const productionData = ref([]);
+const loading = ref(false);
+
 const columns = [
   {
     name: "date",
@@ -266,76 +268,65 @@ const columns = [
     sortable: true,
   },
 ];
-const pagination = {
-  rowsPerPage: [7, 14, 21, 28, 0],
-};
 
-const updateRow = (row, field, value) => {
+const pagination = ref({
+  sortBy: "date",
+  descending: true,
+  page: 1,
+  rowsPerPage: 14,
+  rowsNumber: 0,
+});
+
+const updateRow = async (row, field, value) => {
   row[field] = value;
-  dataLogStore.setProductionData(row).then(() => calculate());
-};
-
-const calculate = () => {
-  productionData.value = [];
-  // Add dates from the last in the dataLogStore.dates to the next sunday
-  const toSunday = Math.abs(
-    dayjs(dataLogStore.dates[dataLogStore.dates.length - 1]).diff(
-      dayjs().weekday(6),
-      "day"
-    )
-  );
-  const dates =
-    toSunday > 0
-      ? [
-          ...dataLogStore.dates,
-          ...Array(toSunday)
-            .fill(null)
-            .map((_, i) =>
-              dayjs(dataLogStore.dates[dataLogStore.dates.length - 1])
-                .add(i + 1, "day")
-                .format("YYYY-MM-DD")
-            ),
-        ]
-      : dataLogStore.dates;
-  dates.forEach((date) => {
-    if (
-      dataLogStore.productionData.filter((pd) =>
-        dayjs(pd.date).isSame(dayjs(date))
-      ).length === 0
-    ) {
-      productionData.value.push({
-        date,
-        start: dayjs(date).format("YYYY-MM-DD 00:00"),
-        end: dayjs(date).format("YYYY-MM-DD 00:00"),
-        dayOff: false,
-        boxTreated: 0,
-        isMissing: true,
-      });
-    } else {
-      const pt = dataLogStore.productionData.find((pt) =>
-        dayjs(pt.date).isSame(dayjs(date))
-      );
-      productionData.value.push({
-        date,
-        start: dayjs(pt.start).format("YYYY-MM-DD HH:mm"),
-        end: dayjs(pt.end).format("YYYY-MM-DD HH:mm"),
-        dayOff: Boolean(pt.dayOff),
-        boxTreated: pt.boxTreated,
-        isMissing: false,
-      });
-    }
-  });
-  productionData.value = productionData.value.sort((a, b) => {
-    if (a.date < b.date) return 1;
-    if (a.date > b.date) return -1;
-    return 0;
+  await dataLogStore.setProductionData(row);
+  // Recharger les données après modification
+  await fetchProductionData({
+    pagination: pagination.value,
   });
 };
 
-onMounted(async () => {
-  dataLogStore.initialize().then(() => {
-    calculate();
-  });
+const fetchProductionData = async (props) => {
+  const { page, rowsPerPage, sortBy, descending } = props.pagination;
+  loading.value = true;
+
+  try {
+    const response = await api.get("/production/data", {
+      params: {
+        page,
+        limit: rowsPerPage,
+        sortBy: sortBy || "date",
+        order: descending ? "DESC" : "ASC",
+      },
+    });
+
+    productionData.value = response.data.data.map((row) => ({
+      date: row.date,
+      start: dayjs(row.start).format("YYYY-MM-DD HH:mm"),
+      end: dayjs(row.end).format("YYYY-MM-DD HH:mm"),
+      dayOff: Boolean(row.dayOff),
+      boxTreated: row.boxTreated,
+      isMissing: false,
+    }));
+
+    pagination.value.page = response.data.page;
+    pagination.value.rowsPerPage = response.data.limit;
+    pagination.value.rowsNumber = response.data.total;
+    pagination.value.sortBy = sortBy;
+    pagination.value.descending = descending;
+  } catch (error) {
+    console.error("Error fetching production data:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const onRequest = (props) => {
+  fetchProductionData(props);
+};
+
+onMounted(() => {
+  fetchProductionData({ pagination: pagination.value });
 });
 </script>
 
