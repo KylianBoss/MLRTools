@@ -1,6 +1,6 @@
 {
   "name": "mlr-tool",
-  "version": "1.8.10",
+  "version": "1.8.11",
   "description": "Tools for MLR",
   "productName": "MLR Tools",
   "author": "Kylian Boss <kylian.boss@bossconcepts.ch>",
@@ -16,7 +16,8 @@
     "dev": "quasar dev",
     "dev-electron": "quasar dev -m electron",
     "build": "quasar build",
-    "build-electron": "quasar build -m electron"
+    "build-electron": "quasar build -m electron",
+    "rebuild": "electron-rebuild -f -w canvas"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
@@ -63,6 +64,7 @@
   },
   "devDependencies": {
     "@electron/packager": "^18.3.5",
+    "@electron/rebuild": "^3.7.2",
     "@intlify/vite-plugin-vue-i18n": "^3.3.1",
     "@quasar/app-vite": "^1.9.0",
     "@quasar/cli": "^2.4.1",
