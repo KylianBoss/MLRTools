@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import csv from "csv-parser";
 import { db } from "../database.js";
 import { updateJob } from "./utils.js";
+import Sequelize from "sequelize";
 
 const ONEDRIVE_BUSINESS_PATH = path.join(os.homedir(), "OneDrive - Migros");
 const WMS_HISTORY_PATH = path.join(
@@ -14,6 +15,7 @@ const WMS_HISTORY_PATH = path.join(
 const START_DATE = dayjs("2025-06-30");
 const jobName = "extractWMS";
 const MAX_RETRY = 5;
+const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 
 const getDatesInDB = async () => {
   const results = await db.models.ProductionData.findAll({
@@ -63,6 +65,44 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
     jobName
   );
 
+  // Récupération de al configuration
+  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
+
+  // Create the DB connection to MVN
+  const MVNDB = new Sequelize(
+    config.mvnDatabase,
+    config.mvnUsername,
+    config.mvnPassword,
+    {
+      host: config.mvnHost,
+      dialect: "oracle",
+      dialectOptions: {
+        connectString: config.mvnConnectString,
+      },
+      logging: false,
+    }
+  );
+
+  // Verify the connection with MVNDB
+  if (
+    !(await MVNDB.authenticate()
+      .then(() => true)
+      .catch(() => false))
+  ) {
+    const errorMsg = "Unable to connect to the MVN database.";
+    console.error(errorMsg);
+    await updateJob(
+      {
+        lastRun: new Date(),
+        lastLog: errorMsg,
+        endAt: new Date(),
+        actualState: "error",
+      },
+      jobName
+    );
+    throw new Error(errorMsg);
+  }
+
   // Get dates already in the database
   const datesInDB = manualDate ? null : await getDatesInDB();
 
@@ -86,75 +126,87 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
   try {
     for (const date of datesToProcess) {
       currentDate = date;
-      const data = [];
-      let getFile = false;
-      for (let i = 0; i < 24; i++) {
-        const fileName = `SUIVI_${dayjs(date).format("YYYYMMDD")}_${i
-          .toString()
-          .padStart(2, "0")}.csv`;
+      // const data = [];
+      // let getFile = false;
+      // for (let i = 0; i < 24; i++) {
+      //   const fileName = `SUIVI_${dayjs(date).format("YYYYMMDD")}_${i
+      //     .toString()
+      //     .padStart(2, "0")}.csv`;
 
-        if (!fs.existsSync(path.join(WMS_HISTORY_PATH, fileName))) {
-          console.warn(`File ${fileName} does not exist, skipping...`);
-          await updateJob(
-            {
-              lastRun: new Date(),
-              lastLog: `File ${fileName} does not exist, skipping...`,
-            },
-            jobName
-          );
-          continue;
-        }
-        getFile = true;
+      //   if (!fs.existsSync(path.join(WMS_HISTORY_PATH, fileName))) {
+      //     console.warn(`File ${fileName} does not exist, skipping...`);
+      //     await updateJob(
+      //       {
+      //         lastRun: new Date(),
+      //         lastLog: `File ${fileName} does not exist, skipping...`,
+      //       },
+      //       jobName
+      //     );
+      //     continue;
+      //   }
+      //   getFile = true;
 
-        await new Promise((resolve) => {
-          fs.createReadStream(path.join(WMS_HISTORY_PATH, fileName), "utf8")
-            .pipe(csv({ separator: ";" }))
-            .on("data", (row) => data.push(row))
-            .on("end", async () => {
-              console.log(`Processed file: ${fileName}`);
-              await updateJob(
-                {
-                  lastRun: new Date(),
-                  lastLog: `Processed file: ${fileName}`,
-                },
-                jobName
-              );
-              resolve();
-            });
-        });
-      }
+      //   await new Promise((resolve) => {
+      //     fs.createReadStream(path.join(WMS_HISTORY_PATH, fileName), "utf8")
+      //       .pipe(csv({ separator: ";" }))
+      //       .on("data", (row) => data.push(row))
+      //       .on("end", async () => {
+      //         console.log(`Processed file: ${fileName}`);
+      //         await updateJob(
+      //           {
+      //             lastRun: new Date(),
+      //             lastLog: `Processed file: ${fileName}`,
+      //           },
+      //           jobName
+      //         );
+      //         resolve();
+      //       });
+      //   });
+      // }
 
-      if (!getFile) {
-        console.warn(
-          `No files found for date ${date}, trying to get only one file...`
-        );
-        await updateJob(
-          {
-            lastRun: new Date(),
-            lastLog: `No files found for date ${date}, trying to get only one file...`,
-          },
-          jobName
-        );
-        const fileName = `SUIVI_${dayjs(date).format("YYYYMMDD")}.csv`;
-        if (fs.existsSync(path.join(WMS_HISTORY_PATH, fileName))) {
-          await new Promise((resolve) => {
-            fs.createReadStream(path.join(WMS_HISTORY_PATH, fileName), "utf8")
-              .pipe(csv({ separator: ";" }))
-              .on("data", (row) => data.push(row))
-              .on("end", async () => {
-                console.log(`Processed file: ${fileName}`);
-                await updateJob(
-                  {
-                    lastRun: new Date(),
-                    lastLog: `Processed file: ${fileName}`,
-                  },
-                  jobName
-                );
-                resolve();
-              });
-          });
-        }
-      }
+      // if (!getFile) {
+      //   console.warn(
+      //     `No files found for date ${date}, trying to get only one file...`
+      //   );
+      //   await updateJob(
+      //     {
+      //       lastRun: new Date(),
+      //       lastLog: `No files found for date ${date}, trying to get only one file...`,
+      //     },
+      //     jobName
+      //   );
+      //   const fileName = `SUIVI_${dayjs(date).format("YYYYMMDD")}.csv`;
+      //   if (fs.existsSync(path.join(WMS_HISTORY_PATH, fileName))) {
+      //     await new Promise((resolve) => {
+      //       fs.createReadStream(path.join(WMS_HISTORY_PATH, fileName), "utf8")
+      //         .pipe(csv({ separator: ";" }))
+      //         .on("data", (row) => data.push(row))
+      //         .on("end", async () => {
+      //           console.log(`Processed file: ${fileName}`);
+      //           await updateJob(
+      //             {
+      //               lastRun: new Date(),
+      //               lastLog: `Processed file: ${fileName}`,
+      //             },
+      //             jobName
+      //           );
+      //           resolve();
+      //         });
+      //     });
+      //   }
+      // }
+
+      const data = await MVNDB.query(
+        "SELECT * FROM lnm.ACTIVITY_DATA LIMIT 10"
+      );
+      console.log(data);
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: JSON.stringify(data),
+        },
+        jobName
+      );
 
       const palettisationData = data.filter(
         (row) => row["ACTIVITE"] === "Palettisation"
