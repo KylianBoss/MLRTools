@@ -1,7 +1,7 @@
 import { db } from "./database";
 import { QueryTypes, Op } from "sequelize";
 import dayjs from "dayjs";
-import duration from "dayjs/plugin/duration";
+import duration from "dayjs/plugin/duration.js";
 import express from "express";
 import cors from "cors";
 import routes from "./routes/index.js";
@@ -369,4 +369,4 @@ function closeServer(server) {
   });
 }
 
-module.exports = { startServer, closeServer };
+export { startServer, closeServer };

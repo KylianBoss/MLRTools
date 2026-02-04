@@ -1,7 +1,7 @@
 import e, { raw, Router } from "express";
 import path from "path";
 import fs from "fs/promises";
-import { initDB } from "../database.js";
+import { initDB, db } from "../database.js";
 import Hooks from "../hooks.js";
 
 const router = Router();
@@ -12,7 +12,7 @@ const STORAGE_PATH = path.join(process.cwd(), "storage");
 router.get("/", async (req, res) => {
   try {
     const config = await fs.readFile(CONFIG_PATH, "utf-8");
-    db = await initDB(JSON.parse(config));
+    await initDB(JSON.parse(config));
     const user = await db.models.Users.findOne({
       where: {
         username: process.env.username,
@@ -42,7 +42,7 @@ router.post("/", async (req, res) => {
   try {
     await fs.mkdir(path.join(STORAGE_PATH), { recursive: true });
     await fs.writeFile(CONFIG_PATH, JSON.stringify(req.body));
-    db = await initDB(req.body);
+    await initDB(req.body);
     let user = await db.models.Users.findOne({
       where: {
         username: process.env.username,
@@ -55,6 +55,7 @@ router.post("/", async (req, res) => {
     if (!user) {
       await db.models.Users.create({
         username: process.env.username,
+        autorised: true,
       });
       await db.models.UserAccess.create({
         userId: user.id,

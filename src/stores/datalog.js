@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import dayjs from "dayjs";
-import duration from "dayjs/plugin/duration";
-import customParseFormat from "dayjs/plugin/customParseFormat";
+import duration from "dayjs/plugin/duration.js";
+import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import "dayjs/locale/fr";
 import { api } from "boot/axios";
 import { Loading, QSpinnerFacebook } from "quasar";

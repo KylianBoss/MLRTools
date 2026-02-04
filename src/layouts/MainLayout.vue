@@ -207,7 +207,7 @@
               icon="mdi-clock-outline"
               label="Cron Jobs"
             />
-            <drawner-item
+            <drawer-item
               to="admin-bots"
               autorisation="canAccessAdminBots"
               icon="mdi-robot-outline"

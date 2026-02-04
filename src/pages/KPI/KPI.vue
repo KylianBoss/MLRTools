@@ -353,8 +353,8 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useQuasar, QSpinnerFacebook, event } from "quasar";
 import dayjs from "dayjs";
-import isBetween from "dayjs/plugin/isBetween";
-import utc from "dayjs/plugin/utc";
+import isBetween from "dayjs/plugin/isBetween.js";
+import utc from "dayjs/plugin/utc.js";
 import { useDataLogStore } from "stores/datalog";
 import MessagesByDay from "src/components/charts/MessagesByDay.vue";
 import ErrorsPerZoneCount from "src/components/charts/ErrorsPerZoneCount.vue";

@@ -4,6 +4,11 @@ import semver from "semver";
 import fs from "fs";
 import path from "path";
 import cron from "node-cron";
+import { createRequire } from "module";
+import https from "https";
+import { spawn } from "child_process";
+
+const require = createRequire(import.meta.url);
 
 export class AutoUpdater {
   constructor(mainWindow, githubOwner, githubRepo) {
@@ -106,6 +111,12 @@ export class AutoUpdater {
   }
 
   setupIPC() {
+    // Remove existing handlers to prevent double registration
+    ipcMain.removeHandler("check-for-updates");
+    ipcMain.removeHandler("download-update");
+    ipcMain.removeHandler("install-update");
+    ipcMain.removeHandler("restart-app");
+
     // Handle check for updates request from renderer
     ipcMain.handle("check-for-updates", async () => {
       return await this.checkForUpdates();
@@ -173,7 +184,7 @@ export class AutoUpdater {
         headers: {
           Accept: "application/vnd.github.v3+json",
         },
-        httpsAgent: new (require("https").Agent)({
+        httpsAgent: new https.Agent({
           rejectUnauthorized: false,
         }),
       });
@@ -244,12 +255,10 @@ export class AutoUpdater {
       const scriptPath = path.join(app.getPath("temp"), "update.bat");
       fs.writeFileSync(scriptPath, scriptContent);
 
-      require("child_process")
-        .spawn("cmd.exe", ["/c", "start", scriptPath], {
-          detached: true,
-          stdio: "ignore",
-        })
-        .unref();
+      spawn("cmd.exe", ["/c", "start", scriptPath], {
+        detached: true,
+        stdio: "ignore",
+      }).unref();
 
       app.quit();
       return { success: true };

@@ -5,6 +5,17 @@ import os from "os";
 import fs from "fs";
 import { AutoUpdater } from "./auto-updater.js";
 import { EventSource } from "eventsource";
+import { fileURLToPath } from "url";
+
+// ESM compatibility: define __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Preload path - in dev mode, Quasar compiles to preload/electron-preload.cjs
+const preloadPath = path.join(__dirname, "preload", "electron-preload.cjs");
+
+console.log("Preload path:", preloadPath);
+console.log("Preload exists:", fs.existsSync(preloadPath));
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
@@ -28,7 +39,7 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.resolve(__dirname, process.env.QUASAR_ELECTRON_PRELOAD),
+      preload: preloadPath,
     },
   });
 
@@ -50,8 +61,15 @@ function createWindow() {
 
         connectToServer();
 
-        mainWindow.loadURL(process.env.APP_URL);
-        console.log("Main window URL loaded:", process.env.APP_URL);
+        // En mode dev, utiliser APP_URL, en production utiliser loadFile
+        if (process.env.APP_URL) {
+          mainWindow.loadURL(process.env.APP_URL);
+          console.log("Main window URL loaded:", process.env.APP_URL);
+        } else {
+          // Production: charger le fichier index.html depuis le même dossier
+          mainWindow.loadFile(path.join(__dirname, "index.html"));
+          console.log("Main window file loaded: index.html");
+        }
       })
       .catch((error) => {
         console.error("Error while starting HTTP server:", error);
@@ -221,6 +239,4 @@ process.on("unhandledRejection", (reason, promise) => {
   console.error("Promesse rejetée non gérée:", reason);
 });
 
-module.exports = {
-  sendCommandToFrontend,
-};
+export { sendCommandToFrontend };
