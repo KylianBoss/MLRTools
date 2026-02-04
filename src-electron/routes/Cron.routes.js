@@ -182,7 +182,6 @@ router.post("/initialize", async (req, res) => {
     activeCronJobs.forEach((task, jobName) => {
       console.log(`Stopping existing cron job: ${jobName}`);
       task.stop();
-      task.destroy();
     });
     activeCronJobs.clear();
 
