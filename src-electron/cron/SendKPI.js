@@ -1,5 +1,5 @@
 import { updateJob } from "./utils.js";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 import dayjs from "dayjs";
 import PDFDocument from "pdfkit";
 import fs from "fs";
@@ -28,21 +28,23 @@ export const sendKPI = async (options = {}) => {
   console.log("Starting SendKPI job...");
   const sendEmail = options.sendEmail !== false; // Par défaut true pour compatibilité
 
-  // Vérifier que la base de données est initialisée
-  if (!db) {
-    const error = "Database not initialized";
-    console.error(error);
+  // Obtenir l'instance de la base de données
+  let db;
+  try {
+    db = getDB();
+  } catch (error) {
+    console.error(error.message);
     updateJob(
       {
         lastRun: new Date(),
         actualState: "error",
-        lastLog: error,
+        lastLog: error.message,
         startAt: new Date(),
         endAt: new Date(),
       },
       jobName
     );
-    throw new Error(error);
+    throw error;
   }
 
   updateJob(

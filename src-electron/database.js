@@ -1583,4 +1583,11 @@ function initDB(config) {
   });
 }
 
-export { initDB, db };
+function getDB() {
+  if (!db) {
+    throw new Error("Database not initialized. Call initDB() first.");
+  }
+  return db;
+}
+
+export { initDB, db, getDB };
