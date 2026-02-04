@@ -12,6 +12,14 @@ const MAX_RETRY = 5;
 
 export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
   return new Promise(async (resolve, reject) => {
+    // Vérifier que la base de données est initialisée
+    if (!db) {
+      const error = "Database not initialized";
+      console.error(error);
+      reject(new Error(error));
+      return;
+    }
+
     if (retryCount >= MAX_RETRY) {
       console.warn(
         `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`

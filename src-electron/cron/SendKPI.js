@@ -28,6 +28,23 @@ export const sendKPI = async (options = {}) => {
   console.log("Starting SendKPI job...");
   const sendEmail = options.sendEmail !== false; // Par défaut true pour compatibilité
 
+  // Vérifier que la base de données est initialisée
+  if (!db) {
+    const error = "Database not initialized";
+    console.error(error);
+    updateJob(
+      {
+        lastRun: new Date(),
+        actualState: "error",
+        lastLog: error,
+        startAt: new Date(),
+        endAt: new Date(),
+      },
+      jobName
+    );
+    throw new Error(error);
+  }
+
   updateJob(
     {
       lastRun: new Date(),

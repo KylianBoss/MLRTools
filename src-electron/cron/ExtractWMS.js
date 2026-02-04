@@ -27,6 +27,13 @@ const getDatesInDB = async () => {
 };
 
 export const extractWMS = async (manualDate = null, retryCount = 0) => {
+  // Vérifier que la base de données est initialisée
+  if (!db) {
+    const error = "Database not initialized";
+    console.error(error);
+    throw new Error(error);
+  }
+
   if (retryCount >= MAX_RETRY) {
     console.warn(
       `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
