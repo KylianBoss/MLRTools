@@ -1,5 +1,8 @@
+import { getDB } from "../database.js";
+
 export function updateJob(data = {}, jobName) {
   return new Promise((resolve, reject) => {
+    const db = getDB();
     db.models.CronJobs.findOne({
       where: {
         action: jobName,

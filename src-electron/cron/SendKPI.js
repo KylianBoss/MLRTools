@@ -25,6 +25,7 @@ export async function closePuppeteerBrowser() {
 }
 
 export const sendKPI = async (options = {}) => {
+  const db = getDB();
   console.log("Starting SendKPI job...");
   const sendEmail = options.sendEmail !== false; // Par défaut true pour compatibilité
 
@@ -1068,6 +1069,7 @@ function generateTable(
  * Envoie le PDF par email aux utilisateurs configurés
  */
 async function sendPDFByEmail(pdfPath) {
+  const db = getDB();
   // Vérifier si le fichier existe
   if (!fs.existsSync(pdfPath)) {
     throw new Error(`PDF file not found: ${pdfPath}`);
