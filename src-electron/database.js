@@ -6,6 +6,11 @@ dotenv.config();
 
 let db;
 
+// Function to check if database is initialized without triggering Proxy error
+export function isDBInitialized() {
+  return db !== undefined && db !== null;
+}
+
 // Créer un proxy pour toujours avoir accès à la dernière valeur de db
 const dbProxy = new Proxy(
   {},

@@ -1,4 +1,4 @@
-import { db } from "./database";
+import { db, isDBInitialized } from "./database.js";
 import { QueryTypes, Op } from "sequelize";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration.js";
@@ -28,7 +28,7 @@ app.use((req, res, next) => {
       req.query ? JSON.stringify(req.query) : ""
     }`
   );
-  if (db) {
+  if (isDBInitialized()) {
     db.models.RequestLogs.create({
       method: req.method,
       path: req.path,
