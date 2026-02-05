@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 
 const router = Router();
 
 router.get("/custom-charts/", async (req, res) => {
+  const db = getDB();
   try {
     const charts = await db.models.CustomChart.findAll({
       order: [["chartName", "ASC"]],
@@ -47,6 +48,7 @@ router.get("/custom-charts/", async (req, res) => {
   }
 });
 router.post("/custom-charts/", async (req, res) => {
+  const db = getDB();
   const { chartName, alarms, createdBy } = req.body;
   if (
     !chartName ||
@@ -73,6 +75,7 @@ router.post("/custom-charts/", async (req, res) => {
   }
 });
 router.put("/custom-charts/:id", async (req, res) => {
+  const db = getDB();
   const { id } = req.params;
   const { alarms, newTarget, setBy } = req.body;
 
@@ -115,6 +118,7 @@ router.put("/custom-charts/:id", async (req, res) => {
   }
 });
 router.delete("/custom-charts/:id", async (req, res) => {
+  const db = getDB();
   const { id } = req.params;
   if (!id) {
     res.status(400).json({ error: "Valid id is required" });
@@ -136,6 +140,7 @@ router.delete("/custom-charts/:id", async (req, res) => {
   }
 });
 router.get("/test-chart-image", async (req, res) => {
+  const db = getDB();
   try {
     // Import dynamique pour éviter de charger la librairie si pas utilisé
     const { ChartJSNodeCanvas } = await import("chartjs-node-canvas");
@@ -183,3 +188,4 @@ router.get("/test-chart-image", async (req, res) => {
 });
 
 export default router;
+

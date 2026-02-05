@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 
 const router = Router();
 
 router.get("/", async (req, res) => {
+  const db = getDB();
   try {
     const users = await db.models.Users.findAll({
       include: {
@@ -25,6 +26,7 @@ router.get("/", async (req, res) => {
   }
 });
 router.put("/", async (req, res) => {
+  const db = getDB();
   const {
     id,
     username,
@@ -80,3 +82,4 @@ router.put("/", async (req, res) => {
 });
 
 export default router;
+

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 import dayjs from "dayjs";
 
 const INACTIVE_BOT_THRESHOLD = 5; // minutes
@@ -7,6 +7,7 @@ const INACTIVE_BOT_THRESHOLD = 5; // minutes
 const router = Router();
 
 router.post("/active", async (req, res) => {
+  const db = getDB();
   const { userId } = req.body;
 
   if (!userId) {
@@ -29,6 +30,7 @@ router.post("/active", async (req, res) => {
   }
 });
 router.get("/status", async (req, res) => {
+  const db = getDB();
   try {
     const bots = await db.models.Users.findAll({
       where: { isBot: true },
@@ -79,6 +81,7 @@ router.get("/status", async (req, res) => {
   }
 });
 router.get("/needs-restart/:userId", async (req, res) => {
+  const db = getDB();
   try {
     const bot = await db.models.Users.findOne({
       where: { isBot: true, id: req.params.userId },
@@ -94,6 +97,7 @@ router.get("/needs-restart/:userId", async (req, res) => {
   }
 });
 router.post("/restart-ack/:userId", async (req, res) => {
+  const db = getDB();
   try {
     const bot = await db.models.Users.findOne({
       where: { isBot: true, id: req.params.userId },
@@ -123,6 +127,7 @@ router.post("/restart-ack/:userId", async (req, res) => {
   }
 });
 router.post("/ask/extract", async (req, res) => {
+  const db = getDB();
   const { date } = req.body;
   if (!date || !dayjs(date, "YYYY-MM-DD", true).isValid()) {
     return res
@@ -181,6 +186,7 @@ router.post("/ask/extract", async (req, res) => {
   }
 });
 router.post("/ask/extractWMS", async (req, res) => {
+  const db = getDB();
   const { date } = req.body;
   if (!date || !dayjs(date, "YYYY-MM-DD", true).isValid()) {
     return res
@@ -239,6 +245,7 @@ router.post("/ask/extractWMS", async (req, res) => {
   }
 });
 router.post("/ask/extractSAV", async (req, res) => {
+  const db = getDB();
   const { date } = req.body;
   if (!date || !dayjs(date, "YYYY-MM-DD", true).isValid()) {
     return res
@@ -297,6 +304,7 @@ router.post("/ask/extractSAV", async (req, res) => {
   }
 });
 router.post("/ask/restart", async (req, res) => {
+  const db = getDB();
   try {
     const bots = await db.models.Users.findAll({
       where: { isBot: true },
@@ -332,3 +340,4 @@ router.post("/ask/restart", async (req, res) => {
 });
 
 export default router;
+

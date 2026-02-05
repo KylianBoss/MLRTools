@@ -1,5 +1,5 @@
 import { updateJob } from "./utils.js";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 import dayjs from "dayjs";
 import PDFDocument from "pdfkit";
 import fs from "fs";
@@ -156,6 +156,7 @@ export const sendKPI = async (options = {}) => {
  * @returns {Promise<string>} Chemin du fichier PDF généré
  */
 export async function generateKPIPDF() {
+  const db = getDB();
   const groups = await db.models.ZoneGroups.findAll({
     where: {
       display: true,

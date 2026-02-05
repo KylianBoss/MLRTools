@@ -4,36 +4,28 @@ import dayjs from "dayjs";
 
 dotenv.config();
 
-let db;
+// Export an object that will hold the db instance
+// This way we can mutate the content without changing the export binding
+export const dbContainer = {
+  instance: null,
+};
 
-// Function to check if database is initialized without triggering Proxy error
-export function isDBInitialized() {
-  return db !== undefined && db !== null;
+// Helper to get db instance safely
+export function getDB() {
+  if (!dbContainer.instance) {
+    throw new Error("Database not initialized. Call initDB() first.");
+  }
+  return dbContainer.instance;
 }
 
-// Créer un proxy pour toujours avoir accès à la dernière valeur de db
-const dbProxy = new Proxy(
-  {},
-  {
-    get(target, prop) {
-      if (!db) {
-        throw new Error("Database not initialized. Call initDB() first.");
-      }
-      // Retourner la propriété directement depuis db, pas depuis target
-      return Reflect.get(db, prop);
-    },
-    set(target, prop, value) {
-      if (!db) {
-        throw new Error("Database not initialized. Call initDB() first.");
-      }
-      return Reflect.set(db, prop, value);
-    },
-  }
-);
+// Function to check if database is initialized
+export function isDBInitialized() {
+  return dbContainer.instance !== null;
+}
 
 function initDB(config) {
   return new Promise((resolve, reject) => {
-    db = new Sequelize({
+    const sequelize = new Sequelize({
       dialect: "mariadb",
       host: config.db_host,
       port: config.db_port,
@@ -49,7 +41,7 @@ function initDB(config) {
       },
     });
 
-    const Audit = db.define(
+    const Audit = sequelize.define(
       "Audit",
       {
         id: {
@@ -99,7 +91,7 @@ function initDB(config) {
       }
     );
 
-    const RequestLogs = db.define(
+    const RequestLogs = sequelize.define(
       "RequestLogs",
       {
         id: {
@@ -130,7 +122,7 @@ function initDB(config) {
       }
     );
 
-    const Element = db.define(
+    const Element = sequelize.define(
       "Element",
       {
         id: {
@@ -156,7 +148,7 @@ function initDB(config) {
       }
     );
 
-    const Location = db.define(
+    const Location = sequelize.define(
       "Location",
       {
         id: {
@@ -202,7 +194,7 @@ function initDB(config) {
       }
     );
 
-    const Datalog = db.define(
+    const Datalog = sequelize.define(
       "Datalog",
       {
         dbId: {
@@ -255,7 +247,7 @@ function initDB(config) {
       }
     );
 
-    const Alarms = db.define(
+    const Alarms = sequelize.define(
       "Alarms",
       {
         alarmId: {
@@ -292,7 +284,7 @@ function initDB(config) {
       }
     );
 
-    const Zones = db.define(
+    const Zones = sequelize.define(
       "Zones",
       {
         zone: {
@@ -319,7 +311,7 @@ function initDB(config) {
       }
     );
 
-    const ZoneGroups = db.define(
+    const ZoneGroups = sequelize.define(
       "ZoneGroups",
       {
         zoneGroupName: {
@@ -356,7 +348,7 @@ function initDB(config) {
       }
     );
 
-    const ScheduleProduction = db.define(
+    const ScheduleProduction = sequelize.define(
       "ScheduleProduction",
       {
         day: {
@@ -381,7 +373,7 @@ function initDB(config) {
       }
     );
 
-    const ZoneReadPoints = db.define(
+    const ZoneReadPoints = sequelize.define(
       "ZoneReadPoints",
       {
         zone: {
@@ -424,7 +416,7 @@ function initDB(config) {
       }
     );
 
-    const ZoneData = db.define(
+    const ZoneData = sequelize.define(
       "ZoneData",
       {
         zoneName: {
@@ -455,7 +447,7 @@ function initDB(config) {
       }
     );
 
-    const AlarmTranslations = db.define(
+    const AlarmTranslations = sequelize.define(
       "AlarmTranslations",
       {
         alarmId: {
@@ -471,7 +463,7 @@ function initDB(config) {
       }
     );
 
-    const Users = db.define(
+    const Users = sequelize.define(
       "Users",
       {
         id: {
@@ -537,7 +529,7 @@ function initDB(config) {
       }
     );
 
-    const UserAccess = db.define(
+    const UserAccess = sequelize.define(
       "UserAccess",
       {
         userId: {
@@ -552,7 +544,7 @@ function initDB(config) {
       }
     );
 
-    const ProductionData = db.define("ProductionData", {
+    const ProductionData = sequelize.define("ProductionData", {
       date: {
         type: DataTypes.DATEONLY,
         primaryKey: true,
@@ -578,7 +570,7 @@ function initDB(config) {
       },
     });
 
-    const DayResume = db.define(
+    const DayResume = sequelize.define(
       "DayResume",
       {
         // id: {
@@ -627,7 +619,7 @@ function initDB(config) {
       }
     );
 
-    const CronJobs = db.define(
+    const CronJobs = sequelize.define(
       "CronJobs",
       {
         jobName: {
@@ -701,7 +693,7 @@ function initDB(config) {
       }
     );
 
-    const JobQueue = db.define(
+    const JobQueue = sequelize.define(
       "JobQueue",
       {
         id: {
@@ -779,7 +771,7 @@ function initDB(config) {
     );
 
     // Maintenance
-    const MaintenancePlan = db.define(
+    const MaintenancePlan = sequelize.define(
       "MaintenancePlan",
       {
         id: {
@@ -857,7 +849,7 @@ function initDB(config) {
       }
     );
 
-    const MaintenanceSchedule = db.define(
+    const MaintenanceSchedule = sequelize.define(
       "MaintenanceSchedule",
       {
         id: {
@@ -941,7 +933,7 @@ function initDB(config) {
       }
     );
 
-    const Maintenance = db.define(
+    const Maintenance = sequelize.define(
       "Maintenance",
       {
         id: {
@@ -1009,7 +1001,7 @@ function initDB(config) {
       }
     );
 
-    const MaintenanceSteps = db.define(
+    const MaintenanceSteps = sequelize.define(
       "MaintenanceSteps",
       {
         id: {
@@ -1092,7 +1084,7 @@ function initDB(config) {
       }
     );
 
-    const MaintenancePlanSteps = db.define(
+    const MaintenancePlanSteps = sequelize.define(
       "MaintenancePlanSteps",
       {
         maintenancePlanId: {
@@ -1149,7 +1141,7 @@ function initDB(config) {
     //   as: "maintenances",
     // });
 
-    const Images = db.define(
+    const Images = sequelize.define(
       "Images",
       {
         id: {
@@ -1179,7 +1171,7 @@ function initDB(config) {
       }
     );
 
-    const Stingrays = db.define(
+    const Stingrays = sequelize.define(
       "Stingrays",
       {
         id: {
@@ -1239,7 +1231,7 @@ function initDB(config) {
       }
     );
 
-    const cache_ErrorsByThousand = db.define(
+    const cache_ErrorsByThousand = sequelize.define(
       "cache_ErrorsByThousand",
       {
         groupName: {
@@ -1284,7 +1276,7 @@ function initDB(config) {
       }
     );
 
-    const cache_DowntimeMinutesByThousand = db.define(
+    const cache_DowntimeMinutesByThousand = sequelize.define(
       "cache_DowntimeMinutesByThousand",
       {
         groupName: {
@@ -1329,7 +1321,7 @@ function initDB(config) {
       }
     );
 
-    const cache_CustomCharts = db.define(
+    const cache_CustomCharts = sequelize.define(
       "cache_CustomCharts",
       {
         chartId: {
@@ -1365,7 +1357,7 @@ function initDB(config) {
       }
     );
 
-    const AlarmDataLast7DaysSaved = db.define(
+    const AlarmDataLast7DaysSaved = sequelize.define(
       "AlarmDataLast7DaysSaved",
       {
         id: {
@@ -1418,7 +1410,7 @@ function initDB(config) {
       }
     );
 
-    const CustomChart = db.define(
+    const CustomChart = sequelize.define(
       "CustomChart",
       {
         id: {
@@ -1457,7 +1449,7 @@ function initDB(config) {
       }
     );
 
-    const Target = db.define(
+    const Target = sequelize.define(
       "Target",
       {
         chartId: {
@@ -1502,7 +1494,7 @@ function initDB(config) {
       }
     );
 
-    const Settings = db.define(
+    const Settings = sequelize.define(
       "Settings",
       {
         key: {
@@ -1547,7 +1539,7 @@ function initDB(config) {
     };
 
     // Notifications
-    const Notifications = db.define(
+    const Notifications = sequelize.define(
       "Notifications",
       {
         id: {
@@ -1603,16 +1595,12 @@ function initDB(config) {
     //   foreignKey: "alarmId",
     // });
 
+    // Assign to container so all imports can access it
+    dbContainer.instance = sequelize;
+
     console.log("Database initialized");
-    resolve(db);
+    resolve(sequelize);
   });
 }
 
-function getDB() {
-  if (!db) {
-    throw new Error("Database not initialized. Call initDB() first.");
-  }
-  return db;
-}
-
-export { initDB, dbProxy as db, getDB };
+export { initDB };

@@ -1,10 +1,11 @@
 import { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 import { Op } from "sequelize";
 
 const router = Router();
 
 router.get("/planned", async (req, res) => {
+  const db = getDB();
   try {
     const scheduledMaintenances = await db.models.MaintenanceSchedule.findAll({
       where: {
@@ -46,6 +47,7 @@ router.get("/planned", async (req, res) => {
   }
 });
 router.get("/resume/:maintenanceId", async (req, res) => {
+  const db = getDB();
   const { maintenanceId } = req.params;
   try {
     const maintenance = await db.models.MaintenanceSchedule.findByPk(
@@ -73,6 +75,7 @@ router.get("/resume/:maintenanceId", async (req, res) => {
   }
 });
 router.post("/start", async (req, res) => {
+  const db = getDB();
   const { id, userId } = req.body;
   try {
     const maintenance = await db.models.MaintenanceSchedule.findByPk(id);
@@ -102,6 +105,7 @@ router.post("/start", async (req, res) => {
   }
 });
 router.post("/save", async (req, res) => {
+  const db = getDB();
   const { id, report } = req.body;
   try {
     const maintenance = await db.models.MaintenanceSchedule.findByPk(id);
@@ -127,6 +131,7 @@ router.post("/save", async (req, res) => {
   }
 });
 router.post("/complete", async (req, res) => {
+  const db = getDB();
   const { id, report, startTime, endTime } = req.body;
 
   if (!id || !report || !startTime || !endTime) {
@@ -177,6 +182,7 @@ router.post("/complete", async (req, res) => {
   }
 });
 router.post("/assign", async (req, res) => {
+  const db = getDB();
   const { maintenanceId, userId } = req.body;
 
   try {
@@ -205,6 +211,7 @@ router.post("/assign", async (req, res) => {
   }
 });
 router.get("/plans", async (req, res) => {
+  const db = getDB();
   try {
     const plans = await db.models.MaintenancePlan.findAll({
       order: [["location", "ASC"]],
@@ -216,6 +223,7 @@ router.get("/plans", async (req, res) => {
   }
 });
 router.get("/plans/:planId", async (req, res) => {
+  const db = getDB();
   const { planId } = req.params;
   try {
     const plan = await db.models.MaintenancePlan.findByPk(planId);
@@ -250,6 +258,7 @@ router.get("/plans/:planId", async (req, res) => {
   }
 });
 router.post("/plans/:planId/duplicate", async (req, res) => {
+  const db = getDB();
   const { planId } = req.params;
   const { location } = req.body;
 
@@ -292,6 +301,7 @@ router.post("/plans/:planId/duplicate", async (req, res) => {
   }
 });
 router.post("/plans/steps-reorder", async (req, res) => {
+  const db = getDB();
   const { newStepData } = req.body;
   console.log(newStepData);
 
@@ -321,6 +331,7 @@ router.post("/plans/steps-reorder", async (req, res) => {
   }
 });
 router.post("/plans/steps", async (req, res) => {
+  const db = getDB();
   try {
     const step = await db.models.MaintenanceSteps.create(req.body);
     if (!step) {
@@ -347,6 +358,7 @@ router.post("/plans/steps", async (req, res) => {
   }
 });
 router.put("/plans/steps/:stepId", async (req, res) => {
+  const db = getDB();
   const { stepId } = req.params;
   try {
     const step = await db.models.MaintenanceSteps.findByPk(stepId);
@@ -366,6 +378,7 @@ router.put("/plans/steps/:stepId", async (req, res) => {
   }
 });
 router.delete("/plans/steps/:stepId", async (req, res) => {
+  const db = getDB();
   const { stepId } = req.params;
   try {
     const step = await db.models.MaintenanceSteps.findByPk(stepId);
@@ -391,6 +404,7 @@ router.delete("/plans/steps/:stepId", async (req, res) => {
   }
 });
 router.get("/reports", async (req, res) => {
+  const db = getDB();
   try {
     const reports = await db.models.Maintenance.findAll({
       order: [["startTime", "DESC"]],
@@ -430,6 +444,7 @@ router.get("/reports", async (req, res) => {
   }
 });
 router.get("/reports/:reportId", async (req, res) => {
+  const db = getDB();
   const { reportId } = req.params;
   try {
     const report = await db.models.Maintenance.findByPk(reportId);
@@ -453,6 +468,7 @@ router.get("/reports/:reportId", async (req, res) => {
   }
 });
 router.get("/scheduled/:maintenanceId", async (req, res) => {
+  const db = getDB();
   const { maintenanceId } = req.params;
   try {
     const maintenanceSchedule = await db.models.MaintenanceSchedule.findByPk(
@@ -469,6 +485,7 @@ router.get("/scheduled/:maintenanceId", async (req, res) => {
   }
 });
 router.get("/:maintenanceId", async (req, res) => {
+  const db = getDB();
   const { maintenanceId } = req.params;
   try {
     const maintenanceSchedule = await db.models.MaintenanceSchedule.findByPk(
@@ -508,3 +525,4 @@ router.get("/:maintenanceId", async (req, res) => {
 });
 
 export default router;
+

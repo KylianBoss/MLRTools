@@ -1,9 +1,10 @@
 import e, { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 
 const router = Router();
 
 router.post("/upload", async (req, res) => {
+  const db = getDB();
   try {
     const { image } = req.body;
     if (!image) {
@@ -22,6 +23,7 @@ router.post("/upload", async (req, res) => {
   }
 });
 router.get("/list", async (req, res) => {
+  const db = getDB();
   try {
     const images = await db.models.Images.findAll({
       attributes: ["id", "name"],
@@ -33,6 +35,7 @@ router.get("/list", async (req, res) => {
   }
 });
 router.get("/:id", async (req, res) => {
+  const db = getDB();
   const { id } = req.params;
   try {
     const image = await db.models.Images.findByPk(id);
@@ -48,3 +51,4 @@ router.get("/:id", async (req, res) => {
 });
 
 export default router;
+

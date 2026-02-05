@@ -17,7 +17,8 @@ export class AutoUpdater {
     this.githubRepo = githubRepo;
     this.console = {
       info: (...messages) => {
-        if (!this.mainWindow) return console.info(...messages);
+        if (!this.mainWindow || this.mainWindow.isDestroyed())
+          return console.info(...messages);
         const processedMessages = messages.map((msg) => {
           if (typeof msg === "object" && msg !== null) {
             return {
@@ -32,7 +33,8 @@ export class AutoUpdater {
         this.mainWindow.webContents.send("console-log", processedMessages);
       },
       warn: (...messages) => {
-        if (!this.mainWindow) return console.warn(...messages);
+        if (!this.mainWindow || this.mainWindow.isDestroyed())
+          return console.warn(...messages);
         const processedMessages = messages.map((msg) => {
           if (typeof msg === "object" && msg !== null) {
             return {
@@ -47,7 +49,8 @@ export class AutoUpdater {
         this.mainWindow.webContents.send("console-log", processedMessages);
       },
       error: (...messages) => {
-        if (!this.mainWindow) return console.error(...messages);
+        if (!this.mainWindow || this.mainWindow.isDestroyed())
+          return console.error(...messages);
         const processedMessages = messages.map((msg) => {
           if (typeof msg === "object" && msg !== null) {
             return {
@@ -62,7 +65,8 @@ export class AutoUpdater {
         this.mainWindow.webContents.send("console-log", processedMessages);
       },
       log: (...messages) => {
-        if (!this.mainWindow) return console.log(...messages);
+        if (!this.mainWindow || this.mainWindow.isDestroyed())
+          return console.log(...messages);
         const processedMessages = messages.map((msg) => {
           if (typeof msg === "object" && msg !== null) {
             return {
@@ -98,14 +102,22 @@ export class AutoUpdater {
     cron.schedule("*/10 * * * *", () => {
       this.checkForUpdates()
         .then((result) => {
-          if (result.updateAvailable)
+          if (
+            result.updateAvailable &&
+            this.mainWindow &&
+            !this.mainWindow.isDestroyed()
+          )
             this.mainWindow.webContents.send("update-available", result);
         })
         .catch((error) => {
-          this.mainWindow.webContents.send(
-            "console-log",
-            `Cron job update check failed: ${error}`
-          );
+          if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            this.mainWindow.webContents.send(
+              "console-log",
+              `Cron job update check failed: ${error}`
+            );
+          } else {
+            console.error(`Cron job update check failed: ${error}`);
+          }
         });
     });
   }

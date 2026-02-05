@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 import dayjs from "dayjs";
 import { Op } from "sequelize";
 import { v4 as uuid } from "uuid";
@@ -18,6 +18,7 @@ const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 
 // Générer et télécharger le PDF KPI directement (sans passer par la queue)
 router.get("/generate-pdf-download", async (req, res) => {
+  const db = getDB();
   try {
     console.log("Generating KPI PDF for direct download...");
 
@@ -57,6 +58,7 @@ router.get("/generate-pdf-download", async (req, res) => {
 });
 
 router.get("/count", async (req, res) => {
+  const db = getDB();
   const { from, to, includesExcluded = false } = req.query;
 
   if (!from || !to) {
@@ -85,6 +87,7 @@ router.get("/count", async (req, res) => {
   }
 });
 router.get("/count/zone", async (req, res) => {
+  const db = getDB();
   const { from, to, includesExcluded = false, dataSource } = req.query;
 
   if (!from || !to) {
@@ -113,6 +116,7 @@ router.get("/count/zone", async (req, res) => {
   }
 });
 router.get("/duration", async (req, res) => {
+  const db = getDB();
   const { from, to, includesExcluded = false } = req.query;
 
   if (!from || !to) {
@@ -141,6 +145,7 @@ router.get("/duration", async (req, res) => {
   }
 });
 router.get("/resume", async (req, res) => {
+  const db = getDB();
   const { from, to, includesExcluded = false, dataSource } = req.query;
 
   if (!from || !to) {
@@ -169,6 +174,7 @@ router.get("/resume", async (req, res) => {
   }
 });
 router.get("/groups", async (req, res) => {
+  const db = getDB();
   try {
     const groups = await db.models.ZoneGroups.findAll({
       attributes: ["zoneGroupName", "zones"],
@@ -208,6 +214,7 @@ router.get("/groups", async (req, res) => {
   }
 });
 router.get("/charts/global-last-7-days", async (req, res) => {
+  const db = getDB();
   try {
     const results = await db.query(
       "CALL getAverageErrorsAndDowntimeLast7Days()"
@@ -225,6 +232,7 @@ router.get("/charts/global-last-7-days", async (req, res) => {
   }
 });
 router.get("/charts/global-last-7-days/top-10", async (req, res) => {
+  const db = getDB();
   const from = dayjs()
     .subtract(7, "day")
     .startOf("day")
@@ -250,6 +258,7 @@ router.get("/charts/global-last-7-days/top-10", async (req, res) => {
   }
 });
 router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
+  const db = getDB();
   const MOVING_AVERAGE_WINDOW = await db.models.Settings.getValue(
     "MOVING_AVERAGE_WINDOW"
   );
@@ -355,6 +364,7 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
   }
 });
 router.get("/charts/custom/:chartId", async (req, res) => {
+  const db = getDB();
   const { chartId } = req.params;
 
   const MOVING_AVERAGE_WINDOW = await db.models.Settings.getValue(
@@ -476,6 +486,7 @@ router.get("/charts/custom/:chartId", async (req, res) => {
   }
 });
 router.get("/charts/print", async (req, res) => {
+  const db = getDB();
   const id = uuid();
 
   fs.mkdirSync(path.join(STORAGE_PATH, "prints", id), { recursive: true });
@@ -483,6 +494,7 @@ router.get("/charts/print", async (req, res) => {
   res.json({ id });
 });
 router.post("/charts/print/:id/finalize-and-send", async (req, res) => {
+  const db = getDB();
   const { id } = req.params;
   const dirPath = path.join(STORAGE_PATH, "prints", id);
   if (!fs.existsSync(dirPath)) {
@@ -610,6 +622,7 @@ This is an automatically generated email, please do not reply.`,
   doc.end();
 });
 router.post("/charts/print/:id", async (req, res) => {
+  const db = getDB();
   const { id } = req.params;
   const { image, index } = req.body;
   const dirPath = path.join(STORAGE_PATH, "prints", id);
@@ -634,6 +647,7 @@ router.post("/charts/print/:id", async (req, res) => {
   res.json({ status: "Image added to print session" });
 });
 router.get("/charts/print/:id", async (req, res) => {
+  const db = getDB();
   const { id } = req.params;
 
   const dirPath = path.join(STORAGE_PATH, "prints", id);
@@ -679,6 +693,7 @@ router.get("/charts/print/:id", async (req, res) => {
   doc.end();
 });
 router.get("/charts/amount", async (req, res) => {
+  const db = getDB();
   try {
     const amount = await db.models.ZoneData.findAll({
       order: [["date", "ASC"]],
@@ -710,3 +725,4 @@ router.get("/charts/amount", async (req, res) => {
 });
 
 export default router;
+

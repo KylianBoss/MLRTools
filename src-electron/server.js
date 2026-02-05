@@ -1,4 +1,4 @@
-import { db, isDBInitialized } from "./database.js";
+import { getDB, isDBInitialized } from "./database.js";
 import { QueryTypes, Op } from "sequelize";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration.js";
@@ -29,12 +29,14 @@ app.use((req, res, next) => {
     }`
   );
   if (isDBInitialized()) {
-    db.models.RequestLogs.create({
-      method: req.method,
-      path: req.path,
-    }).catch((err) => {
-      console.error("Error logging request:", err);
-    });
+    getDB()
+      .models.RequestLogs.create({
+        method: req.method,
+        path: req.path,
+      })
+      .catch((err) => {
+        console.error("Error logging request:", err);
+      });
   }
   next();
 });
@@ -108,6 +110,7 @@ app.post("/alarms/zone/:alarmId", async (req, res) => {
   const { zones } = req.body;
   console.log("Updating alarm zone:", req.params.alarmId, zones);
   try {
+    const db = getDB();
     const alarm = await db.models.Alarms.findOne({
       where: {
         alarmId: req.params.alarmId,
@@ -169,6 +172,7 @@ app.get("/alarms/:alarmIdCode", async (req, res) => {
   }
 
   try {
+    const db = getDB();
     const alarm = await db.models.Alarms.findOne({
       where: {
         [Op.or]: [{ alarmId: alarmIdCode }, { alarmCode: alarmIdCode }],
@@ -183,6 +187,7 @@ app.get("/alarms/:alarmIdCode", async (req, res) => {
 
 // PRODUCTION DATA
 app.get("/production/data", async (req, res) => {
+  const db = getDB();
   try {
     // Support pagination si les paramètres sont fournis
     const page = parseInt(req.query.page);
@@ -226,6 +231,7 @@ app.get("/production/data", async (req, res) => {
 app.post("/production/data", async (req, res) => {
   const { date, start, end, dayOff, boxTreated } = req.body;
   try {
+    const db = getDB();
     await db.models.ProductionData.upsert({
       date,
       start,

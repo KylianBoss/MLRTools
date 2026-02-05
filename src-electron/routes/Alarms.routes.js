@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 import { Op, QueryTypes, Sequelize } from "sequelize";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
@@ -11,6 +11,7 @@ dayjs.locale("fr");
 const router = Router();
 
 router.post("/", async (req, res) => {
+  const db = getDB();
   try {
     const alarms = await db.models.Datalog.bulkCreate(req.body.data, {
       updateOnDuplicate: [
@@ -50,6 +51,7 @@ router.post("/", async (req, res) => {
   }
 });
 router.post("/import-alarms", async (req, res) => {
+  const db = getDB();
   const { data } = req.body;
   if (!data) {
     res.status(400).json({ error: "No data provided" });
@@ -188,6 +190,7 @@ router.post("/import-alarms", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
+  const db = getDB();
   const { startRow, count, filter, sortBy, descending, sum } = req.body;
   try {
     if (sum) {
@@ -310,6 +313,7 @@ router.get("/", async (req, res) => {
   }
 });
 router.get("/count", async (req, res) => {
+  const db = getDB();
   const { date, excluded, like = null, sum = false } = req.body;
   try {
     let where = {
@@ -367,6 +371,7 @@ router.get("/count", async (req, res) => {
   }
 });
 router.get("/day", async (req, res) => {
+  const db = getDB();
   try {
     const dates = await db.query(
       "SELECT DISTINCT DATE(timeOfOccurence) as date FROM Datalogs ORDER BY date",
@@ -381,6 +386,7 @@ router.get("/day", async (req, res) => {
   }
 });
 router.get("/day/:date", async (req, res) => {
+  const db = getDB();
   try {
     const alarms = await db.models.Datalog.findAll({
       where: {
@@ -399,6 +405,7 @@ router.get("/day/:date", async (req, res) => {
   }
 });
 router.get("/by-users/:from/:to", async (req, res) => {
+  const db = getDB();
   const { from, to } = req.params;
 
   if (!from || !to) {
@@ -421,6 +428,7 @@ router.get("/by-users/:from/:to", async (req, res) => {
   }
 });
 router.get("/unique", async (req, res) => {
+  const db = getDB();
   try {
     const alarms = await db.models.Alarms.findAll({
       attributes: [
@@ -457,6 +465,7 @@ router.get("/unique", async (req, res) => {
   }
 });
 router.get("/messages", async (req, res) => {
+  const db = getDB();
   const { from, to, includesExcluded = false } = req.body;
   try {
     const where = {
@@ -489,6 +498,7 @@ router.get("/messages", async (req, res) => {
   }
 });
 router.post("/translate", async (req, res) => {
+  const db = getDB();
   const { alarmId, translation } = req.body;
 
   if (!alarmId || !translation) {
@@ -508,6 +518,7 @@ router.post("/translate", async (req, res) => {
   }
 });
 router.post("/primary", async (req, res) => {
+  const db = getDB();
   const { alarmId } = req.body;
 
   if (!alarmId) {
@@ -552,6 +563,7 @@ router.post("/primary", async (req, res) => {
   }
 });
 router.post("/secondary", async (req, res) => {
+  const db = getDB();
   const { alarmId } = req.body;
 
   if (!alarmId) {
@@ -596,6 +608,7 @@ router.post("/secondary", async (req, res) => {
   }
 });
 router.post("/human", async (req, res) => {
+  const db = getDB();
   const { alarmId } = req.body;
 
   if (!alarmId) {
@@ -640,6 +653,7 @@ router.post("/human", async (req, res) => {
   }
 });
 router.post("/other", async (req, res) => {
+  const db = getDB();
   const { alarmId } = req.body;
   if (!alarmId) {
     res.status(400).json({ error: "Alarm ID is required" });
@@ -683,3 +697,4 @@ router.post("/other", async (req, res) => {
 });
 
 export default router;
+

@@ -3,7 +3,7 @@ import path from "path";
 import os from "os";
 import dayjs from "dayjs";
 import csv from "csv-parser";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 import { updateJob } from "./utils.js";
 import Sequelize from "sequelize";
 
@@ -18,6 +18,7 @@ const MAX_RETRY = 5;
 const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 
 const getDatesInDB = async () => {
+  const db = getDB();
   const results = await db.models.ProductionData.findAll({
     attributes: ["date"],
     order: [["date", "ASC"]],
@@ -27,6 +28,7 @@ const getDatesInDB = async () => {
 };
 
 export const extractWMS = async (manualDate = null, retryCount = 0) => {
+  const db = getDB();
   if (retryCount >= MAX_RETRY) {
     console.warn(
       `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`

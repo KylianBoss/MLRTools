@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 import dayjs from "dayjs";
 import { sendCommandToFrontend } from "../electron-main.js";
 import cron from "node-cron";
@@ -149,6 +149,7 @@ async function processJobQueue() {
 }
 
 router.post("/initialize", async (req, res) => {
+  const db = getDB();
   const { user } = req.body;
   if (!user) {
     res.status(400).json({ error: "No user provided" });
@@ -257,6 +258,7 @@ router.post("/initialize", async (req, res) => {
 });
 // Get a list of all cron jobs
 router.get("/", async (req, res) => {
+  const db = getDB();
   try {
     const cronJobs = await db.models.CronJobs.findAll({
       order: [["jobName", "ASC"]],
@@ -270,6 +272,7 @@ router.get("/", async (req, res) => {
 
 // Demander l'exécution d'un job (pour les utilisateurs)
 router.post("/request-job", async (req, res) => {
+  const db = getDB();
   const { action, args, userId } = req.body;
 
   if (!action) {
@@ -319,6 +322,7 @@ router.post("/request-job", async (req, res) => {
 
 // Obtenir le statut d'un job dans la queue
 router.get("/queue/:id", async (req, res) => {
+  const db = getDB();
   const { id } = req.params;
 
   try {
@@ -338,6 +342,7 @@ router.get("/queue/:id", async (req, res) => {
 
 // Obtenir tous les jobs en attente dans la queue
 router.get("/queue", async (req, res) => {
+  const db = getDB();
   try {
     const { status, limit = 50 } = req.query;
 
@@ -357,6 +362,7 @@ router.get("/queue", async (req, res) => {
 });
 // SSE for cron job status
 router.get("/status", async (req, res) => {
+  const db = getDB();
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -429,6 +435,7 @@ router.get("/status", async (req, res) => {
 
 // Start manually a cron job with custom arguments
 router.post("/start", async (req, res) => {
+  const db = getDB();
   const { action, args } = req.body;
 
   if (!action) {
@@ -465,6 +472,7 @@ router.post("/start", async (req, res) => {
 
 // Télécharger le dernier PDF KPI généré
 router.get("/download-latest-kpi", async (req, res) => {
+  const db = getDB();
   try {
     const fs = await import("fs");
     const path = await import("path");
@@ -518,3 +526,4 @@ router.get("/test", (req, res) => {
 });
 
 export default router;
+

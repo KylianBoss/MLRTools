@@ -1,12 +1,13 @@
 import { Router } from "express";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 
 const router = Router();
 
 // Générer le QR code pour la configuration initiale
 router.get("/2fa/setup", async (req, res) => {
+  const db = getDB();
   try {
     // Utiliser le secret partagé depuis les Settings de la base de données
     let secret = await db.models.Settings.getValue("APP_2FA_SECRET");
@@ -85,3 +86,4 @@ export const require2FA = async (req, res, next) => {
 };
 
 export default router;
+

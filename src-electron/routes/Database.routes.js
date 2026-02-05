@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 import dayjs from "dayjs";
 import { Op } from "sequelize";
 import { require2FA } from "./Auth.routes.js";
@@ -7,6 +7,7 @@ import { require2FA } from "./Auth.routes.js";
 const router = Router();
 
 router.post("/sync-models", async (req, res) => {
+  const db = getDB();
   const { user } = req.body;
   if (!user) {
     res.status(400).json({ error: "No user provided" });
@@ -50,6 +51,7 @@ router.post("/sync-models", async (req, res) => {
   }
 });
 router.post("/empty-day-resume", async (req, res) => {
+  const db = getDB();
   const { user } = req.body;
   if (!user) {
     res.status(400).json({ error: "No user provided" });
@@ -89,6 +91,7 @@ router.post("/empty-day-resume", async (req, res) => {
   }
 });
 router.post("/empty-day-resume-at-date", async (req, res) => {
+  const db = getDB();
   const { user, date } = req.body;
   if (!user) {
     res.status(400).json({ error: "No user provided" });
@@ -136,6 +139,7 @@ router.post("/empty-day-resume-at-date", async (req, res) => {
 });
 
 router.post("/execute-code", async (req, res) => {
+  const db = getDB();
   const { code } = req.body;
 
   if (!code) {
@@ -277,6 +281,7 @@ router.post("/execute-code", async (req, res) => {
 });
 
 router.get("/models", async (req, res) => {
+  const db = getDB();
   try {
     // Get all model names
     const models = Object.keys(db.models);
@@ -403,3 +408,4 @@ router.post("/execute-code-override", require2FA, async (req, res) => {
 });
 
 export default router;
+

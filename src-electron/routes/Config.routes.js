@@ -1,7 +1,7 @@
 import e, { raw, Router } from "express";
 import path from "path";
 import fs from "fs/promises";
-import { initDB, db } from "../database.js";
+import { initDB, getDB } from "../database.js";
 import Hooks from "../hooks.js";
 
 const router = Router();
@@ -13,6 +13,7 @@ router.get("/", async (req, res) => {
   try {
     const config = await fs.readFile(CONFIG_PATH, "utf-8");
     await initDB(JSON.parse(config));
+    const db = getDB();
     const user = await db.models.Users.findOne({
       where: {
         username: process.env.username,
@@ -43,6 +44,7 @@ router.post("/", async (req, res) => {
     await fs.mkdir(path.join(STORAGE_PATH), { recursive: true });
     await fs.writeFile(CONFIG_PATH, JSON.stringify(req.body));
     await initDB(req.body);
+    const db = getDB();
     let user = await db.models.Users.findOne({
       where: {
         username: process.env.username,

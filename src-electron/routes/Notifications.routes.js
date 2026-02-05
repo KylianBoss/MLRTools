@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 
 const router = Router();
 
 router.post("/", async (req, res) => {
+  const db = getDB();
   const { userId, message, type } = req.body;
 
   if (!userId || !message || !type) {
@@ -26,6 +27,7 @@ router.post("/", async (req, res) => {
   }
 });
 router.get("/:userId", async (req, res) => {
+  const db = getDB();
   const { userId } = req.params;
 
   if (!userId) {
@@ -46,6 +48,7 @@ router.get("/:userId", async (req, res) => {
   }
 });
 router.post("/read/:notificationId", async (req, res) => {
+  const db = getDB();
   const { notificationId } = req.params;
 
   if (!notificationId) {
@@ -73,6 +76,7 @@ router.post("/read/:notificationId", async (req, res) => {
   }
 });
 router.delete("/:notificationId", async (req, res) => {
+  const db = getDB();
   const { notificationId } = req.params;
 
   if (!notificationId) {
@@ -100,3 +104,4 @@ router.delete("/:notificationId", async (req, res) => {
 });
 
 export default router;
+

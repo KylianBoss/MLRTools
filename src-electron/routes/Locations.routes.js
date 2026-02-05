@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { db } from "../database.js";
+import { getDB } from "../database.js";
 
 const router = Router();
 
 router.get("/", async (req, res) => {
+  const db = getDB();
   try {
     const locations = await db.models.Location.findAll({
       order: [
@@ -33,3 +34,4 @@ router.get("/", async (req, res) => {
 });
 
 export default router;
+
