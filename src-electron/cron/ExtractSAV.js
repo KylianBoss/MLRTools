@@ -3,7 +3,7 @@ import path from "path";
 import os from "os";
 import dayjs from "dayjs";
 import csv from "csv-parser";
-import { getDB } from "../database.js";
+import { db } from "../database.js";
 import { updateJob } from "./utils.js";
 
 const ONEDRIVE_BUSINESS_PATH = path.join(os.homedir(), "OneDrive - Migros");
@@ -15,9 +15,6 @@ const jobName = "extractSAV";
 const MAX_RETRY = 5;
 
 export const extractSAV = async (date = null, retryCount = 0) => {
-  // Obtenir l'instance de la base de données
-  const db = getDB();
-
   if (retryCount >= MAX_RETRY) {
     console.warn(
       `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`

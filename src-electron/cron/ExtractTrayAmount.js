@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { getDB } from "../database.js";
+import { db } from "../database.js";
 import fs, { readFileSync } from "fs";
 import path from "path";
 import puppeteer from "puppeteer";
@@ -12,16 +12,6 @@ const MAX_RETRY = 5;
 
 export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
   return new Promise(async (resolve, reject) => {
-    // Obtenir l'instance de la base de données
-    let db;
-    try {
-      db = getDB();
-    } catch (error) {
-      console.error(error.message);
-      reject(error);
-      return;
-    }
-
     if (retryCount >= MAX_RETRY) {
       console.warn(
         `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`

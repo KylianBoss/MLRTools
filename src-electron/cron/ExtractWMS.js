@@ -3,7 +3,7 @@ import path from "path";
 import os from "os";
 import dayjs from "dayjs";
 import csv from "csv-parser";
-import { getDB } from "../database.js";
+import { db } from "../database.js";
 import { updateJob } from "./utils.js";
 import Sequelize from "sequelize";
 
@@ -27,9 +27,6 @@ const getDatesInDB = async () => {
 };
 
 export const extractWMS = async (manualDate = null, retryCount = 0) => {
-  // Obtenir l'instance de la base de données
-  const db = getDB();
-
   if (retryCount >= MAX_RETRY) {
     console.warn(
       `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`

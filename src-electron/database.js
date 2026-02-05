@@ -6,6 +6,19 @@ dotenv.config();
 
 let db;
 
+// Créer un proxy pour toujours avoir accès à la dernière valeur de db
+const dbProxy = new Proxy(
+  {},
+  {
+    get(target, prop) {
+      if (!db) {
+        throw new Error("Database not initialized. Call initDB() first.");
+      }
+      return db[prop];
+    },
+  }
+);
+
 function initDB(config) {
   return new Promise((resolve, reject) => {
     db = new Sequelize({
@@ -1590,4 +1603,4 @@ function getDB() {
   return db;
 }
 
-export { initDB, db, getDB };
+export { initDB, dbProxy as db, getDB };
