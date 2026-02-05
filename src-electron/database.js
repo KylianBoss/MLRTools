@@ -14,7 +14,14 @@ const dbProxy = new Proxy(
       if (!db) {
         throw new Error("Database not initialized. Call initDB() first.");
       }
-      return db[prop];
+      // Retourner la propriété directement depuis db, pas depuis target
+      return Reflect.get(db, prop);
+    },
+    set(target, prop, value) {
+      if (!db) {
+        throw new Error("Database not initialized. Call initDB() first.");
+      }
+      return Reflect.set(db, prop, value);
     },
   }
 );
