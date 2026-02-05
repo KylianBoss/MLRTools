@@ -1,18 +1,20 @@
 # ============================================
 # MLR Tools - Force Update Script
 # ============================================
-# Ce script télécharge et installe la dernière version de MLR Tools
-# depuis GitHub Releases, même si l'application ne démarre plus.
+# This script downloads and installs the latest version of MLR Tools
+# from GitHub Releases, even if the application won't start.
 #
-# Usage: Clic droit > "Exécuter avec PowerShell"
+# IMPORTANT: Place this script in the same folder as mlr-tool.exe
+#
+# Usage: Right-click > "Run with PowerShell"
 # ============================================
 
 # Configuration
 $GitHubRepo = "KylianBoss/MLRTools"
 $AppName = "MLR Tools"
-$ProcessName = "mlr-tool"  # Nom du processus (sans .exe)
+$ProcessName = "mlr-tool"  # Process name (without .exe)
 
-# Couleurs pour l'output
+# Colors for output
 $Host.UI.RawUI.BackgroundColor = "Black"
 $Host.UI.RawUI.ForegroundColor = "White"
 Clear-Host
@@ -23,42 +25,70 @@ Write-Host "   MLR Tools - Force Update Script      " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Fonction pour afficher les erreurs
+# Function to display errors
 function Write-Error-Message {
     param([string]$Message)
-    Write-Host "[ERREUR] $Message" -ForegroundColor Red
+    Write-Host "[ERROR] $Message" -ForegroundColor Red
 }
 
-# Fonction pour afficher les succès
+# Function to display success messages
 function Write-Success-Message {
     param([string]$Message)
     Write-Host "[OK] $Message" -ForegroundColor Green
 }
 
-# Fonction pour afficher les infos
+# Function to display info messages
 function Write-Info-Message {
     param([string]$Message)
     Write-Host "[INFO] $Message" -ForegroundColor Yellow
 }
 
 try {
-    # Étape 1: Fermer l'application si elle est en cours d'exécution
-    Write-Info-Message "Vérification si $AppName est en cours d'exécution..."
+    # Step 1: Determine installation path from script location
+    Write-Info-Message "Detecting installation path from script location..."
+    $scriptPath = $PSScriptRoot
+    
+    if ([string]::IsNullOrEmpty($scriptPath)) {
+        $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+    }
+    
+    Write-Success-Message "Installation path: $scriptPath"
+    Write-Host ""
+    
+    # Verify that MLR Tools.exe exists in this folder
+    $appExePath = Join-Path $scriptPath "$AppName.exe"
+    if (-not (Test-Path $appExePath)) {
+        Write-Error-Message "MLR Tools executable not found in this folder!"
+        Write-Host ""
+        Write-Host "Expected: $appExePath" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "IMPORTANT: This script must be placed in the same folder as MLR Tools.exe" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Press any key to exit..."
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        exit 1
+    }
+    
+    Write-Success-Message "MLR Tools executable found"
+    Write-Host ""
+    
+    # Step 2: Close the application if it's running
+    Write-Info-Message "Checking if $AppName is running..."
     $runningProcess = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
     
     if ($runningProcess) {
-        Write-Info-Message "$AppName est en cours d'exécution. Fermeture en cours..."
+        Write-Info-Message "$AppName is running. Closing..."
         Stop-Process -Name $ProcessName -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 2
-        Write-Success-Message "$AppName fermé avec succès"
+        Write-Success-Message "$AppName closed successfully"
     } else {
-        Write-Info-Message "$AppName n'est pas en cours d'exécution"
+        Write-Info-Message "$AppName is not running"
     }
     
     Write-Host ""
     
-    # Étape 2: Récupérer les informations de la dernière release
-    Write-Info-Message "Récupération de la dernière version depuis GitHub..."
+    # Step 3: Fetch latest release information from GitHub
+    Write-Info-Message "Fetching latest version from GitHub..."
     $apiUrl = "https://api.github.com/repos/$GitHubRepo/releases/latest"
     
     try {
@@ -66,30 +96,30 @@ try {
             "User-Agent" = "MLRTools-ForceUpdate-Script"
         }
     } catch {
-        Write-Error-Message "Impossible de contacter GitHub: $_"
+        Write-Error-Message "Unable to contact GitHub: $_"
         Write-Host ""
-        Write-Host "Vérifiez votre connexion internet ou essayez plus tard." -ForegroundColor Yellow
+        Write-Host "Check your internet connection or try again later." -ForegroundColor Yellow
         Write-Host ""
-        Write-Host "Appuyez sur une touche pour quitter..."
+        Write-Host "Press any key to exit..."
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         exit 1
     }
     
     $latestVersion = $release.tag_name
-    Write-Success-Message "Dernière version disponible: $latestVersion"
+    Write-Success-Message "Latest version available: $latestVersion"
     
-    # Trouver l'asset .zip (comme l'auto-updater de l'app)
+    # Find the .zip asset (like the built-in auto-updater)
     $updateAsset = $release.assets | Where-Object { $_.name -match "\.zip$" } | Select-Object -First 1
     
     if (-not $updateAsset) {
-        Write-Error-Message "Aucun package de mise à jour (.zip) trouvé dans la release $latestVersion"
+        Write-Error-Message "No update package (.zip) found in release $latestVersion"
         Write-Host ""
-        Write-Host "Assets disponibles:" -ForegroundColor Yellow
+        Write-Host "Available assets:" -ForegroundColor Yellow
         foreach ($asset in $release.assets) {
             Write-Host "  - $($asset.name)" -ForegroundColor Gray
         }
         Write-Host ""
-        Write-Host "Appuyez sur une touche pour quitter..."
+        Write-Host "Press any key to exit..."
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         exit 1
     }
@@ -101,207 +131,159 @@ try {
     Write-Info-Message "Package: $downloadName ($downloadSize MB)"
     Write-Host ""
     
-    # Étape 3: Télécharger le package
+    # Step 4: Download the package
     $downloadPath = Join-Path $env:TEMP $downloadName
-    Write-Info-Message "Téléchargement en cours..."
+    Write-Info-Message "Downloading..."
     Write-Host "   URL: $downloadUrl" -ForegroundColor Gray
     Write-Host "   Destination: $downloadPath" -ForegroundColor Gray
     
     try {
-        # Créer un WebClient pour afficher la progression
+        # Create a WebClient to show progress
         $webClient = New-Object System.Net.WebClient
         
-        # Event handler pour la progression
+        # Event handler for progress
         $progressEventHandler = {
             param($sender, $e)
             $percent = [math]::Round($e.ProgressPercentage, 0)
-            Write-Progress -Activity "Téléchargement de $installerName" -Status "$percent% complété" -PercentComplete $percent
+            Write-Progress -Activity "Downloading $downloadName" -Status "$percent% complete" -PercentComplete $percent
         }
         
-        # Enregistrer l'event handler
+        # Register event handler
         Register-ObjectEvent -InputObject $webClient -EventName DownloadProgressChanged -Action $progressEventHandler | Out-Null
         
-        # Télécharger le fichier
+        # Download the file
         $downloadTask = $webClient.DownloadFileTaskAsync($downloadUrl, $downloadPath)
         $downloadTask.Wait()
         
-        # Nettoyer les events
+        # Cleanup events
         Unregister-Event -SourceIdentifier *
         Get-Job | Remove-Job -Force
-        Write-Progress -Activity "Téléchargement" -Completed
+        Write-Progress -Activity "Download" -Completed
         
         $webClient.Dispose()
         
     } catch {
-        Write-Error-Message "Erreur lors du téléchargement: $_"
+        Write-Error-Message "Error downloading: $_"
         Write-Host ""
-        Write-Host "Appuyez sur une touche pour quitter..."
+        Write-Host "Press any key to exit..."
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         exit 1
     }
     
-    Write-Success-Message "Téléchargement terminé"
+    Write-Success-Message "Download complete"
     Write-Host ""
     
-    # Étape 4: Extraire le ZIP
-    Write-Info-Message "Extraction du package..."
+    # Step 5: Extract the ZIP
+    Write-Info-Message "Extracting package..."
     $extractPath = Join-Path $env:TEMP "MLRTools-Update-Extract"
     
-    # Nettoyer le dossier d'extraction s'il existe
+    # Clean extraction folder if it exists
     if (Test-Path $extractPath) {
         Remove-Item -Path $extractPath -Recurse -Force -ErrorAction SilentlyContinue
     }
     
     try {
         Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
-        Write-Success-Message "Extraction terminée"
+        Write-Success-Message "Extraction complete"
     } catch {
-        Write-Error-Message "Erreur lors de l'extraction: $_"
+        Write-Error-Message "Error extracting: $_"
         Write-Host ""
-        Write-Host "Appuyez sur une touche pour quitter..."
+        Write-Host "Press any key to exit..."
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         exit 1
     }
     Write-Host ""
     
-    # Étape 5: Trouver le dossier de l'application installée
-    Write-Info-Message "Recherche de l'installation existante..."
+    # Step 6: Find the source folder in the extracted ZIP
+    Write-Info-Message "Finding source folder in package..."
     
-    # Chercher le processus en cours pour trouver le chemin d'installation
-    $appPath = $null
-    $runningProcess = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
-    
-    if ($runningProcess) {
-        try {
-            $appPath = Split-Path -Parent $runningProcess.Path
-            Write-Success-Message "Installation trouvée: $appPath"
-        } catch {
-            Write-Host "   (Impossible de déterminer le chemin depuis le processus)" -ForegroundColor Gray
-        }
-    }
-    
-    # Si pas trouvé via le processus, chercher dans les emplacements standards
-    if (-not $appPath) {
-        $possiblePaths = @(
-            "$env:LOCALAPPDATA\Programs\mlr-tool",
-            "$env:LOCALAPPDATA\Programs\MLR Tools",
-            "C:\Program Files\MLR Tools",
-            "C:\Program Files (x86)\MLR Tools"
-        )
-        
-        foreach ($path in $possiblePaths) {
-            if (Test-Path $path) {
-                $appPath = $path
-                Write-Success-Message "Installation trouvée: $appPath"
-                break
-            }
-        }
-    }
-    
-    if (-not $appPath) {
-        Write-Error-Message "Impossible de trouver l'installation de $AppName"
-        Write-Host ""
-        Write-Host "Chemins vérifiés:" -ForegroundColor Yellow
-        $possiblePaths | ForEach-Object {
-            Write-Host "  - $_" -ForegroundColor Gray
-        }
-        Write-Host ""
-        Write-Host "Appuyez sur une touche pour quitter..."
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        exit 1
-    }
-    Write-Host ""
-    
-    # Étape 6: Trouver le dossier source dans le ZIP extrait
-    Write-Info-Message "Recherche du dossier source dans le package..."
-    
-    # Chercher le dossier "MLR Tools-win32-x64" ou similaire
+    # Look for "MLR Tools-win32-x64" folder or similar
     $sourceFolders = Get-ChildItem -Path $extractPath -Directory | Where-Object {
-        $_.Name -match "MLR.*Tools" -or $_.Name -match "mlr-tool"
+        $_.Name -match "MLR.*Tools" -or $_.Name -match "mlr-tool" -or $_.Name -match "win32-x64"
     }
     
     if ($sourceFolders.Count -eq 0) {
-        Write-Error-Message "Dossier source non trouvé dans le package"
+        Write-Error-Message "Source folder not found in package"
         Write-Host ""
-        Write-Host "Contenu du ZIP:" -ForegroundColor Yellow
+        Write-Host "ZIP contents:" -ForegroundColor Yellow
         Get-ChildItem -Path $extractPath | ForEach-Object {
             Write-Host "  - $($_.Name)" -ForegroundColor Gray
         }
         Write-Host ""
-        Write-Host "Appuyez sur une touche pour quitter..."
+        Write-Host "Press any key to exit..."
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         exit 1
     }
     
     $sourceFolder = $sourceFolders[0].FullName
-    Write-Success-Message "Dossier source trouvé: $($sourceFolders[0].Name)"
+    Write-Success-Message "Source folder found: $($sourceFolders[0].Name)"
     Write-Host ""
     
-    # Étape 7: Remplacer les fichiers
-    Write-Info-Message "Remplacement des fichiers de l'application..."
+    # Step 7: Replace application files
+    Write-Info-Message "Replacing application files..."
     Write-Host "   Source: $sourceFolder" -ForegroundColor Gray
-    Write-Host "   Destination: $appPath" -ForegroundColor Gray
+    Write-Host "   Destination: $scriptPath" -ForegroundColor Gray
     Write-Host ""
     
     try {
-        # Créer un backup du dossier actuel (au cas où)
-        $backupPath = "$appPath-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-        Write-Info-Message "Création d'un backup: $(Split-Path -Leaf $backupPath)"
-        Copy-Item -Path $appPath -Destination $backupPath -Recurse -Force -ErrorAction SilentlyContinue
+        # Create a backup of current folder (just in case)
+        $backupPath = "$scriptPath-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        Write-Info-Message "Creating backup: $(Split-Path -Leaf $backupPath)"
+        Copy-Item -Path $scriptPath -Destination $backupPath -Recurse -Force -ErrorAction SilentlyContinue
         
-        # Copier les nouveaux fichiers
-        Write-Info-Message "Copie des nouveaux fichiers..."
-        Copy-Item -Path "$sourceFolder\*" -Destination $appPath -Recurse -Force
+        # Copy new files
+        Write-Info-Message "Copying new files..."
+        Copy-Item -Path "$sourceFolder\*" -Destination $scriptPath -Recurse -Force
         
-        Write-Success-Message "Fichiers remplacés avec succès!"
+        Write-Success-Message "Files replaced successfully!"
         Write-Host ""
-        Write-Host "Un backup a été créé:" -ForegroundColor Cyan
+        Write-Host "A backup was created:" -ForegroundColor Cyan
         Write-Host "  $backupPath" -ForegroundColor Gray
-        Write-Host "  (Vous pouvez le supprimer si tout fonctionne bien)" -ForegroundColor Gray
+        Write-Host "  (You can delete it if everything works fine)" -ForegroundColor Gray
         
     } catch {
-        Write-Error-Message "Erreur lors du remplacement: $_"
+        Write-Error-Message "Error replacing files: $_"
         Write-Host ""
-        Write-Host "Le backup est disponible ici:" -ForegroundColor Yellow
+        Write-Host "Backup is available here:" -ForegroundColor Yellow
         Write-Host "  $backupPath" -ForegroundColor White
         Write-Host ""
-        Write-Host "Appuyez sur une touche pour quitter..."
+        Write-Host "Press any key to exit..."
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         exit 1
     }
     Write-Host ""
     
-    # Étape 8: Relancer l'application
-    Write-Info-Message "Redémarrage de l'application..."
+    # Step 8: Restart the application
+    Write-Info-Message "Restarting application..."
     
     try {
-        $exePath = Join-Path $appPath "$ProcessName.exe"
+        $exePath = Join-Path $scriptPath "$AppName.exe"
         
         if (-not (Test-Path $exePath)) {
-            Write-Error-Message "Exécutable non trouvé: $exePath"
+            Write-Error-Message "Executable not found: $exePath"
         } else {
             Start-Process -FilePath $exePath
             
             Write-Host ""
-            Write-Success-Message "Application redémarrée!"
+            Write-Success-Message "Application restarted!"
             Write-Host ""
             Write-Host "=========================================" -ForegroundColor Green
-            Write-Host "   $AppName a été mis à jour!" -ForegroundColor Green
+            Write-Host "   $AppName has been updated!          " -ForegroundColor Green
             Write-Host "=========================================" -ForegroundColor Green
             Write-Host ""
-            Write-Info-Message "L'application devrait démarrer dans quelques instants"
+            Write-Info-Message "The application should start in a few moments"
         }
         
     } catch {
-        Write-Error-Message "Erreur lors du redémarrage: $_"
+        Write-Error-Message "Error restarting: $_"
         Write-Host ""
-        Write-Host "Vous pouvez lancer manuellement depuis:" -ForegroundColor Yellow
+        Write-Host "You can launch manually from:" -ForegroundColor Yellow
         Write-Host "  $exePath" -ForegroundColor White
     }
     
-    # Étape 9: Nettoyer les fichiers temporaires
+    # Step 9: Clean up temporary files
     Write-Host ""
-    Write-Info-Message "Nettoyage des fichiers temporaires..."
+    Write-Info-Message "Cleaning up temporary files..."
     
     try {
         if (Test-Path $downloadPath) {
@@ -310,21 +292,21 @@ try {
         if (Test-Path $extractPath) {
             Remove-Item -Path $extractPath -Recurse -Force -ErrorAction SilentlyContinue
         }
-        Write-Success-Message "Fichiers temporaires supprimés"
+        Write-Success-Message "Temporary files deleted"
         
     } catch {
-        Write-Host "   (Certains fichiers temporaires n'ont pas pu être supprimés)" -ForegroundColor Gray
+        Write-Host "   (Some temporary files could not be deleted)" -ForegroundColor Gray
     }
     
 } catch {
     Write-Host ""
-    Write-Error-Message "Une erreur inattendue s'est produite:"
+    Write-Error-Message "An unexpected error occurred:"
     Write-Host $_.Exception.Message -ForegroundColor Red
     Write-Host ""
-    Write-Host "Détails techniques:" -ForegroundColor Gray
+    Write-Host "Technical details:" -ForegroundColor Gray
     Write-Host $_.ScriptStackTrace -ForegroundColor DarkGray
 }
 
 Write-Host ""
-Write-Host "Appuyez sur une touche pour quitter..."
+Write-Host "Press any key to exit..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
