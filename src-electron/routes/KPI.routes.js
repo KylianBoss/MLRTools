@@ -318,7 +318,7 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
       });
     }
 
-    filledChartData = chartData.map((data, index) => {
+    const filledChartData = chartData.map((data, index) => {
       const start = Math.max(0, index - MOVING_AVERAGE_WINDOW + 1);
       const window = chartData
         .slice(start, index + 1)
