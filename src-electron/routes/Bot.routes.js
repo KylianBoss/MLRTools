@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getDB } from "../database.js";
+import { getDB, isDBInitialized } from "../database.js";
 import dayjs from "dayjs";
 
 const INACTIVE_BOT_THRESHOLD = 5; // minutes
@@ -7,6 +7,9 @@ const INACTIVE_BOT_THRESHOLD = 5; // minutes
 const router = Router();
 
 router.post("/active", async (req, res) => {
+  if (!isDBInitialized()) {
+    return res.status(503).json({ error: "Database not initialized yet" });
+  }
   const db = getDB();
   const { userId } = req.body;
 
@@ -30,6 +33,9 @@ router.post("/active", async (req, res) => {
   }
 });
 router.get("/status", async (req, res) => {
+  if (!isDBInitialized()) {
+    return res.status(503).json({ error: "Database not initialized yet" });
+  }
   const db = getDB();
   try {
     const bots = await db.models.Users.findAll({
@@ -270,9 +276,7 @@ router.post("/ask/extractSAV", async (req, res) => {
       where: { action: "extractSAV" },
     });
     if (!cronJob) {
-      return res
-        .status(404)
-        .json({ error: "Cron job 'extractSAV' not found" });
+      return res.status(404).json({ error: "Cron job 'extractSAV' not found" });
     }
 
     let args = `date:${date}`;
@@ -340,4 +344,3 @@ router.post("/ask/restart", async (req, res) => {
 });
 
 export default router;
-
