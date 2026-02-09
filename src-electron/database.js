@@ -1331,6 +1331,7 @@ function initDB(config) {
           references: {
             model: "CustomCharts",
             key: "id",
+            onDelete: "CASCADE",
           },
           comment: "ID of the custom chart",
         },

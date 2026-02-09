@@ -368,6 +368,7 @@ const generateAndDownloadKPI = async () => {
   try {
     const response = await api.get("/kpi/generate-pdf-download", {
       responseType: "blob",
+      timeout: 600000
     });
 
     // Créer un lien de téléchargement

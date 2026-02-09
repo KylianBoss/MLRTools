@@ -89,7 +89,15 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
   if (
     !(await MVNDB.authenticate()
       .then(() => true)
-      .catch(() => false))
+      .catch(async (error) => {
+        await updateJob({
+          lastRun: new Date(),
+          lastLog: JSON.stringify(error),
+          endAt: new Date(),
+          actualState: "error",
+        });
+        return false;
+      }))
   ) {
     const errorMsg = "Unable to connect to the MVN database.";
     console.error(errorMsg);

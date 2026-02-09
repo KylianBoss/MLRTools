@@ -179,21 +179,34 @@ export async function generateKPIPDF() {
   return new Promise(async (resolve, reject) => {
     try {
       const doc = new PDFDocument({
-        size: "A2",
-        layout: "portrait",
+        size: "A4",
+        layout: "landscape",
         margin: 30,
+        autoFirstPage: false,
       });
 
       const stream = fs.createWriteStream(filePath);
       doc.pipe(stream);
 
-      // Disposition en deux colonnes: table à gauche, graphique à droite
-      const pageWidth = doc.page.width - 60;
-      const leftColumnWidth = pageWidth * 0.6;
-      const rightColumnWidth = pageWidth * 0.4;
-      const columnGap = 20;
-      let actualY = 30;
+      // Title page
+      doc.addPage();
+      doc.moveDown();
+      doc.fontSize(40).text(`KPI REPORT ${dayjs().format("DD.MM.YYYY")}`, {
+        align: "center",
+        valign: "center",
+      });
+      doc.moveDown();
+      const logoPath = path.join(
+        process.cwd(),
+        "src-electron",
+        "assets",
+        "Logo_MLR.jpg"
+      );
+      doc.image(logoPath, doc.page.width / 2 - 250, doc.y, { width: 500 });
 
+      const pageWidth = doc.page.width - 60;
+
+      // START GROUP CHART
       // Générer les graphiques pour chaque groupe
       for (const group of groups) {
         console.log(`Generating chart for group: ${group.zoneGroupName}`);
@@ -213,72 +226,36 @@ export async function generateKPIPDF() {
         );
         const data = await response.json();
 
+        doc.addPage();
         const imageBuffer = await generateImage(data);
         const { tableRows, tableColumns } = formatDataForTable(data);
 
-        // Calculer la hauteur nécessaire pour ce groupe
-        const titleHeight = 30; // Titre + marge
-        const width = 1200;
-        const height = 450;
-        const imgRatio = width / height;
-        let imgWidth = rightColumnWidth;
-        let imgHeight = imgWidth / imgRatio;
-        const rowHeight = 20;
-        const tableHeight = tableRows.length * rowHeight + 50;
+        // Titre de la page
+        doc.fontSize(18).fillColor("#000").text(`${group.zoneGroupName}`);
+        const zones = await db.models.Zones.findAll();
+        const zoneDescriptions = group.zones
+          .map((z) => zones.find((z1) => z1.zone === z)?.zoneDescription)
+          .join(", ");
+        doc.fontSize(10).text(zoneDescriptions);
 
-        // Hauteur totale nécessaire (prendre le max entre table et image)
-        const contentHeight =
-          imageBuffer !== null ? Math.max(imgHeight, tableHeight) : tableHeight;
-        const totalHeightNeeded = titleHeight + contentHeight + 40; // +40 pour marge de sécurité
-
-        // Vérifier si on a assez d'espace sur la page actuelle
-        if (actualY + totalHeightNeeded > doc.page.height - 60) {
-          doc.addPage();
-          actualY = 30;
-        }
-
-        doc
-          .fontSize(18)
-          .fillColor("#000")
-          .text(`${group.zoneGroupName}`, 30, actualY);
-        actualY += 20;
-
-        // Colonne gauche: Table
-        if (tableRows.length > 0) {
-          generateTable(
-            doc,
-            tableRows,
-            tableColumns,
-            30,
-            actualY,
-            leftColumnWidth
-          );
-        }
-
-        // Colonne droite: Graphique
+        // Graphique 1
         if (imageBuffer !== null) {
-          const width = 1200;
-          const height = 450;
-          const imgRatio = width / height;
-          const graphStartX = 30 + leftColumnWidth + columnGap;
-          let imgWidth = rightColumnWidth;
-          let imgHeight = imgWidth / imgRatio;
-
-          doc.image(imageBuffer, graphStartX, actualY, {
-            fit: [imgWidth, imgHeight],
+          doc.image(imageBuffer, 30, 90, {
+            width: pageWidth,
+            height: 200,
           });
+        }
 
-          actualY += imgHeight + 10;
-        } else {
-          // Sans graphique, on calcule la hauteur du tableau
-          const rowHeight = 20;
-          const tableHeight = tableRows.length * rowHeight + 50;
-          actualY += tableHeight;
+        // Tableau de données
+        if (tableRows.length > 0) {
+          generateTable(doc, tableRows, tableColumns, 30, 300, pageWidth);
         }
 
         console.log(`Chart for group: ${group.zoneGroupName} added to PDF.`);
       }
+      // END GROUP CHART
 
+      // START CUSTOM CHART
       // Custom charts
       for (const customChart of customCharts) {
         console.log(`Generating custom chart: ${customChart.chartName}`);
@@ -309,74 +286,32 @@ export async function generateKPIPDF() {
 
         customData.alarmList = alarmList;
 
+        doc.addPage();
         const imageBuffer = await generateCustomChartImage(customData);
         const { tableRows, tableColumns } = formatDataForCustomChart(
           customData,
           customChart
         );
 
-        // Calculer la hauteur nécessaire pour ce custom chart
-        const titleHeight = 30;
-        const width = 1200;
-        const height = 450;
-        const imgRatio = width / height;
-        let imgWidth = rightColumnWidth;
-        let imgHeight = imgWidth / imgRatio;
-        const rowHeight = 20;
-        const tableHeight = tableRows.length * rowHeight + 50;
+        // Titre de la page
+        doc.fontSize(18).fillColor("#000").text(`${customChart.chartName}`);
 
-        // Hauteur totale nécessaire
-        const contentHeight =
-          imageBuffer !== null ? Math.max(imgHeight, tableHeight) : tableHeight;
-        const totalHeightNeeded = titleHeight + contentHeight + 40;
-
-        // Vérifier si on a assez d'espace
-        if (actualY + totalHeightNeeded > doc.page.height - 60) {
-          doc.addPage();
-          actualY = 30;
-        }
-
-        doc
-          .fontSize(18)
-          .fillColor("#000")
-          .text(`${customChart.chartName}`, 30, actualY);
-        actualY += 20;
-
-        // Colonne gauche: Table
-        if (tableRows.length > 0) {
-          generateTable(
-            doc,
-            tableRows,
-            tableColumns,
-            30,
-            actualY,
-            leftColumnWidth
-          );
-        }
-
-        // Colonne droite: Graphique
+        // Graphique
         if (imageBuffer !== null) {
-          const width = 1200;
-          const height = 450;
-          const imgRatio = width / height;
-          const graphStartX = 30 + leftColumnWidth + columnGap;
-          let imgWidth = rightColumnWidth;
-          let imgHeight = imgWidth / imgRatio;
-
-          doc.image(imageBuffer, graphStartX, actualY, {
-            fit: [imgWidth, imgHeight],
+          doc.image(imageBuffer, 30, 90, {
+            width: pageWidth,
+            height: 200,
           });
+        }
 
-          actualY += imgHeight + 10;
-        } else {
-          // Sans graphique, on calcule la hauteur du tableau
-          const rowHeight = 20;
-          const tableHeight = tableRows.length * rowHeight + 50;
-          actualY += tableHeight;
+        // Tableau de données
+        if (tableRows.length > 0) {
+          generateTable(doc, tableRows, tableColumns, 30, 300, pageWidth);
         }
 
         console.log(`Custom chart: ${customChart.chartName} added to PDF.`);
       }
+      // END CUSTOM CHART
 
       doc.end();
 
@@ -446,15 +381,79 @@ async function generateImage(data) {
   const transportDivisor =
     data.chartData[0]?.transportType === "tray" ? "1000" : "100";
 
+  // Calculer la ligne de tendance (régression linéaire)
+  const calculateTrendLine = (values) => {
+    const n = values.length;
+    const xValues = Array.from({ length: n }, (_, i) => i);
+    const yValues = values.map((v) => parseFloat(v));
+
+    const sumX = xValues.reduce((a, b) => a + b, 0);
+    const sumY = yValues.reduce((a, b) => a + b, 0);
+    const sumXY = xValues.reduce((sum, x, i) => sum + x * yValues[i], 0);
+    const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0);
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    return {
+      data: xValues.map((x) => parseFloat((slope * x + intercept).toFixed(2))),
+      slope: slope,
+    };
+  };
+
+  const trendLine = calculateTrendLine(filteredData.map((item) => item.errors));
+
+  const getTrendColor = (slope) => {
+    const avgValue =
+      filteredData.reduce((sum, item) => sum + parseFloat(item.errors), 0) /
+      filteredData.length;
+    const relativeSlope = Math.abs(slope) / avgValue;
+
+    if (relativeSlope < 0.01) return "#FFA500";
+    return slope < 0 ? "#00C853" : "#FF1744";
+  };
+
+  const trendColor = getTrendColor(trendLine.slope);
+
+  // Calculer l'échelle max basée sur les données et moyennes
+  const errorValues = filteredData.map((item) => parseFloat(item.errors));
+  const movingAverageValues = filteredData.map((item) =>
+    parseFloat(item.movingAverageErrors)
+  );
+  const allErrorValues = [
+    ...errorValues,
+    ...movingAverageValues,
+    ...trendLine.data,
+  ].sort((a, b) => a - b);
+  const percentile90Index = Math.floor(allErrorValues.length * 0.9);
+  const maxScale = Math.round(allErrorValues[percentile90Index] * 1.5);
+
   const browser = await getBrowser();
   const page = await browser.newPage();
-  await page.setViewport({ width: 1200, height: 450 });
+  await page.setViewport({
+    width: 2346,
+    height: 600,
+    deviceScaleFactor: 3,
+  });
 
   const configuration = {
     type: "bar",
     data: {
       labels: labels,
       datasets: [
+        {
+          type: "line",
+          label: "Tendance",
+          data: trendLine.data,
+          borderColor: trendColor,
+          backgroundColor: trendColor,
+          borderWidth: 3,
+          borderDash: [5, 5],
+          fill: false,
+          pointRadius: 0,
+          tension: 0,
+          yAxisID: "y",
+        },
         {
           type: "line",
           label: "Moyenne 7 jours (nombre)",
@@ -488,6 +487,11 @@ async function generateImage(data) {
       ],
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: 0,
+      },
       plugins: {
         title: {
           display: true,
@@ -517,6 +521,8 @@ async function generateImage(data) {
           display: true,
           position: "left",
           beginAtZero: true,
+          min: 0,
+          max: maxScale,
           title: {
             display: true,
             text: `Nombre de pannes / ${transportDivisor} ${transportLabel}`,
@@ -527,6 +533,7 @@ async function generateImage(data) {
           display: true,
           position: "right",
           beginAtZero: true,
+          min: 0,
           title: {
             display: true,
             text: `Temps de pannes / ${transportDivisor} ${transportLabel} (minutes)`,
@@ -547,7 +554,8 @@ async function generateImage(data) {
       <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
       <style>
         body { margin: 0; padding: 0; background: white; }
-        #chartContainer { width: 1200px; height: 450px; }
+        #chartContainer { width: 100vw; height: 100vh; }
+        canvas { width: 100% !important; height: 100% !important; }
       </style>
     </head>
     <body>
@@ -584,7 +592,11 @@ async function generateCustomChartImage(data) {
 
   const browser = await getBrowser();
   const page = await browser.newPage();
-  await page.setViewport({ width: 1200, height: 450 });
+  await page.setViewport({
+    width: 2346,
+    height: 600,
+    deviceScaleFactor: 3,
+  });
 
   const labels = chartData.map((item) => {
     const date = new Date(item.date);
@@ -595,12 +607,54 @@ async function generateCustomChartImage(data) {
     });
   });
 
-  const barColors = chartData.map((item) => {
-    const value = parseFloat(item.data);
-    const target = parseFloat(item.target) || 0;
-    const above = value > target;
-    return above ? "#E74C3CA0" : "#27AE60A0";
-  });
+  // Calculer la ligne de tendance (régression linéaire)
+  const calculateTrendLine = (values) => {
+    const n = values.length;
+    const xValues = Array.from({ length: n }, (_, i) => i);
+    const yValues = values.map((v) => parseFloat(v));
+
+    const sumX = xValues.reduce((a, b) => a + b, 0);
+    const sumY = yValues.reduce((a, b) => a + b, 0);
+    const sumXY = xValues.reduce((sum, x, i) => sum + x * yValues[i], 0);
+    const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0);
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    return {
+      data: xValues.map((x) => parseFloat((slope * x + intercept).toFixed(2))),
+      slope: slope,
+    };
+  };
+
+  const trendLine = calculateTrendLine(
+    chartData.map((item) => parseFloat(item.data))
+  );
+
+  const getTrendColor = (slope) => {
+    const avgValue =
+      chartData.reduce((sum, item) => sum + parseFloat(item.data), 0) /
+      chartData.length;
+    const relativeSlope = Math.abs(slope) / avgValue;
+
+    if (relativeSlope < 0.01) return "#FFA500";
+    return slope < 0 ? "#00C853" : "#FF1744";
+  };
+
+  const trendColor = getTrendColor(trendLine.slope);
+
+  // Calculer l'échelle max basée sur les données et moyennes (sans targets)
+  const dataValues = chartData.map((item) => parseFloat(item.data));
+  const movingAverageValues = chartData.map((item) =>
+    parseFloat(item.movingAverage)
+  );
+  const allValues = [
+    ...dataValues,
+    ...movingAverageValues,
+    ...trendLine.data,
+  ].sort((a, b) => a - b);
+  const percentile90Index = Math.floor(allValues.length * 0.9);
+  const maxScale = Math.round(allValues[percentile90Index] * 1.5);
 
   const configuration = {
     type: "bar",
@@ -608,11 +662,28 @@ async function generateCustomChartImage(data) {
       labels: labels,
       datasets: [
         {
-          type: "bar",
-          label: "Nombre d'erreurs",
-          data: chartData.map((item) => parseFloat(item.data)),
-          backgroundColor: barColors,
-          borderColor: barColors,
+          type: "line",
+          label: "Tendance",
+          data: trendLine.data,
+          borderColor: trendColor,
+          backgroundColor: trendColor,
+          borderWidth: 3,
+          borderDash: [5, 5],
+          fill: false,
+          pointRadius: 0,
+          tension: 0,
+          yAxisID: "y",
+        },
+        {
+          type: "line",
+          label: "Moyenne 7 jours (nombre)",
+          data: chartData.map((item) => parseFloat(item.movingAverage)),
+          borderColor: "#C10015",
+          backgroundColor: "#C10015",
+          borderWidth: 2,
+          fill: false,
+          pointRadius: 0,
+          tension: 0.2,
           yAxisID: "y",
         },
         {
@@ -621,30 +692,35 @@ async function generateCustomChartImage(data) {
           data: chartData.map((item) => parseFloat(item.target) || 0),
           borderColor: "#3498DB",
           backgroundColor: "#3498DB",
-          borderWidth: 3,
+          borderWidth: 2,
           fill: false,
           pointRadius: 0,
           yAxisID: "y",
         },
         {
-          type: "line",
-          label: "Moyenne 7 jours (nombre)",
-          data: chartData.map((item) => parseFloat(item.movingAverage)),
-          borderColor: "#F39C12",
-          backgroundColor: "#F39C12",
-          borderWidth: 2,
-          fill: false,
-          pointRadius: 0,
-          tension: 0.2,
-          yAxisID: "y1",
+          type: "bar",
+          label: "Nombre d'erreurs",
+          data: chartData.map((item) => parseFloat(item.data)),
+          backgroundColor: "#008ffb",
+          borderColor: "#008ffb",
+          yAxisID: "y",
         },
       ],
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: 0,
+      },
       plugins: {
         title: {
-          display: false,
+          display: true,
+          text: "Total history",
+          font: {
+            size: 20,
+            weight: "bold",
+          },
         },
         legend: {
           display: true,
@@ -666,22 +742,11 @@ async function generateCustomChartImage(data) {
           display: true,
           position: "left",
           beginAtZero: true,
+          min: 0,
+          max: maxScale,
           title: {
             display: true,
             text: "Nombre d'erreurs",
-          },
-        },
-        y1: {
-          type: "linear",
-          display: true,
-          position: "right",
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: "Moyenne mobile 7 jours",
-          },
-          grid: {
-            drawOnChartArea: false,
           },
         },
       },
@@ -696,7 +761,8 @@ async function generateCustomChartImage(data) {
       <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
       <style>
         body { margin: 0; padding: 0; background: white; }
-        #chartContainer { width: 1200px; height: 450px; }
+        #chartContainer { width: 100vw; height: 100vh; }
+        canvas { width: 100% !important; height: 100% !important; }
       </style>
     </head>
     <body>
