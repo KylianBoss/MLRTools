@@ -66,7 +66,7 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
     jobName
   );
 
-  // Récupération de al configuration
+  // Récupération de la configuration
   const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
 
   // Create the DB connection to MVN
@@ -208,21 +208,24 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
       //   }
       // }
 
-      const data = await MVNDB.query(
-        "SELECT * FROM lnm.ACTIVITY_DATA LIMIT 10"
+      const [results] = await MVNDB.query(
+        `SELECT * FROM lnm.ACTIVITY_DATA FETCH FIRST 10 ROWS ONLY`,
+        {
+          replacements: { dateParam: date },
+          type: Sequelize.QueryTypes.SELECT,
+        }
       );
-      console.log(data);
+      console.log(`Found ${results.length} palettisation records for ${date}`);
+      console.log(results);
       await updateJob(
         {
           lastRun: new Date(),
-          lastLog: JSON.stringify(data),
+          lastLog: `Found ${results.length} palettisation records for ${date}`,
         },
         jobName
       );
 
-      const palettisationData = data.filter(
-        (row) => row["ACTIVITE"] === "Palettisation"
-      );
+      const palettisationData = results;
       const graiPalettised = palettisationData.map((row) => row["GRAI"]);
       const uniqueGrai = [...new Set(graiPalettised)];
       const totalBoxes = uniqueGrai.length;
@@ -288,8 +291,21 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
         jobName
       );
     }
+
+    // Fermer la connexion MVN
+    await MVNDB.close();
+    console.log("MVN database connection closed.");
   } catch (error) {
     console.error(`Failed to process data for date ${currentDate}:`, error);
+
+    // Fermer la connexion MVN en cas d'erreur
+    try {
+      await MVNDB.close();
+      console.log("MVN database connection closed (after error).");
+    } catch (closeError) {
+      console.error("Error closing MVN connection:", closeError);
+    }
+
     await updateJob(
       {
         lastRun: new Date(),
