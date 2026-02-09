@@ -79,8 +79,18 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
       dialect: "oracle",
       dialectOptions: {
         connectString: config.mvnConnectString,
+        connectTimeout: 60000, // 60 secondes
       },
-      logging: false,
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 60000, // 60 secondes
+        idle: 10000,
+      },
+      logging: console.log, // Activer le logging pour debug
+      retry: {
+        max: 3,
+      },
     }
   );
 
