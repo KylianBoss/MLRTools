@@ -1,6 +1,15 @@
 <template>
   <q-page padding>
-    <div class="text-h4">Données de production</div>
+    <div class="row items-center justify-between q-mb-md">
+      <div class="text-h4">Données de production</div>
+      <q-btn
+        v-if="App.userHasAccess('canUpdateProductionData')"
+        color="primary"
+        icon="add"
+        label="Nouvelle ligne"
+        @click="handleCreateRow"
+      />
+    </div>
     <q-table
       :rows="productionData"
       :columns="columns"
@@ -208,11 +217,13 @@ import { api } from "boot/axios";
 import { useDataLogStore } from "stores/datalog";
 import dayjs from "dayjs";
 import { useAppStore } from "src/stores/app";
+import { useProductionDataDialog } from "src/plugins/useProductionDataDialog";
 
 const dataLogStore = useDataLogStore();
 const App = useAppStore();
 const productionData = ref([]);
 const loading = ref(false);
+const { createProductionData } = useProductionDataDialog();
 
 const columns = [
   {
@@ -284,6 +295,25 @@ const updateRow = async (row, field, value) => {
   await fetchProductionData({
     pagination: pagination.value,
   });
+};
+
+const handleCreateRow = async () => {
+  try {
+    const rowData = await createProductionData();
+
+    // Créer via le store
+    await dataLogStore.setProductionData(rowData);
+
+    // Recharger les données
+    await fetchProductionData({
+      pagination: pagination.value,
+    });
+  } catch (error) {
+    // Dialog annulé ou erreur
+    if (error) {
+      console.error("Error creating production data:", error);
+    }
+  }
 };
 
 const fetchProductionData = async (props) => {
