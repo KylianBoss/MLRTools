@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import dayjs from "dayjs";
-import csv from "csv-parser";
 import { getDB } from "../database.js";
 import { updateJob } from "./utils.js";
 import Sequelize from "sequelize";
@@ -90,12 +89,15 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
     !(await MVNDB.authenticate()
       .then(() => true)
       .catch(async (error) => {
-        await updateJob({
-          lastRun: new Date(),
-          lastLog: JSON.stringify(error),
-          endAt: new Date(),
-          actualState: "error",
-        });
+        await updateJob(
+          {
+            lastRun: new Date(),
+            lastLog: JSON.stringify(error),
+            endAt: new Date(),
+            actualState: "error",
+          },
+          jobName
+        );
         return false;
       }))
   ) {

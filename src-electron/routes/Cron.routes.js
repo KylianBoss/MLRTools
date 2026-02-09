@@ -48,6 +48,7 @@ async function executeJobAction(action, args = {}) {
  * Traiter la queue de jobs en attente
  */
 async function processJobQueue() {
+  const db = getDB();
   try {
     // Vérifier s'il y a déjà un job en cours d'exécution
     const runningJobs = await db.models.JobQueue.findAll({
@@ -526,4 +527,3 @@ router.get("/test", (req, res) => {
 });
 
 export default router;
-
