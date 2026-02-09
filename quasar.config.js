@@ -194,6 +194,10 @@ export default configure(function (/* ctx */) {
             from: "src-electron/electron-preload.js",
             to: "electron-preload.js",
           },
+          {
+            from: "src-electron/assets",
+            to: "src-electron/assets",
+          },
         ],
       },
 
@@ -209,7 +213,7 @@ export default configure(function (/* ctx */) {
         nsis: false,
         msi: false,
         asar: true,
-        extraResources: ["./ressources/**"],
+        extraResources: ["./ressources/**", "./src-electron/assets/**"],
         directories: {
           output: "dist/electron",
         },
