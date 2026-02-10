@@ -165,6 +165,12 @@
               icon="mdi-timetable"
               label="Données de production"
             />
+            <drawer-item
+              to="alarm-data-table"
+              autorisation="canAccessAlarmDataTable"
+              icon="mdi-table-large"
+              label="Données d'alarmes"
+            />
           </q-expansion-item>
           <!-- TOOLS -->
           <q-expansion-item

@@ -696,5 +696,109 @@ router.post("/other", async (req, res) => {
   }
 });
 
+// Update x_state field
+router.post("/update-state", async (req, res) => {
+  const db = getDB();
+  const { dbId, x_state } = req.body;
+
+  if (!dbId || !x_state) {
+    res.status(400).json({ error: "Database ID and state are required" });
+    return;
+  }
+
+  try {
+    const alarm = await db.models.Datalog.update(
+      { x_state },
+      {
+        where: {
+          dbId,
+        },
+      }
+    );
+    res.json(alarm);
+  } catch (error) {
+    console.error("Error updating alarm state:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update x_group field
+router.post("/update-group", async (req, res) => {
+  const db = getDB();
+  const { dbId, x_group } = req.body;
+
+  if (!dbId) {
+    res.status(400).json({ error: "Database ID is required" });
+    return;
+  }
+
+  try {
+    const alarm = await db.models.Datalog.update(
+      { x_group },
+      {
+        where: {
+          dbId,
+        },
+      }
+    );
+    res.json(alarm);
+  } catch (error) {
+    console.error("Error updating alarm group:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update x_treated field
+router.post("/update-treated", async (req, res) => {
+  const db = getDB();
+  const { dbId, x_treated } = req.body;
+
+  if (!dbId || x_treated === undefined) {
+    res.status(400).json({ error: "Database ID and treated status are required" });
+    return;
+  }
+
+  try {
+    const alarm = await db.models.Datalog.update(
+      { x_treated },
+      {
+        where: {
+          dbId,
+        },
+      }
+    );
+    res.json(alarm);
+  } catch (error) {
+    console.error("Error updating alarm treated status:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update x_comment field
+router.post("/update-comment", async (req, res) => {
+  const db = getDB();
+  const { dbId, x_comment } = req.body;
+
+  if (!dbId) {
+    res.status(400).json({ error: "Database ID is required" });
+    return;
+  }
+
+  try {
+    const alarm = await db.models.Datalog.update(
+      { x_comment },
+      {
+        where: {
+          dbId,
+        },
+      }
+    );
+    res.json(alarm);
+  } catch (error) {
+    console.error("Error updating alarm comment:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
 

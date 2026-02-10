@@ -63,6 +63,11 @@ const routes = [
             name: "tgw-report-zones",
             component: () => import("src/pages/alarms/TGWReportZones.vue"),
           },
+          {
+            path: "alarm-data-table",
+            name: "alarm-data-table",
+            component: () => import("src/pages/alarms/AlarmDataTable.vue"),
+          },
         ],
       },
       // === TOOLS === //

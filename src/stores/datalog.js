@@ -460,6 +460,54 @@ export const useDataLogStore = defineStore("datalog", {
         });
       });
     },
+    updateAlarmState(dbId, x_state) {
+      return new Promise((resolve, reject) => {
+        api
+          .post("/alarms/update-state", { dbId, x_state })
+          .then((response) => {
+            resolve(response.data);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
+    updateAlarmGroup(dbId, x_group) {
+      return new Promise((resolve, reject) => {
+        api
+          .post("/alarms/update-group", { dbId, x_group })
+          .then((response) => {
+            resolve(response.data);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
+    updateAlarmTreated(dbId, x_treated) {
+      return new Promise((resolve, reject) => {
+        api
+          .post("/alarms/update-treated", { dbId, x_treated })
+          .then((response) => {
+            resolve(response.data);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
+    updateAlarmComment(dbId, x_comment) {
+      return new Promise((resolve, reject) => {
+        api
+          .post("/alarms/update-comment", { dbId, x_comment })
+          .then((response) => {
+            resolve(response.data);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
   },
   persist: false,
 });
