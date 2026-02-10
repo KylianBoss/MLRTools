@@ -31,9 +31,20 @@ const currentVersion = ref(null);
 const latestVersion = ref(null);
 const updateAvailable = ref(false);
 const updating = ref(false);
+const isDevelopment = ref(import.meta.env.DEV);
 
 const checkForUpdates = async () => {
   try {
+    // Ne pas vérifier les mises à jour en mode développement
+    if (isDevelopment.value) {
+      console.log("Update checker disabled in development mode");
+      return;
+    }
+
+    if (!window.electron || !window.electron.checkForUpdates) {
+      console.log("Update checker not available yet");
+      return;
+    }
     const result = await window.electron.checkForUpdates();
     currentVersion.value = result.currentVersion;
     latestVersion.value = result.latestVersion;
@@ -50,8 +61,57 @@ watch(updateAvailable, (newVal) => {
 });
 
 const handleUpdate = async () => {
+  // Ne pas permettre les mises à jour en mode développement
+  if (isDevelopment.value) {
+    console.log("Updates disabled in development mode");
+    return;
+  }
+
+  let progressNotif = null;
+
   try {
     updating.value = true;
+
+    // Show progress notification
+    progressNotif = $q.notify({
+      group: false,
+      timeout: 0,
+      spinner: true,
+      message: "Téléchargement de la mise à jour...",
+      caption: "0%",
+    });
+
+    // Setup progress listener
+    const progressListener = (progress) => {
+      if (progress.stage === "downloading" && progress.percent) {
+        progressNotif({
+          caption: `${progress.percent}%`,
+          message: "Téléchargement de la mise à jour...",
+        });
+      } else if (progress.stage === "saving") {
+        progressNotif({
+          message: "Enregistrement du fichier...",
+        });
+      } else if (progress.stage === "complete") {
+        progressNotif({
+          icon: "done",
+          spinner: false,
+          message: "Téléchargement terminé !",
+          timeout: 2000,
+        });
+      } else if (progress.stage === "error") {
+        progressNotif({
+          type: "negative",
+          icon: "error",
+          spinner: false,
+          message: "Erreur lors du téléchargement",
+          caption: progress.message,
+          timeout: 5000,
+        });
+      }
+    };
+
+    window.electron.onDownloadProgress(progressListener);
 
     // Download the update
     await window.electron.downloadUpdate();
@@ -78,13 +138,27 @@ const handleUpdate = async () => {
       window.electron.restartApp();
     });
   } catch (error) {
+    console.error("Update error:", error);
     $q.notify({
       type: "negative",
-      message: "Failed to update application",
-      caption: error.message,
+      message: "Échec de la mise à jour",
+      caption: error.message || "Une erreur est survenue",
+      timeout: 10000,
+      actions: [
+        {
+          label: "Détails",
+          color: "white",
+          handler: () => {
+            console.error("Full error:", error);
+          },
+        },
+      ],
     });
   } finally {
     updating.value = false;
+    if (progressNotif) {
+      progressNotif();
+    }
   }
 };
 
@@ -98,8 +172,11 @@ const setupUpdateListeners = () => {
 };
 
 onMounted(() => {
-  checkForUpdates();
   setupUpdateListeners();
+  // Delay initial check to ensure handlers are registered
+  setTimeout(() => {
+    checkForUpdates();
+  }, 1000);
 });
 
 onBeforeUnmount(() => {

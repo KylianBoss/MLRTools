@@ -153,18 +153,42 @@ export class AutoUpdater {
 
   async checkForUpdates() {
     try {
+      this.console.info("Checking for updates...");
+      this.console.info(`Repository: ${this.githubOwner}/${this.githubRepo}`);
+      this.console.info(`Current version: ${this.currentVersion}`);
+
       const response = await axios.get(
-        `https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/releases/latest`
+        `https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/releases/latest`,
+        {
+          timeout: 30000, // 30 seconds timeout
+        }
       );
 
       // Clean up version strings
       const latestVersion = response.data.tag_name.replace(/^v/i, "").trim();
       const currentVersion = this.currentVersion.trim();
 
+      this.console.info(`Latest version: ${latestVersion}`);
+
       const updateAvailable = semver.gt(latestVersion, currentVersion);
+      this.console.info(`Update available: ${updateAvailable}`);
+
       const windowsAsset = response.data.assets.find((asset) =>
         asset.name.endsWith(".zip")
       );
+
+      if (windowsAsset) {
+        this.console.info(
+          `Windows asset found: ${windowsAsset.name} (${(
+            windowsAsset.size /
+            1024 /
+            1024
+          ).toFixed(2)} MB)`
+        );
+        this.console.info(`Download URL: ${windowsAsset.browser_download_url}`);
+      } else {
+        this.console.warn("No Windows .zip asset found in the release");
+      }
 
       return {
         currentVersion: this.currentVersion,
@@ -174,41 +198,114 @@ export class AutoUpdater {
           updateAvailable && windowsAsset
             ? windowsAsset.browser_download_url
             : null,
+        assetSize: windowsAsset ? windowsAsset.size : 0,
       };
     } catch (error) {
-      this.console.error("Error checking for updates:", error);
-      throw new Error("Failed to check for updates");
+      this.console.error("Error checking for updates:", {
+        message: error.message,
+        code: error.code,
+        response: error.response
+          ? {
+              status: error.response.status,
+              statusText: error.response.statusText,
+            }
+          : null,
+      });
+      throw new Error(`Failed to check for updates: ${error.message}`);
     }
   }
 
   async downloadUpdate() {
     try {
-      const { downloadUrl } = await this.checkForUpdates();
-      if (!downloadUrl) {
+      const updateInfo = await this.checkForUpdates();
+      const { downloadUrl, updateAvailable } = updateInfo;
+
+      if (!updateAvailable || !downloadUrl) {
         throw new Error("No update available");
       }
 
-      this.console.info("Downloading update from:", downloadUrl);
+      this.console.info("Starting download from:", downloadUrl);
+      this.console.info("Update info:", JSON.stringify(updateInfo, null, 2));
+
       const response = await axios({
         method: "get",
         url: downloadUrl,
         responseType: "arraybuffer",
         headers: {
-          Accept: "application/vnd.github.v3+json",
+          Accept: "application/octet-stream",
+          "User-Agent": "MLR-Tools-Updater",
         },
         httpsAgent: new https.Agent({
           rejectUnauthorized: false,
         }),
+        maxRedirects: 10,
+        timeout: 600000, // 10 minutes
       });
-      this.console.info("Update downloaded successfully");
+
+      if (!response.data) {
+        throw new Error("No data received from download");
+      }
+
+      const dataSize = response.data.length || response.data.byteLength || 0;
+      this.console.info(
+        `Download completed. Size: ${dataSize} bytes (${(
+          dataSize /
+          1024 /
+          1024
+        ).toFixed(2)} MB)`
+      );
+
+      if (dataSize === 0) {
+        throw new Error("Downloaded file is empty");
+      }
+
       const downloadPath = path.join(app.getPath("temp"), "update.zip");
+      this.console.info("Saving to:", downloadPath);
+
       fs.writeFileSync(downloadPath, response.data);
-      this.console.info("Update saved to:", downloadPath);
+
+      // Verify the file was written correctly
+      if (!fs.existsSync(downloadPath)) {
+        throw new Error("Failed to save update file - file does not exist");
+      }
+
+      const stats = fs.statSync(downloadPath);
+      this.console.info(
+        `File saved successfully. Size on disk: ${stats.size} bytes`
+      );
+
+      if (stats.size === 0) {
+        fs.unlinkSync(downloadPath);
+        throw new Error("Saved file is empty");
+      }
+
+      if (stats.size !== dataSize) {
+        this.console.warn(
+          `Warning: File size mismatch. Downloaded: ${dataSize}, Saved: ${stats.size}`
+        );
+      }
 
       return { success: true, downloadPath };
     } catch (error) {
-      this.console.error("Error downloading update:", error);
-      throw new Error("Failed to download update");
+      const errorDetails = {
+        message: error.message,
+        code: error.code,
+        response: error.response
+          ? {
+              status: error.response.status,
+              statusText: error.response.statusText,
+              headers: error.response.headers,
+            }
+          : null,
+        isAxiosError: error.isAxiosError,
+      };
+
+      this.console.error(
+        "Download failed with error:",
+        JSON.stringify(errorDetails, null, 2)
+      );
+
+      throw new Error(`Failed to download update: ${error.message || error}`);
     }
   }
 

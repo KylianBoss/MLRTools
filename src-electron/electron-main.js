@@ -107,54 +107,23 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  // ÉTAPE 1: Vérifier les updates AVANT tout démarrage (sauf en dev)
-  if (process.env.NODE_ENV !== "development") {
-    try {
-      console.log("Checking for updates before startup...");
-      // Créer une fenêtre minimale pour l'auto-updater
-      const checkWindow = new BrowserWindow({
-        width: 400,
-        height: 200,
-        show: false,
-        frame: false,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-        },
-      });
-
-      autoUpdater = new AutoUpdater(checkWindow, "KylianBoss", "MLRTools");
-
-      // Attendre la vérification (avec timeout de 10s)
-      await Promise.race([
-        new Promise((resolve) => {
-          // Écouter les événements de l'auto-updater
-          ipcMain.once("update-downloaded", () => {
-            console.log("Update downloaded, will install and restart");
-            resolve();
-          });
-          ipcMain.once("update-not-available", () => {
-            console.log("No update available, continuing startup");
-            resolve();
-          });
-          ipcMain.once("update-error", () => {
-            console.log("Update check failed, continuing startup");
-            resolve();
-          });
-        }),
-        new Promise((resolve) => setTimeout(resolve, 10000)), // Timeout 10s
-      ]);
-
-      checkWindow.close();
-    } catch (error) {
-      console.error("Error checking for updates:", error);
-      // Continuer quand même le démarrage
-    }
-  }
-
-  // ÉTAPE 2: Démarrer l'application normalement
+  // Démarrer l'application normalement
   try {
     createWindow();
+
+    // Initialiser l'AutoUpdater APRÈS la création de la fenêtre (uniquement en production)
+    if (process.env.NODE_ENV !== "development" && mainWindow) {
+      try {
+        console.log("Initializing auto-updater...");
+        autoUpdater = new AutoUpdater(mainWindow, "KylianBoss", "MLRTools");
+        console.log("Auto-updater initialized successfully");
+      } catch (error) {
+        console.error("Error initializing auto-updater:", error);
+        // Ne pas bloquer le démarrage si l'auto-updater échoue
+      }
+    } else {
+      console.log("Auto-updater disabled in development mode");
+    }
   } catch (error) {
     console.error("Critical error during startup:", error);
     // Activer le mode recovery uniquement en production

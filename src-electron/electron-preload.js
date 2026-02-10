@@ -42,8 +42,12 @@ contextBridge.exposeInMainWorld("electron", {
   onUpdateAvailable: (callback) => {
     ipcRenderer.on("update-available", (_event, value) => callback(value));
   },
+  onDownloadProgress: (callback) => {
+    ipcRenderer.on("download-progress", (_event, value) => callback(value));
+  },
   removeUpdateListener: () => {
     ipcRenderer.removeAllListeners("update-available");
+    ipcRenderer.removeAllListeners("download-progress");
   },
   onRouter: (callback) => {
     ipcRenderer.on("router", (_event, value) => callback(value));
