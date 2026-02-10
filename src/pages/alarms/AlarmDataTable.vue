@@ -420,10 +420,6 @@ const editGroup = (row) => {
   });
 };
 
-const toggleTreated = (row) => {
-  updateTreated(row, !row.x_treated);
-};
-
 const updateTreated = async (row, value) => {
   try {
     await api.post("/alarms/update-treated", {
