@@ -73,6 +73,13 @@
               label="DDS Board"
               v-if="App.userHasAccess('canAccessDdsBoard')"
             />
+            <drawer-item
+              to="daily-analysis"
+              autorisation="canAccessDailyAnalysis"
+              icon="mdi-chart-timeline-variant-shimmer"
+              label="Analyse quotidienne"
+              v-if="App.userHasAccess('canAccessDailyAnalysis')"
+            />
           </q-expansion-item>
           <!-- SEARCH -->
           <drawer-item

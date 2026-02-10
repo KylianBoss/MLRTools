@@ -241,6 +241,30 @@ function initDB(config) {
           type: DataTypes.STRING,
           allowNull: false,
         },
+        x_state: {
+          type: DataTypes.ENUM("planned", "unplanned"),
+          allowNull: false,
+          defaultValue: "unplanned",
+          comment:
+            "State to organize the errors to see if they where planned or not",
+        },
+        x_group: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          comment:
+            "Define the group ID for the groupped alarms, only the first one should be take in account",
+        },
+        x_treated: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+          comment: "Define if an alarm has been treated or not",
+        },
+        x_comment: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          comment: "Comment about the error"
+        }
       },
       {
         timestamps: false,

@@ -378,6 +378,11 @@ const access = [
     label: "Peut modifier le tableau DDS",
     value: "canUpdateDdsBoard",
   },
+  {
+    section: "DDS",
+    label: "Peut accéder à l'analyse quotidienne",
+    value: "canAccessDailyAnalysis",
+  },
   // Admin accesses
   { section: "Admin", label: "DB", value: "canAccessAdminDB" },
   { section: "Admin", label: "Users", value: "canAccessAdminUser" },

@@ -542,19 +542,28 @@ router.post("/primary", async (req, res) => {
         alarmId,
       },
     });
-    const groupsToClear = await db.models.ZoneGroups.findAll({
-      where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
-    });
-    await db.models.ErrorsByThousandSaved.destroy({
-      where: {
-        groupName: groupsToClear.map((g) => g.zoneGroupName),
-      },
-    });
-    await db.models.DowntimeMinutesByThousandSaved.destroy({
-      where: {
-        groupName: groupsToClear.map((g) => g.zoneGroupName),
-      },
-    });
+    if (a && a.dataSource) {
+      const groupsToClear = await db.models.ZoneGroups.findAll({
+        where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
+      });
+      if (groupsToClear.length > 0) {
+        const groupNames = groupsToClear.map((g) => g.zoneGroupName);
+        if (db.models.ErrorsByThousandSaved) {
+          await db.models.ErrorsByThousandSaved.destroy({
+            where: {
+              groupName: groupNames,
+            },
+          });
+        }
+        if (db.models.DowntimeMinutesByThousandSaved) {
+          await db.models.DowntimeMinutesByThousandSaved.destroy({
+            where: {
+              groupName: groupNames,
+            },
+          });
+        }
+      }
+    }
 
     res.json(alarm);
   } catch (error) {
@@ -587,19 +596,28 @@ router.post("/secondary", async (req, res) => {
         alarmId,
       },
     });
-    const groupsToClear = await db.models.ZoneGroups.findAll({
-      where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
-    });
-    await db.models.ErrorsByThousandSaved.destroy({
-      where: {
-        groupName: groupsToClear.map((g) => g.zoneGroupName),
-      },
-    });
-    await db.models.DowntimeMinutesByThousandSaved.destroy({
-      where: {
-        groupName: groupsToClear.map((g) => g.zoneGroupName),
-      },
-    });
+    if (a && a.dataSource) {
+      const groupsToClear = await db.models.ZoneGroups.findAll({
+        where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
+      });
+      if (groupsToClear.length > 0) {
+        const groupNames = groupsToClear.map((g) => g.zoneGroupName);
+        if (db.models.ErrorsByThousandSaved) {
+          await db.models.ErrorsByThousandSaved.destroy({
+            where: {
+              groupName: groupNames,
+            },
+          });
+        }
+        if (db.models.DowntimeMinutesByThousandSaved) {
+          await db.models.DowntimeMinutesByThousandSaved.destroy({
+            where: {
+              groupName: groupNames,
+            },
+          });
+        }
+      }
+    }
 
     res.json(alarm);
   } catch (error) {
@@ -632,19 +650,28 @@ router.post("/human", async (req, res) => {
         alarmId,
       },
     });
-    const groupsToClear = await db.models.ZoneGroups.findAll({
-      where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
-    });
-    await db.models.ErrorsByThousandSaved.destroy({
-      where: {
-        groupName: groupsToClear.map((g) => g.zoneGroupName),
-      },
-    });
-    await db.models.DowntimeMinutesByThousandSaved.destroy({
-      where: {
-        groupName: groupsToClear.map((g) => g.zoneGroupName),
-      },
-    });
+    if (a && a.dataSource) {
+      const groupsToClear = await db.models.ZoneGroups.findAll({
+        where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
+      });
+      if (groupsToClear.length > 0) {
+        const groupNames = groupsToClear.map((g) => g.zoneGroupName);
+        if (db.models.ErrorsByThousandSaved) {
+          await db.models.ErrorsByThousandSaved.destroy({
+            where: {
+              groupName: groupNames,
+            },
+          });
+        }
+        if (db.models.DowntimeMinutesByThousandSaved) {
+          await db.models.DowntimeMinutesByThousandSaved.destroy({
+            where: {
+              groupName: groupNames,
+            },
+          });
+        }
+      }
+    }
 
     res.json(alarm);
   } catch (error) {
@@ -675,19 +702,28 @@ router.post("/other", async (req, res) => {
         alarmId,
       },
     });
-    const groupsToClear = await db.models.ZoneGroups.findAll({
-      where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
-    });
-    await db.models.ErrorsByThousandSaved.destroy({
-      where: {
-        groupName: groupsToClear.map((g) => g.zoneGroupName),
-      },
-    });
-    await db.models.DowntimeMinutesByThousandSaved.destroy({
-      where: {
-        groupName: groupsToClear.map((g) => g.zoneGroupName),
-      },
-    });
+    if (a && a.dataSource) {
+      const groupsToClear = await db.models.ZoneGroups.findAll({
+        where: Sequelize.literal(`JSON_CONTAINS(zones, '"${a.dataSource}"')`),
+      });
+      if (groupsToClear.length > 0) {
+        const groupNames = groupsToClear.map((g) => g.zoneGroupName);
+        if (db.models.ErrorsByThousandSaved) {
+          await db.models.ErrorsByThousandSaved.destroy({
+            where: {
+              groupName: groupNames,
+            },
+          });
+        }
+        if (db.models.DowntimeMinutesByThousandSaved) {
+          await db.models.DowntimeMinutesByThousandSaved.destroy({
+            where: {
+              groupName: groupNames,
+            },
+          });
+        }
+      }
+    }
 
     res.json(alarm);
   } catch (error) {
@@ -695,6 +731,181 @@ router.post("/other", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+router.get("/daily-analysis", async (req, res) => {
+  try {
+    const db = getDB();
+
+    const MIN_ALARM_DURATION = await db.models.Settings.getValue(
+      "MIN_ALARM_DURATION"
+    );
+
+    const primaryAlarms = await db.models.Alarms.findAll({
+      where: {
+        type: "primary",
+      },
+      attributes: ["alarmId"],
+    }).then((primaryAlarms) => primaryAlarms.map((a) => a.alarmId));
+    const alarms = await db.models.Datalog.findAll({
+      where: {
+        duration: {
+          [Op.gte]: MIN_ALARM_DURATION,
+        },
+        timeOfOccurence: {
+          [Op.between]: [
+            dayjs().subtract(1, "day").startOf("day").toDate(),
+            dayjs().subtract(1, "day").endOf("day").toDate(),
+          ],
+        },
+        alarmId: primaryAlarms,
+      },
+      order: [["timeOfOccurence", "ASC"]],
+    });
+
+    res.json(alarms);
+  } catch (e) {
+    console.error("Error fetching daily analysis alarms:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Update alarm state (planned/unplanned)
+router.patch("/update-state", async (req, res) => {
+  try {
+    const db = getDB();
+    const { dbId, state, updateGroup = false } = req.body;
+
+    if (!dbId || !state) {
+      return res.status(400).json({ error: "dbId and state are required" });
+    }
+
+    if (!["planned", "unplanned"].includes(state)) {
+      return res.status(400).json({ error: "Invalid state value" });
+    }
+
+    // Get the alarm to check if it's part of a group
+    const alarm = await db.models.Datalog.findOne({ where: { dbId } });
+
+    if (!alarm) {
+      return res.status(404).json({ error: "Alarm not found" });
+    }
+
+    // Update the alarm state
+    await db.models.Datalog.update({ x_state: state }, { where: { dbId } });
+
+    let updatedCount = 1;
+    let affectedDbIds = [dbId];
+
+    // If updateGroup is true and alarm is part of a group, update all alarms in the group
+    if (updateGroup && alarm.x_group) {
+      const groupResult = await db.models.Datalog.update(
+        { x_state: state },
+        { where: { x_group: alarm.x_group } }
+      );
+
+      // Get all affected alarm IDs
+      const groupAlarms = await db.models.Datalog.findAll({
+        where: { x_group: alarm.x_group },
+        attributes: ["dbId"],
+      });
+
+      affectedDbIds = groupAlarms.map((a) => a.dbId);
+      updatedCount = groupResult[0];
+    }
+
+    res.json({ success: true, updatedCount, affectedDbIds });
+  } catch (e) {
+    console.error("Error updating alarm state:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Mark alarm as treated
+router.patch("/mark-treated", async (req, res) => {
+  try {
+    const db = getDB();
+    const { dbIds } = req.body;
+
+    if (!dbIds || !Array.isArray(dbIds)) {
+      return res.status(400).json({ error: "dbIds array is required" });
+    }
+
+    await db.models.Datalog.update(
+      { x_treated: true },
+      { where: { dbId: dbIds } }
+    );
+
+    res.json({ success: true, count: dbIds.length });
+  } catch (e) {
+    console.error("Error marking alarms as treated:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Update alarm comment
+router.patch("/update-comment", async (req, res) => {
+  try {
+    const db = getDB();
+    const { dbId, comment } = req.body;
+
+    if (!dbId) {
+      return res.status(400).json({ error: "dbId is required" });
+    }
+
+    await db.models.Datalog.update({ x_comment: comment }, { where: { dbId } });
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Error updating alarm comment:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Group alarms together
+router.post("/group-alarms", async (req, res) => {
+  try {
+    const db = getDB();
+    const { dbIds } = req.body;
+
+    if (!dbIds || !Array.isArray(dbIds) || dbIds.length < 2) {
+      return res
+        .status(400)
+        .json({ error: "At least 2 dbIds are required to group" });
+    }
+
+    // Find the highest existing group ID
+    const maxGroup = await db.models.Datalog.max("x_group");
+    const newGroupId = (maxGroup || 0) + 1;
+
+    // Update all alarms with the new group ID
+    await db.models.Datalog.update(
+      { x_group: newGroupId },
+      { where: { dbId: dbIds } }
+    );
+
+    res.json({ success: true, groupId: newGroupId, count: dbIds.length });
+  } catch (e) {
+    console.error("Error grouping alarms:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Ungroup alarm
+router.patch("/ungroup-alarm", async (req, res) => {
+  try {
+    const db = getDB();
+    const { dbId } = req.body;
+
+    if (!dbId) {
+      return res.status(400).json({ error: "dbId is required" });
+    }
+
+    await db.models.Datalog.update({ x_group: null }, { where: { dbId } });
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Error ungrouping alarm:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 export default router;
-

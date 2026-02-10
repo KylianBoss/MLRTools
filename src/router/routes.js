@@ -13,6 +13,7 @@ const routes = [
       },
       // === KPI === //
       { path: "kpi", name: "kpi", component: () => import("src/pages/KPI/KPI.vue") },
+      { path: "daily-analysis", name: "daily-analysis", component: () => import("src/pages/KPI/DailyAnalysis.vue") },
       {
         path: "search",
         name: "search",
