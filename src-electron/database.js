@@ -241,6 +241,28 @@ function initDB(config) {
           type: DataTypes.STRING,
           allowNull: false,
         },
+        x_state: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          defaultValue: "unplanned",
+          comment: "State of the alarm (e.g., 'unplanned', 'planned', etc.)",
+        },
+        x_group: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: "Group or category associated with the alarm",
+        },
+        x_treated: {
+          type: DataTypes.BOOLEAN,
+          allowNull: true,
+          defaultValue: false,
+          comment: "Whether the alarm has been treated",
+        },
+        x_comment: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          comment: "Comments or notes about the alarm",
+        },
       },
       {
         timestamps: false,
