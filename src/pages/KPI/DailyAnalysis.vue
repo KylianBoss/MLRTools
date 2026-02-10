@@ -724,14 +724,33 @@ const markAsTreated = async () => {
 
 const markSingleAsTreated = async (dbId) => {
   try {
-    await api.patch("/alarms/mark-treated", { dbIds: [dbId] });
     const alarm = alarms.value.find((a) => a.dbId === dbId);
-    if (alarm) {
-      alarm.x_treated = true;
+    const groupId = alarm?.x_group;
+
+    // Si l'alarme fait partie d'un groupe, marquer toutes les alarmes du groupe
+    let dbIdsToMark = [dbId];
+    if (groupId) {
+      dbIdsToMark = alarms.value
+        .filter((a) => a.x_group === groupId)
+        .map((a) => a.dbId);
     }
+
+    await api.patch("/alarms/mark-treated", { dbIds: dbIdsToMark });
+
+    // Mettre à jour l'UI
+    dbIdsToMark.forEach((id) => {
+      const alarmToUpdate = alarms.value.find((a) => a.dbId === id);
+      if (alarmToUpdate) {
+        alarmToUpdate.x_treated = true;
+      }
+    });
+
     $q.notify({
       type: "positive",
-      message: "Alarme marquée comme traitée",
+      message:
+        dbIdsToMark.length > 1
+          ? `${dbIdsToMark.length} alarmes du groupe marquées comme traitées`
+          : "Alarme marquée comme traitée",
     });
   } catch (error) {
     console.error("Error marking as treated:", error);
@@ -753,21 +772,68 @@ const groupSelectedAlarms = async () => {
   }
 
   try {
-    const dbIds = selectedAlarms.value.map((a) => a.dbId);
-    const response = await api.post("/alarms/group-alarms", { dbIds });
+    // Vérifier si certaines alarmes sélectionnées font déjà partie d'un groupe
+    const existingGroups = new Set(
+      selectedAlarms.value
+        .map((a) => a.x_group)
+        .filter((g) => g !== null && g !== undefined)
+    );
 
-    selectedAlarms.value.forEach((selectedAlarm) => {
-      const alarm = alarms.value.find((a) => a.dbId === selectedAlarm.dbId);
-      if (alarm) {
-        alarm.x_group = response.data.groupId;
+    let targetGroupId = null;
+    let dbIds = selectedAlarms.value.map((a) => a.dbId);
+
+    if (existingGroups.size > 0) {
+      // Au moins une alarme fait déjà partie d'un groupe
+      // Utiliser le premier groupe trouvé comme groupe cible
+      targetGroupId = Array.from(existingGroups)[0];
+
+      // Si plusieurs groupes existent, ajouter toutes les alarmes de ces groupes
+      if (existingGroups.size > 1) {
+        const allGroupAlarms = alarms.value.filter((a) =>
+          existingGroups.has(a.x_group)
+        );
+        dbIds = [...new Set([...dbIds, ...allGroupAlarms.map((a) => a.dbId)])];
       }
-    });
 
-    $q.notify({
-      type: "positive",
-      message: `${dbIds.length} alarmes groupées ensemble`,
-      caption: `ID du groupe: ${response.data.groupId}`,
-    });
+      // Envoyer la requête avec l'ID du groupe existant
+      const response = await api.post("/alarms/group-alarms", {
+        dbIds,
+        existingGroupId: targetGroupId,
+      });
+
+      // Mettre à jour toutes les alarmes concernées
+      dbIds.forEach((dbId) => {
+        const alarm = alarms.value.find((a) => a.dbId === dbId);
+        if (alarm) {
+          alarm.x_group = response.data.groupId;
+        }
+      });
+
+      $q.notify({
+        type: "positive",
+        message:
+          existingGroups.size > 1
+            ? `${existingGroups.size} groupes fusionnés - ${dbIds.length} alarmes au total`
+            : `Groupe étendu à ${dbIds.length} alarmes`,
+        caption: `ID du groupe: ${response.data.groupId}`,
+      });
+    } else {
+      // Aucun groupe existant, créer un nouveau groupe
+      const response = await api.post("/alarms/group-alarms", { dbIds });
+
+      selectedAlarms.value.forEach((selectedAlarm) => {
+        const alarm = alarms.value.find((a) => a.dbId === selectedAlarm.dbId);
+        if (alarm) {
+          alarm.x_group = response.data.groupId;
+        }
+      });
+
+      $q.notify({
+        type: "positive",
+        message: `${dbIds.length} alarmes groupées ensemble`,
+        caption: `ID du groupe: ${response.data.groupId}`,
+      });
+    }
 
     selectedAlarms.value = [];
   } catch (error) {
@@ -809,20 +875,39 @@ const editComment = (alarm) => {
 
 const saveComment = async () => {
   try {
+    const alarm = alarms.value.find((a) => a.dbId === currentAlarm.value.dbId);
+    const groupId = alarm?.x_group;
+
     await api.patch("/alarms/update-comment", {
       dbId: currentAlarm.value.dbId,
       comment: commentText.value,
     });
 
-    const alarm = alarms.value.find((a) => a.dbId === currentAlarm.value.dbId);
-    if (alarm) {
-      alarm.x_comment = commentText.value;
-    }
+    // Si l'alarme fait partie d'un groupe, mettre à jour toutes les alarmes du groupe
+    if (groupId) {
+      alarms.value.forEach((a) => {
+        if (a.x_group === groupId) {
+          a.x_comment = commentText.value;
+        }
+      });
 
-    $q.notify({
-      type: "positive",
-      message: "Commentaire mis à jour",
-    });
+      const groupCount = alarms.value.filter(
+        (a) => a.x_group === groupId
+      ).length;
+      $q.notify({
+        type: "positive",
+        message: `Commentaire mis à jour pour ${groupCount} alarme(s) du groupe`,
+      });
+    } else {
+      // Sinon, mettre à jour seulement l'alarme sélectionnée
+      if (alarm) {
+        alarm.x_comment = commentText.value;
+      }
+      $q.notify({
+        type: "positive",
+        message: "Commentaire mis à jour",
+      });
+    }
 
     commentDialog.value = false;
     currentAlarm.value = null;

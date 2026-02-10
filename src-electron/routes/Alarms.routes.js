@@ -851,9 +851,32 @@ router.patch("/update-comment", async (req, res) => {
       return res.status(400).json({ error: "dbId is required" });
     }
 
-    await db.models.Datalog.update({ x_comment: comment }, { where: { dbId } });
+    // Trouver l'alarme et son groupe
+    const alarm = await db.models.Datalog.findOne({ where: { dbId } });
 
-    res.json({ success: true });
+    if (!alarm) {
+      return res.status(404).json({ error: "Alarm not found" });
+    }
+
+    // Si l'alarme fait partie d'un groupe, mettre à jour toutes les alarmes du groupe
+    if (alarm.x_group) {
+      await db.models.Datalog.update(
+        { x_comment: comment },
+        { where: { x_group: alarm.x_group } }
+      );
+
+      const count = await db.models.Datalog.count({
+        where: { x_group: alarm.x_group },
+      });
+      res.json({ success: true, updatedCount: count });
+    } else {
+      // Sinon, mettre à jour seulement cette alarme
+      await db.models.Datalog.update(
+        { x_comment: comment },
+        { where: { dbId } }
+      );
+      res.json({ success: true, updatedCount: 1 });
+    }
   } catch (e) {
     console.error("Error updating alarm comment:", e);
     res.status(500).json({ error: e.message });
@@ -864,7 +887,7 @@ router.patch("/update-comment", async (req, res) => {
 router.post("/group-alarms", async (req, res) => {
   try {
     const db = getDB();
-    const { dbIds } = req.body;
+    const { dbIds, existingGroupId } = req.body;
 
     if (!dbIds || !Array.isArray(dbIds) || dbIds.length < 2) {
       return res
@@ -872,17 +895,24 @@ router.post("/group-alarms", async (req, res) => {
         .json({ error: "At least 2 dbIds are required to group" });
     }
 
-    // Find the highest existing group ID
-    const maxGroup = await db.models.Datalog.max("x_group");
-    const newGroupId = (maxGroup || 0) + 1;
+    let groupId;
 
-    // Update all alarms with the new group ID
+    if (existingGroupId) {
+      // Utiliser le groupe existant
+      groupId = existingGroupId;
+    } else {
+      // Créer un nouveau groupe
+      const maxGroup = await db.models.Datalog.max("x_group");
+      groupId = (maxGroup || 0) + 1;
+    }
+
+    // Update all alarms with the group ID
     await db.models.Datalog.update(
-      { x_group: newGroupId },
+      { x_group: groupId },
       { where: { dbId: dbIds } }
     );
 
-    res.json({ success: true, groupId: newGroupId, count: dbIds.length });
+    res.json({ success: true, groupId, count: dbIds.length });
   } catch (e) {
     console.error("Error grouping alarms:", e);
     res.status(500).json({ error: e.message });
