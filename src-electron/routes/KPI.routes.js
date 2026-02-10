@@ -397,11 +397,8 @@ router.get("/charts/custom/:chartId", async (req, res) => {
           startDate: dayjs
             .max(dayjs().subtract(CUSTOM_CHART_WINDOW, "day"), dayjs(MIN_DATE))
             .startOf("day")
-            .format("YYYY-MM-DD HH:mm:ss"),
-          endDate: dayjs()
-            .subtract(1, "day")
-            .endOf("day")
-            .format("YYYY-MM-DD HH:mm:ss"),
+            .format("YYYY-MM-DD"),
+          endDate: dayjs().subtract(1, "day").endOf("day").format("YYYY-MM-DD"),
           chartId,
           minTime: MIN_ALARM_DURATION,
         },
@@ -725,4 +722,3 @@ router.get("/charts/amount", async (req, res) => {
 });
 
 export default router;
-

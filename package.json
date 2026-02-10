@@ -1,6 +1,6 @@
 {
   "name": "mlr-tool",
-  "version": "1.9.22",
+  "version": "1.9.23",
   "description": "Tools for MLR",
   "productName": "MLR Tools",
   "author": "Kylian Boss <kylian.boss@bossconcepts.ch>",
@@ -19,14 +19,6 @@
     "build": "quasar build",
     "build-electron": "quasar build -m electron",
     "rebuild": "electron-rebuild -f -w canvas",
-    "migrate": "node src-electron/migrate.js",
-    "migrate:up": "node src-electron/migrate.js up",
-    "migrate:down": "node src-electron/migrate.js down",
-    "migrate:status": "node src-electron/migrate.js status",
-    "migrate:backup": "node src-electron/migrate.js backup",
-    "migrate:restore": "node src-electron/migrate.js restore",
-    "migrate:list": "node src-electron/migrate.js list-backups",
-    "deploy:procedures": "node src-electron/deploy-procedures.js"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
