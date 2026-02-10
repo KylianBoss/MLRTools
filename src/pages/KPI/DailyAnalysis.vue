@@ -47,6 +47,20 @@
 
     <!-- Action Bar -->
     <div class="row q-col-gutter-sm q-mb-md">
+      <div class="col-12 col-sm-auto">
+        <q-input
+          v-model="searchText"
+          outlined
+          dense
+          placeholder="Rechercher..."
+          clearable
+          style="min-width: 250px"
+        >
+          <template v-slot:prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </div>
       <div class="col-auto">
         <q-btn
           color="primary"
@@ -468,6 +482,7 @@ const commentDialog = ref(false);
 const detailsDialog = ref(false);
 const currentAlarm = ref(null);
 const commentText = ref("");
+const searchText = ref("");
 
 const yesterdayDate = computed(() => {
   return dayjs().subtract(1, "day").format("YYYY-MM-DD");
@@ -566,10 +581,29 @@ const columns = [
 ];
 
 const filteredAlarms = computed(() => {
-  if (showGrouped.value) {
-    return alarms.value;
+  let filtered = alarms.value;
+
+  // Filter by showGrouped
+  if (!showGrouped.value) {
+    filtered = filtered.filter((alarm) => !alarm.x_group);
   }
-  return alarms.value.filter((alarm) => !alarm.x_group);
+
+  // Filter by search text
+  if (searchText.value && searchText.value.trim() !== "") {
+    const search = searchText.value.toLowerCase().trim();
+    filtered = filtered.filter((alarm) => {
+      return (
+        alarm.alarmText?.toLowerCase().includes(search) ||
+        alarm.alarmCode?.toLowerCase().includes(search) ||
+        alarm.alarmArea?.toLowerCase().includes(search) ||
+        alarm.dataSource?.toLowerCase().includes(search) ||
+        alarm.severity?.toLowerCase().includes(search) ||
+        alarm.x_comment?.toLowerCase().includes(search)
+      );
+    });
+  }
+
+  return filtered;
 });
 
 const treatedCount = computed(() => {

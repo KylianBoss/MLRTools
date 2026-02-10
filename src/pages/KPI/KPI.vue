@@ -823,17 +823,15 @@ const exportImage = (id) => {
 };
 
 onMounted(async () => {
-  // showLoading(null, true);
+  showLoading("Initialisation...", true);
+  await dataLogStore.initialize();
+
   // toDisplay is the date off the last day with data and not a day off
   let date = dayjs(dataLogStore.dates[dataLogStore.dates.length - 1]);
   while (dataLogStore.isDayOff(date)) {
     date = date.subtract(1, "day");
   }
   toDisplay.value = date.format("YYYY/MM/DD");
-  // await dataLogStore.initialize().then(async () => {
-  //   await getData(toDisplay);
-  //   await getAlarmsByUser(toDisplay);
-  // });
   sectionKPITop3.value = false;
 });
 
