@@ -418,12 +418,7 @@ export async function generateKPIPDF() {
           doc.text(firstAlarm.x_comment || "Intervention", 35, yPosition, {
             width: pageWidth - 10,
           });
-          const commentHeight = doc.heightOfString(
-            firstAlarm.x_comment || "Intervention",
-            {
-              width: pageWidth - 10,
-            }
-          );
+          yPosition += 20;
 
           // Détails de l'intervention
           doc.fontSize(10).font("Helvetica").fillColor("#333");
@@ -432,7 +427,7 @@ export async function generateKPIPDF() {
           doc.text(`Fin: ${endTime.format("HH:mm")}`, 350, yPosition);
           doc.text(`Durée: ${durationText}`, 480, yPosition);
 
-          yPosition += 10; // Espacement entre les interventions
+          yPosition += 20; // Espacement entre les interventions
         }
 
         console.log("Planned interventions summary added to PDF.");
