@@ -263,8 +263,8 @@ function initDB(config) {
         x_comment: {
           type: DataTypes.TEXT,
           allowNull: true,
-          comment: "Comment about the error"
-        }
+          comment: "Comment about the error",
+        },
       },
       {
         timestamps: false,
@@ -789,6 +789,97 @@ function initDB(config) {
         indexes: [
           {
             fields: ["status", "createdAt"],
+          },
+        ],
+      }
+    );
+
+    // Interventions (planifiées et non planifiées)
+    const Intervention = sequelize.define(
+      "Intervention",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        plannedDate: {
+          type: DataTypes.DATEONLY,
+          allowNull: false,
+          comment: "Date for which the intervention is planned",
+        },
+        alarmCode: {
+          type: DataTypes.STRING(50),
+          allowNull: true,
+          comment: "Alarm code to search for (e.g., X003, Shuttle 67)",
+        },
+        description: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          comment: "Description of the intervention",
+        },
+        startTime: {
+          type: DataTypes.TIME,
+          allowNull: true,
+          comment: "Expected start time of the intervention",
+        },
+        endTime: {
+          type: DataTypes.TIME,
+          allowNull: true,
+          comment: "Expected end time of the intervention",
+        },
+        comment: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          comment: "Additional comments about the intervention",
+        },
+        isPlanned: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: true,
+          comment: "Whether this is a planned or unplanned intervention",
+        },
+        createdBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          comment: "User ID of the person who created this intervention",
+          references: {
+            model: "Users",
+            key: "id",
+          },
+        },
+        status: {
+          type: DataTypes.ENUM("pending", "validated", "ignored"),
+          allowNull: false,
+          defaultValue: "pending",
+          comment: "Status of the intervention validation",
+        },
+        validatedAt: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          comment: "Timestamp when the intervention was validated or ignored",
+        },
+        validatedBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          comment: "User ID of the person who validated the intervention",
+          references: {
+            model: "Users",
+            key: "id",
+          },
+        },
+      },
+      {
+        timestamps: true,
+        indexes: [
+          {
+            fields: ["plannedDate"],
+          },
+          {
+            fields: ["status"],
+          },
+          {
+            fields: ["createdBy"],
           },
         ],
       }
@@ -1613,6 +1704,18 @@ function initDB(config) {
 
     Users.hasMany(UserAccess, {
       foreignKey: "userId",
+    });
+
+    // Association Intervention -> Users (creator)
+    Intervention.belongsTo(Users, {
+      foreignKey: "createdBy",
+      as: "creator",
+    });
+
+    // Association Intervention -> Users (validator)
+    Intervention.belongsTo(Users, {
+      foreignKey: "validatedBy",
+      as: "validator",
     });
 
     // Alarms.hasOne(alarmZoneTGWReport, {

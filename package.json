@@ -1,6 +1,6 @@
 {
   "name": "mlr-tool",
-  "version": "1.9.26",
+  "version": "1.9.30",
   "description": "Tools for MLR",
   "productName": "MLR Tools",
   "author": "Kylian Boss <kylian.boss@bossconcepts.ch>",
@@ -39,6 +39,7 @@
     "express": "^4.21.2",
     "html2pdf.js": "^0.14.0",
     "mariadb": "^3.4.0",
+    "mysql2": "^3.17.0",
     "nl2br": "^0.0.3",
     "node-cron": "^3.0.3",
     "nodemailer": "^7.0.6",
@@ -75,6 +76,7 @@
     "eslint-plugin-vue": "^9.0.0",
     "postcss": "^8.4.14",
     "prettier": "^2.5.1",
+    "sequelize-cli": "^6.6.5",
     "vite-plugin-checker": "^0.7.1"
   },
   "engines": {

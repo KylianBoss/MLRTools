@@ -4,6 +4,7 @@ import { Op, QueryTypes, Sequelize } from "sequelize";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import "dayjs/locale/fr.js";
+import { requireAnyPermission } from "../middlewares/permissions.js";
 
 dayjs.extend(customParseFormat);
 dayjs.locale("fr");
@@ -769,199 +770,223 @@ router.get("/daily-analysis", async (req, res) => {
 });
 
 // Update alarm state (planned/unplanned)
-router.patch("/update-state", async (req, res) => {
-  try {
-    const db = getDB();
-    const { dbId, state, updateGroup = false } = req.body;
+router.patch(
+  "/update-state",
+  requireAnyPermission(["canMarkAsPlanned", "canAccessDailyAnalysis"]),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const { dbId, state, updateGroup = false } = req.body;
 
-    if (!dbId || !state) {
-      return res.status(400).json({ error: "dbId and state are required" });
+      if (!dbId || !state) {
+        return res.status(400).json({ error: "dbId and state are required" });
+      }
+
+      if (!["planned", "unplanned"].includes(state)) {
+        return res.status(400).json({ error: "Invalid state value" });
+      }
+
+      // Get the alarm to check if it's part of a group
+      const alarm = await db.models.Datalog.findOne({ where: { dbId } });
+
+      if (!alarm) {
+        return res.status(404).json({ error: "Alarm not found" });
+      }
+
+      // Update the alarm state
+      await db.models.Datalog.update({ x_state: state }, { where: { dbId } });
+
+      let updatedCount = 1;
+      let affectedDbIds = [dbId];
+
+      // If updateGroup is true and alarm is part of a group, update all alarms in the group
+      if (updateGroup && alarm.x_group) {
+        const groupResult = await db.models.Datalog.update(
+          { x_state: state },
+          { where: { x_group: alarm.x_group } }
+        );
+
+        // Get all affected alarm IDs
+        const groupAlarms = await db.models.Datalog.findAll({
+          where: { x_group: alarm.x_group },
+          attributes: ["dbId"],
+        });
+
+        affectedDbIds = groupAlarms.map((a) => a.dbId);
+        updatedCount = groupResult[0];
+      }
+
+      res.json({ success: true, updatedCount, affectedDbIds });
+    } catch (e) {
+      console.error("Error updating alarm state:", e);
+      res.status(500).json({ error: e.message });
     }
-
-    if (!["planned", "unplanned"].includes(state)) {
-      return res.status(400).json({ error: "Invalid state value" });
-    }
-
-    // Get the alarm to check if it's part of a group
-    const alarm = await db.models.Datalog.findOne({ where: { dbId } });
-
-    if (!alarm) {
-      return res.status(404).json({ error: "Alarm not found" });
-    }
-
-    // Update the alarm state
-    await db.models.Datalog.update({ x_state: state }, { where: { dbId } });
-
-    let updatedCount = 1;
-    let affectedDbIds = [dbId];
-
-    // If updateGroup is true and alarm is part of a group, update all alarms in the group
-    if (updateGroup && alarm.x_group) {
-      const groupResult = await db.models.Datalog.update(
-        { x_state: state },
-        { where: { x_group: alarm.x_group } }
-      );
-
-      // Get all affected alarm IDs
-      const groupAlarms = await db.models.Datalog.findAll({
-        where: { x_group: alarm.x_group },
-        attributes: ["dbId"],
-      });
-
-      affectedDbIds = groupAlarms.map((a) => a.dbId);
-      updatedCount = groupResult[0];
-    }
-
-    res.json({ success: true, updatedCount, affectedDbIds });
-  } catch (e) {
-    console.error("Error updating alarm state:", e);
-    res.status(500).json({ error: e.message });
   }
-});
+);
 
 // Mark alarm as treated
-router.patch("/mark-treated", async (req, res) => {
-  try {
-    const db = getDB();
-    const { dbIds } = req.body;
+router.patch(
+  "/mark-treated",
+  requireAnyPermission(["canMarkAsTreated", "canAccessDailyAnalysis"]),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const { dbIds } = req.body;
 
-    if (!dbIds || !Array.isArray(dbIds)) {
-      return res.status(400).json({ error: "dbIds array is required" });
+      if (!dbIds || !Array.isArray(dbIds)) {
+        return res.status(400).json({ error: "dbIds array is required" });
+      }
+
+      await db.models.Datalog.update(
+        { x_treated: true },
+        { where: { dbId: dbIds } }
+      );
+
+      res.json({ success: true, count: dbIds.length });
+    } catch (e) {
+      console.error("Error marking alarms as treated:", e);
+      res.status(500).json({ error: e.message });
     }
-
-    await db.models.Datalog.update(
-      { x_treated: true },
-      { where: { dbId: dbIds } }
-    );
-
-    res.json({ success: true, count: dbIds.length });
-  } catch (e) {
-    console.error("Error marking alarms as treated:", e);
-    res.status(500).json({ error: e.message });
   }
-});
+);
 
 // Update alarm comment
-router.patch("/update-comment", async (req, res) => {
-  try {
-    const db = getDB();
-    const { dbId, comment } = req.body;
+router.patch(
+  "/update-comment",
+  requireAnyPermission([
+    "canUpdateComment",
+    "canAddComment",
+    "canAccessDailyAnalysis",
+  ]),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const { dbId, comment } = req.body;
 
-    if (!dbId) {
-      return res.status(400).json({ error: "dbId is required" });
+      if (!dbId) {
+        return res.status(400).json({ error: "dbId is required" });
+      }
+
+      // Trouver l'alarme et son groupe
+      const alarm = await db.models.Datalog.findOne({ where: { dbId } });
+
+      if (!alarm) {
+        return res.status(404).json({ error: "Alarm not found" });
+      }
+
+      // Si l'alarme fait partie d'un groupe, mettre à jour toutes les alarmes du groupe
+      if (alarm.x_group) {
+        await db.models.Datalog.update(
+          { x_comment: comment },
+          { where: { x_group: alarm.x_group } }
+        );
+
+        const count = await db.models.Datalog.count({
+          where: { x_group: alarm.x_group },
+        });
+        res.json({ success: true, updatedCount: count });
+      } else {
+        // Sinon, mettre à jour seulement cette alarme
+        await db.models.Datalog.update(
+          { x_comment: comment },
+          { where: { dbId } }
+        );
+        res.json({ success: true, updatedCount: 1 });
+      }
+    } catch (e) {
+      console.error("Error updating alarm comment:", e);
+      res.status(500).json({ error: e.message });
     }
-
-    // Trouver l'alarme et son groupe
-    const alarm = await db.models.Datalog.findOne({ where: { dbId } });
-
-    if (!alarm) {
-      return res.status(404).json({ error: "Alarm not found" });
-    }
-
-    // Si l'alarme fait partie d'un groupe, mettre à jour toutes les alarmes du groupe
-    if (alarm.x_group) {
-      await db.models.Datalog.update(
-        { x_comment: comment },
-        { where: { x_group: alarm.x_group } }
-      );
-
-      const count = await db.models.Datalog.count({
-        where: { x_group: alarm.x_group },
-      });
-      res.json({ success: true, updatedCount: count });
-    } else {
-      // Sinon, mettre à jour seulement cette alarme
-      await db.models.Datalog.update(
-        { x_comment: comment },
-        { where: { dbId } }
-      );
-      res.json({ success: true, updatedCount: 1 });
-    }
-  } catch (e) {
-    console.error("Error updating alarm comment:", e);
-    res.status(500).json({ error: e.message });
   }
-});
+);
 
 // Group alarms together
-router.post("/group-alarms", async (req, res) => {
-  try {
-    const db = getDB();
-    const { dbIds, existingGroupId } = req.body;
+router.post(
+  "/group-alarms",
+  requireAnyPermission(["canGroupAlarms", "canAccessDailyAnalysis"]),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const { dbIds, existingGroupId } = req.body;
 
-    if (!dbIds || !Array.isArray(dbIds) || dbIds.length < 2) {
-      return res
-        .status(400)
-        .json({ error: "At least 2 dbIds are required to group" });
-    }
+      if (!dbIds || !Array.isArray(dbIds) || dbIds.length < 2) {
+        return res
+          .status(400)
+          .json({ error: "At least 2 dbIds are required to group" });
+      }
 
-    let groupId;
-    let isNewGroup = false;
+      let groupId;
+      let isNewGroup = false;
 
-    if (existingGroupId) {
-      // Utiliser le groupe existant
-      groupId = existingGroupId;
+      if (existingGroupId) {
+        // Utiliser le groupe existant
+        groupId = existingGroupId;
 
-      // Récupérer le commentaire, x_state et x_treated du groupe existant
-      const existingAlarm = await db.models.Datalog.findOne({
-        where: { x_group: existingGroupId },
-      });
+        // Récupérer le commentaire, x_state et x_treated du groupe existant
+        const existingAlarm = await db.models.Datalog.findOne({
+          where: { x_group: existingGroupId },
+        });
 
-      if (existingAlarm) {
-        // Copier les propriétés du groupe sur les nouvelles alarmes
-        await db.models.Datalog.update(
-          {
-            x_group: groupId,
-            x_comment: existingAlarm.x_comment,
-            x_state: existingAlarm.x_state,
-            x_treated: existingAlarm.x_treated,
-          },
-          { where: { dbId: dbIds } }
-        );
+        if (existingAlarm) {
+          // Copier les propriétés du groupe sur les nouvelles alarmes
+          await db.models.Datalog.update(
+            {
+              x_group: groupId,
+              x_comment: existingAlarm.x_comment,
+              x_state: existingAlarm.x_state,
+              x_treated: existingAlarm.x_treated,
+            },
+            { where: { dbId: dbIds } }
+          );
+        } else {
+          // Fallback si pas d'alarme trouvée dans le groupe
+          await db.models.Datalog.update(
+            { x_group: groupId },
+            { where: { dbId: dbIds } }
+          );
+        }
       } else {
-        // Fallback si pas d'alarme trouvée dans le groupe
+        // Créer un nouveau groupe
+        const maxGroup = await db.models.Datalog.max("x_group");
+        groupId = (maxGroup || 0) + 1;
+        isNewGroup = true;
+
+        // Update all alarms with the group ID
         await db.models.Datalog.update(
           { x_group: groupId },
           { where: { dbId: dbIds } }
         );
       }
-    } else {
-      // Créer un nouveau groupe
-      const maxGroup = await db.models.Datalog.max("x_group");
-      groupId = (maxGroup || 0) + 1;
-      isNewGroup = true;
 
-      // Update all alarms with the group ID
-      await db.models.Datalog.update(
-        { x_group: groupId },
-        { where: { dbId: dbIds } }
-      );
+      res.json({ success: true, groupId, count: dbIds.length, isNewGroup });
+    } catch (e) {
+      console.error("Error grouping alarms:", e);
+      res.status(500).json({ error: e.message });
     }
-
-    res.json({ success: true, groupId, count: dbIds.length, isNewGroup });
-  } catch (e) {
-    console.error("Error grouping alarms:", e);
-    res.status(500).json({ error: e.message });
   }
-});
+);
 
 // Ungroup alarm
-router.patch("/ungroup-alarm", async (req, res) => {
-  try {
-    const db = getDB();
-    const { dbId } = req.body;
+router.patch(
+  "/ungroup-alarm",
+  requireAnyPermission(["canUngroupAlarms", "canAccessDailyAnalysis"]),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const { dbId } = req.body;
 
-    if (!dbId) {
-      return res.status(400).json({ error: "dbId is required" });
+      if (!dbId) {
+        return res.status(400).json({ error: "dbId is required" });
+      }
+
+      await db.models.Datalog.update({ x_group: null }, { where: { dbId } });
+
+      res.json({ success: true });
+    } catch (e) {
+      console.error("Error ungrouping alarm:", e);
+      res.status(500).json({ error: e.message });
     }
-
-    await db.models.Datalog.update({ x_group: null }, { where: { dbId } });
-
-    res.json({ success: true });
-  } catch (e) {
-    console.error("Error ungrouping alarm:", e);
-    res.status(500).json({ error: e.message });
   }
-});
+);
 
 export default router;

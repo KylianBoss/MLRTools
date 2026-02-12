@@ -95,7 +95,9 @@
               v-model="props.row.recieveDailyReport"
               color="primary"
               @update:model-value="App.updateUser(props.row)"
-              :disable="!props.row.email || !props.row.autorised || props.row.isBot"
+              :disable="
+                !props.row.email || !props.row.autorised || props.row.isBot
+              "
             />
           </q-td>
           <q-td key="isTechnician" :props="props" class="text-center">
@@ -382,6 +384,46 @@ const access = [
     section: "DDS",
     label: "Peut accéder à l'analyse quotidienne",
     value: "canAccessDailyAnalysis",
+  },
+  {
+    section: "DDS",
+    label: "Peut grouper des alarmes",
+    value: "canGroupAlarms",
+  },
+  {
+    section: "DDS",
+    label: "Peut dégrouper des alarmes",
+    value: "canUngroupAlarms",
+  },
+  {
+    section: "DDS",
+    label: "Peut ajouter un commentaire",
+    value: "canAddComment",
+  },
+  {
+    section: "DDS",
+    label: "Peut modifier un commentaire",
+    value: "canUpdateComment",
+  },
+  {
+    section: "DDS",
+    label: "Peut marquer comme traité",
+    value: "canMarkAsTreated",
+  },
+  {
+    section: "DDS",
+    label: "Peut marquer comme planifié",
+    value: "canMarkAsPlanned",
+  },
+  {
+    section: "Interventions",
+    label: "Accès au journal d'interventions",
+    value: "canAccessJournal",
+  },
+  {
+    section: "Interventions",
+    label: "Peut valider des interventions",
+    value: "canValidateInterventions",
   },
   // Admin accesses
   { section: "Admin", label: "DB", value: "canAccessAdminDB" },

@@ -12,8 +12,21 @@ const routes = [
         component: () => import("pages/HomePage.vue"),
       },
       // === KPI === //
-      { path: "kpi", name: "kpi", component: () => import("src/pages/KPI/KPI.vue") },
-      { path: "daily-analysis", name: "daily-analysis", component: () => import("src/pages/KPI/DailyAnalysis.vue") },
+      {
+        path: "kpi",
+        name: "kpi",
+        component: () => import("src/pages/KPI/KPI.vue"),
+      },
+      {
+        path: "daily-analysis",
+        name: "daily-analysis",
+        component: () => import("src/pages/KPI/DailyAnalysis.vue"),
+      },
+      {
+        path: "intervention-journal",
+        name: "intervention-journal",
+        component: () => import("src/pages/KPI/InterventionJournal.vue"),
+      },
       {
         path: "search",
         name: "search",

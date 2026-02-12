@@ -1,5 +1,6 @@
 import { boot } from "quasar/wrappers";
 import axios from "axios";
+import { useAppStore } from "stores/app";
 
 // Be careful when using SSR for cross-request state pollution
 // due to creating a Singleton instance here;
@@ -17,6 +18,18 @@ api.interceptors.request.use(
   (config) => {
     // Ajouter des headers si nécessaire
     config.headers["Content-Type"] = "application/json";
+
+    // Ajouter automatiquement le username de l'utilisateur connecté dans les headers
+    try {
+      const appStore = useAppStore();
+      if (appStore.user && appStore.user.username) {
+        config.headers["x-username"] = appStore.user.username;
+      }
+    } catch (error) {
+      // Si le store n'est pas encore initialisé, continuer sans username
+      console.warn("Username not added to request:", error.message);
+    }
+
     return config;
   },
   (error) => {

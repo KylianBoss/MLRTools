@@ -80,6 +80,13 @@
               label="Analyse quotidienne"
               v-if="App.userHasAccess('canAccessDailyAnalysis')"
             />
+            <drawer-item
+              to="intervention-journal"
+              autorisation="canAccessJournal"
+              icon="mdi-notebook-edit-outline"
+              label="Journal d'interventions"
+              v-if="App.userHasAccess('canAccessJournal')"
+            />
           </q-expansion-item>
           <!-- SEARCH -->
           <drawer-item

@@ -66,7 +66,9 @@
           color="primary"
           label="Grouper la sélection"
           icon="link"
-          :disable="selectedAlarms.length < 2"
+          :disable="
+            selectedAlarms.length < 2 || !App.userHasAccess('canGroupAlarms')
+          "
           @click="groupSelectedAlarms"
         />
       </div>
@@ -75,7 +77,10 @@
           color="positive"
           label="Marquer comme traité"
           icon="check"
-          :disable="selectedAlarms.length === 0"
+          :disable="
+            selectedAlarms.length === 0 ||
+            !App.userHasAccess('canMarkAsTreated')
+          "
           @click="markAsTreated"
         />
       </div>
@@ -230,6 +235,7 @@
                 icon="edit"
                 color="grey-7"
                 @click="editComment(props.row)"
+                :disable="!App.userHasAccess('canUpdateComment')"
               >
                 <q-tooltip>Modifier le commentaire</q-tooltip>
               </q-btn>
@@ -244,7 +250,12 @@
           <q-btn flat dense round size="sm" icon="more_vert" color="grey-7">
             <q-menu>
               <q-list style="min-width: 200px">
-                <q-item clickable v-close-popup @click="editComment(props.row)">
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="editComment(props.row)"
+                  :disable="!App.userHasAccess('canUpdateComment')"
+                >
                   <q-item-section avatar>
                     <q-icon name="comment" />
                   </q-item-section>
@@ -254,6 +265,7 @@
                   clickable
                   v-close-popup
                   @click="markSingleAsTreated(props.row.dbId)"
+                  :disable="!App.userHasAccess('canMarkAsTreated')"
                 >
                   <q-item-section avatar>
                     <q-icon name="check" />
@@ -266,6 +278,7 @@
                   clickable
                   v-close-popup
                   @click="classifyAlarm(props.row.alarmId, 'primary')"
+                  :disable="!App.userHasAccess('canClassifyAlarms')"
                 >
                   <q-item-section avatar>
                     <q-icon name="error" color="red" />
@@ -461,6 +474,141 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Intervention Validation Dialog -->
+    <q-dialog
+      v-model="validationDialog"
+      persistent
+      transition-show="scale"
+      transition-hide="scale"
+    >
+      <q-card style="min-width: 700px; max-width: 900px">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">
+            Validation des interventions
+            <q-badge color="primary" :label="pendingInterventions.length" />
+          </div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section v-if="currentIntervention">
+          <div class="q-mb-md">
+            <div class="text-subtitle1 text-weight-bold">
+              <q-badge
+                v-if="currentIntervention.alarmCode"
+                color="primary"
+                :label="currentIntervention.alarmCode"
+                class="q-mr-sm"
+              />
+              {{ currentIntervention.description }}
+            </div>
+            <div class="text-caption text-grey-7 q-mt-xs">
+              <q-icon name="schedule" size="xs" />
+              {{ currentIntervention.startTime }} -
+              {{ currentIntervention.endTime }}
+            </div>
+            <div
+              v-if="currentIntervention.comment"
+              class="q-mt-sm q-pa-sm bg-blue-1 rounded-borders"
+            >
+              {{ currentIntervention.comment }}
+            </div>
+          </div>
+
+          <!-- Search Button -->
+          <div class="q-mb-md">
+            <q-btn
+              color="primary"
+              label="Rechercher les alarmes correspondantes"
+              icon="search"
+              @click="findMatchingAlarms"
+              :loading="searchingAlarms"
+            />
+          </div>
+
+          <!-- Matching Alarms List -->
+          <div v-if="matchingAlarms.length > 0">
+            <div class="text-subtitle2 q-mb-sm">
+              Alarmes trouvées ({{ matchingAlarms.length }})
+            </div>
+            <q-list bordered separator>
+              <q-item
+                v-for="alarm in matchingAlarms"
+                :key="alarm.dbId"
+                clickable
+                @click="toggleAlarmSelection(alarm)"
+              >
+                <q-item-section side>
+                  <q-checkbox
+                    :model-value="selectedMatchingAlarms.includes(alarm.dbId)"
+                    @update:model-value="toggleAlarmSelection(alarm)"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>
+                    {{ alarm.alarmCode }} - {{ alarm.alarmText }}
+                  </q-item-label>
+                  <q-item-label caption>
+                    {{ formatDate(alarm.timeOfOccurence) }} | Zone:
+                    {{ alarm.dataSource }} - {{ alarm.alarmArea }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+
+            <!-- Validation Comment -->
+            <div class="q-mt-md">
+              <q-input
+                v-model="validationComment"
+                label="Commentaire de validation"
+                outlined
+                type="textarea"
+                rows="3"
+                hint="Ce commentaire sera ajouté aux alarmes groupées"
+              />
+            </div>
+
+            <!-- Planned Toggle -->
+            <div class="q-mt-md">
+              <q-toggle
+                v-model="validationIsPlanned"
+                label="Intervention planifiée (maintenance)"
+                color="primary"
+              />
+            </div>
+          </div>
+
+          <div v-else-if="searchPerformed" class="text-center q-pa-md">
+            <q-icon name="search_off" size="48px" color="grey-5" />
+            <div class="text-grey-7 q-mt-sm">Aucune alarme trouvée</div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            label="Ignorer"
+            color="grey-7"
+            @click="ignoreIntervention"
+          />
+          <q-btn
+            flat
+            label="Passer"
+            color="orange"
+            @click="skipIntervention"
+            v-if="pendingInterventions.length > 1"
+          />
+          <q-btn
+            label="Valider"
+            color="positive"
+            icon="check"
+            @click="validateIntervention"
+            :disable="selectedMatchingAlarms.length === 0"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -470,8 +618,10 @@ import { ref, onMounted, computed } from "vue";
 import { useQuasar } from "quasar";
 import dayjs from "dayjs";
 import AlarmGroupView from "src/components/alarms/AlarmGroupView.vue";
+import { useAppStore } from "stores/app";
 
 const $q = useQuasar();
+const App = useAppStore();
 
 const alarms = ref([]);
 const selectedAlarms = ref([]);
@@ -483,6 +633,15 @@ const detailsDialog = ref(false);
 const currentAlarm = ref(null);
 const commentText = ref("");
 const searchText = ref("");
+const validationDialog = ref(false);
+const pendingInterventions = ref([]);
+const currentIntervention = ref(null);
+const matchingAlarms = ref([]);
+const selectedMatchingAlarms = ref([]);
+const validationComment = ref("");
+const validationIsPlanned = ref(false);
+const searchingAlarms = ref(false);
+const searchPerformed = ref(false);
 
 const yesterdayDate = computed(() => {
   return dayjs().subtract(1, "day").format("YYYY-MM-DD");
@@ -697,7 +856,9 @@ const updateState = async (dbId, state) => {
 const markAsTreated = async () => {
   try {
     const dbIds = selectedAlarms.value.map((a) => a.dbId);
-    await api.patch("/alarms/mark-treated", { dbIds });
+    await api.patch("/alarms/mark-treated", {
+      dbIds,
+    });
 
     selectedAlarms.value.forEach((selectedAlarm) => {
       const alarm = alarms.value.find((a) => a.dbId === selectedAlarm.dbId);
@@ -735,7 +896,9 @@ const markSingleAsTreated = async (dbId) => {
         .map((a) => a.dbId);
     }
 
-    await api.patch("/alarms/mark-treated", { dbIds: dbIdsToMark });
+    await api.patch("/alarms/mark-treated", {
+      dbIds: dbIdsToMark,
+    });
 
     // Mettre à jour l'UI
     dbIdsToMark.forEach((id) => {
@@ -830,7 +993,9 @@ const groupSelectedAlarms = async () => {
       });
     } else {
       // Aucun groupe existant, créer un nouveau groupe
-      const response = await api.post("/alarms/group-alarms", { dbIds });
+      const response = await api.post("/alarms/group-alarms", {
+        dbIds,
+      });
 
       selectedAlarms.value.forEach((selectedAlarm) => {
         const alarm = alarms.value.find((a) => a.dbId === selectedAlarm.dbId);
@@ -868,7 +1033,9 @@ const groupSelectedAlarms = async () => {
 
 const ungroupAlarm = async (dbId) => {
   try {
-    await api.patch("/alarms/ungroup-alarm", { dbId });
+    await api.patch("/alarms/ungroup-alarm", {
+      dbId,
+    });
     const alarm = alarms.value.find((a) => a.dbId === dbId);
     if (alarm) {
       alarm.x_group = null;
@@ -970,8 +1137,175 @@ const classifyAlarm = async (alarmId, type) => {
   }
 };
 
+const loadPendingInterventions = async () => {
+  // Vérifier que l'utilisateur a la permission de valider
+  if (!App.userHasAccess("canValidateInterventions")) {
+    return;
+  }
+
+  try {
+    const response = await api.get(
+      `/interventions/pending/${yesterdayDate.value}`
+    );
+    pendingInterventions.value = response.data;
+
+    if (pendingInterventions.value.length > 0) {
+      currentIntervention.value = pendingInterventions.value[0];
+      validationDialog.value = true;
+    }
+  } catch (error) {
+    console.error("Error loading pending interventions:", error);
+  }
+};
+
+const findMatchingAlarms = async () => {
+  if (!currentIntervention.value) return;
+
+  searchingAlarms.value = true;
+  searchPerformed.value = false;
+  try {
+    const response = await api.post("/interventions/find-matching-alarms", {
+      alarmCode: currentIntervention.value.alarmCode,
+      startTime: currentIntervention.value.startTime,
+      endTime: currentIntervention.value.endTime,
+      plannedDate: yesterdayDate.value,
+    });
+
+    matchingAlarms.value = response.data;
+    selectedMatchingAlarms.value = matchingAlarms.value.map((a) => a.dbId);
+
+    // Pré-remplir le commentaire avec description et commentaire si disponibles
+    if (!validationComment.value) {
+      const parts = [];
+      if (currentIntervention.value.description) {
+        parts.push(currentIntervention.value.description);
+      }
+      if (currentIntervention.value.comment) {
+        parts.push(currentIntervention.value.comment);
+      }
+      if (parts.length > 0) {
+        validationComment.value = parts.join(" - ");
+      }
+    }
+
+    // Initialiser le toggle avec la valeur de l'intervention
+    validationIsPlanned.value = currentIntervention.value.isPlanned || false;
+
+    searchPerformed.value = true;
+  } catch (error) {
+    console.error("Error finding matching alarms:", error);
+    $q.notify({
+      type: "negative",
+      message: "Erreur lors de la recherche des alarmes",
+      caption: error.message,
+    });
+  } finally {
+    searchingAlarms.value = false;
+  }
+};
+
+const toggleAlarmSelection = (alarm) => {
+  const index = selectedMatchingAlarms.value.indexOf(alarm.dbId);
+  if (index > -1) {
+    selectedMatchingAlarms.value.splice(index, 1);
+  } else {
+    selectedMatchingAlarms.value.push(alarm.dbId);
+  }
+};
+
+const validateIntervention = async () => {
+  if (!currentIntervention.value || selectedMatchingAlarms.value.length === 0) {
+    return;
+  }
+
+  try {
+    await api.post(
+      `/interventions/journal/${currentIntervention.value.id}/validate`,
+      {
+        selectedAlarmIds: selectedMatchingAlarms.value,
+        comment: validationComment.value,
+        isPlanned: validationIsPlanned.value,
+      }
+    );
+
+    $q.notify({
+      type: "positive",
+      message: "Intervention validée avec succès",
+      caption: `${selectedMatchingAlarms.value.length} alarme(s) groupée(s) et traitée(s)`,
+    });
+
+    // Recharger les alarmes
+    await loadAlarms();
+
+    // Passer à l'intervention suivante ou fermer
+    moveToNextIntervention();
+  } catch (error) {
+    console.error("Error validating intervention:", error);
+    $q.notify({
+      type: "negative",
+      message: "Erreur lors de la validation",
+      caption: error.message,
+    });
+  }
+};
+
+const ignoreIntervention = async () => {
+  if (!currentIntervention.value) return;
+
+  try {
+    await api.post(
+      `/interventions/journal/${currentIntervention.value.id}/ignore`,
+      {}
+    );
+
+    $q.notify({
+      type: "info",
+      message: "Intervention ignorée",
+    });
+
+    moveToNextIntervention();
+  } catch (error) {
+    console.error("Error ignoring intervention:", error);
+    $q.notify({
+      type: "negative",
+      message: "Erreur lors de l'ignorance de l'intervention",
+      caption: error.message,
+    });
+  }
+};
+
+const skipIntervention = () => {
+  moveToNextIntervention();
+};
+
+const moveToNextIntervention = () => {
+  // Retirer l'intervention courante de la liste
+  const currentIndex = pendingInterventions.value.findIndex(
+    (i) => i.id === currentIntervention.value.id
+  );
+  if (currentIndex > -1) {
+    pendingInterventions.value.splice(currentIndex, 1);
+  }
+
+  // Réinitialiser l'état
+  matchingAlarms.value = [];
+  selectedMatchingAlarms.value = [];
+  validationComment.value = "";
+  searchPerformed.value = false;
+
+  if (pendingInterventions.value.length > 0) {
+    // Passer à l'intervention suivante
+    currentIntervention.value = pendingInterventions.value[0];
+  } else {
+    // Fermer le modal
+    validationDialog.value = false;
+    currentIntervention.value = null;
+  }
+};
+
 onMounted(async () => {
   await loadAlarms();
+  await loadPendingInterventions();
 });
 </script>
 
