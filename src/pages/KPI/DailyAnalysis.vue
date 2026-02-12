@@ -787,6 +787,11 @@ const groupSelectedAlarms = async () => {
       // Utiliser le premier groupe trouvé comme groupe cible
       targetGroupId = Array.from(existingGroups)[0];
 
+      // Récupérer les infos du groupe existant
+      const existingGroupAlarm = alarms.value.find(
+        (a) => a.x_group === targetGroupId
+      );
+
       // Si plusieurs groupes existent, ajouter toutes les alarmes de ces groupes
       if (existingGroups.size > 1) {
         const allGroupAlarms = alarms.value.filter((a) =>
@@ -801,11 +806,17 @@ const groupSelectedAlarms = async () => {
         existingGroupId: targetGroupId,
       });
 
-      // Mettre à jour toutes les alarmes concernées
+      // Mettre à jour toutes les alarmes concernées avec les propriétés du groupe
       dbIds.forEach((dbId) => {
         const alarm = alarms.value.find((a) => a.dbId === dbId);
         if (alarm) {
           alarm.x_group = response.data.groupId;
+          // Copier les propriétés du groupe existant
+          if (existingGroupAlarm) {
+            alarm.x_comment = existingGroupAlarm.x_comment;
+            alarm.x_state = existingGroupAlarm.x_state;
+            alarm.x_treated = existingGroupAlarm.x_treated;
+          }
         }
       });
 
@@ -833,6 +844,15 @@ const groupSelectedAlarms = async () => {
         message: `${dbIds.length} alarmes groupées ensemble`,
         caption: `ID du groupe: ${response.data.groupId}`,
       });
+
+      // Ouvrir automatiquement la fenêtre de commentaire pour le nouveau groupe
+      if (response.data.isNewGroup) {
+        currentAlarm.value = alarms.value.find(
+          (a) => a.x_group === response.data.groupId
+        );
+        commentText.value = currentAlarm.value?.x_comment || "";
+        commentDialog.value = true;
+      }
     }
 
     selectedAlarms.value = [];

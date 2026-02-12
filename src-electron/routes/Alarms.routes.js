@@ -896,23 +896,49 @@ router.post("/group-alarms", async (req, res) => {
     }
 
     let groupId;
+    let isNewGroup = false;
 
     if (existingGroupId) {
       // Utiliser le groupe existant
       groupId = existingGroupId;
+
+      // Récupérer le commentaire, x_state et x_treated du groupe existant
+      const existingAlarm = await db.models.Datalog.findOne({
+        where: { x_group: existingGroupId },
+      });
+
+      if (existingAlarm) {
+        // Copier les propriétés du groupe sur les nouvelles alarmes
+        await db.models.Datalog.update(
+          {
+            x_group: groupId,
+            x_comment: existingAlarm.x_comment,
+            x_state: existingAlarm.x_state,
+            x_treated: existingAlarm.x_treated,
+          },
+          { where: { dbId: dbIds } }
+        );
+      } else {
+        // Fallback si pas d'alarme trouvée dans le groupe
+        await db.models.Datalog.update(
+          { x_group: groupId },
+          { where: { dbId: dbIds } }
+        );
+      }
     } else {
       // Créer un nouveau groupe
       const maxGroup = await db.models.Datalog.max("x_group");
       groupId = (maxGroup || 0) + 1;
+      isNewGroup = true;
+
+      // Update all alarms with the group ID
+      await db.models.Datalog.update(
+        { x_group: groupId },
+        { where: { dbId: dbIds } }
+      );
     }
 
-    // Update all alarms with the group ID
-    await db.models.Datalog.update(
-      { x_group: groupId },
-      { where: { dbId: dbIds } }
-    );
-
-    res.json({ success: true, groupId, count: dbIds.length });
+    res.json({ success: true, groupId, count: dbIds.length, isNewGroup });
   } catch (e) {
     console.error("Error grouping alarms:", e);
     res.status(500).json({ error: e.message });
