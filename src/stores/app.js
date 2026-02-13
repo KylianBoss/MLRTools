@@ -11,6 +11,12 @@ export const useAppStore = defineStore("App", {
     users: [],
     cronJobsInitialized: false,
     loading: false,
+    // Timer d'intervention global
+    interventionTimer: {
+      running: false,
+      startDate: null,
+      startTime: "",
+    },
   }),
   getters: {
     userHasAccess: (state) => (menuId) => {
@@ -195,7 +201,47 @@ export const useAppStore = defineStore("App", {
         position: "top",
         timeout: 3000,
       });
-    }
+    },
+    // Actions pour le timer d'intervention
+    startInterventionTimer() {
+      const now = new Date();
+      this.interventionTimer.running = true;
+      this.interventionTimer.startDate = now.toISOString();
+      this.interventionTimer.startTime = new Date(now).toLocaleTimeString(
+        "fr-FR",
+        { hour: "2-digit", minute: "2-digit", second: "2-digit" }
+      );
+      localStorage.setItem("interventionTimerStart", now.toISOString());
+    },
+    stopInterventionTimer() {
+      this.interventionTimer.running = false;
+      this.interventionTimer.startDate = null;
+      this.interventionTimer.startTime = "";
+      localStorage.removeItem("interventionTimerStart");
+    },
+    restoreInterventionTimer() {
+      const savedTimerStart = localStorage.getItem("interventionTimerStart");
+      if (savedTimerStart) {
+        const startDate = new Date(savedTimerStart);
+        const now = new Date();
+        const elapsedMs = now - startDate;
+
+        // Vérifier que le timer n'est pas trop ancien (max 24h)
+        if (elapsedMs < 24 * 60 * 60 * 1000) {
+          this.interventionTimer.running = true;
+          this.interventionTimer.startDate = savedTimerStart;
+          this.interventionTimer.startTime = startDate.toLocaleTimeString(
+            "fr-FR",
+            { hour: "2-digit", minute: "2-digit", second: "2-digit" }
+          );
+          return true;
+        } else {
+          // Timer trop ancien, le supprimer
+          localStorage.removeItem("interventionTimerStart");
+        }
+      }
+      return false;
+    },
   },
   persist: false,
 });
