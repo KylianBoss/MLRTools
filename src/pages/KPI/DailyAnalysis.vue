@@ -93,6 +93,15 @@
           @click="loadAlarms"
         />
       </div>
+      <div class="col-auto">
+        <q-btn
+          color="secondary"
+          label="Assistant IA"
+          icon="psychology"
+          @click="showAIAssistant = true"
+          v-if="App.user?.isAdmin"
+        />
+      </div>
       <div class="col"></div>
       <div class="col-auto">
         <q-btn-toggle
@@ -517,13 +526,23 @@
           </div>
 
           <!-- Search Button -->
-          <div class="q-mb-md">
+          <div class="q-mb-md row q-gutter-sm">
             <q-btn
               color="primary"
-              label="Rechercher les alarmes correspondantes"
+              label="Rechercher les alarmes"
               icon="search"
               @click="findMatchingAlarms"
               :loading="searchingAlarms"
+            />
+            <q-btn
+              color="secondary"
+              label="Recherche IA"
+              icon="auto_awesome"
+              @click="openAIAlarmSearch"
+              v-if="
+                App.user?.isAdmin &&
+                App.userHasAccess('canValidateInterventions')
+              "
             />
           </div>
 
@@ -609,6 +628,21 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- AI Assistant Dialog -->
+    <AIAssistantDialog v-model="showAIAssistant" />
+
+    <!-- AI Alarm Search Dialog -->
+    <AIAlarmSearchDialog
+      v-if="currentIntervention"
+      v-model="showAIAlarmSearch"
+      :description="currentIntervention.description"
+      :alarm-code="currentIntervention.alarmCode"
+      :planned-date="currentIntervention.plannedDate"
+      :start-time="currentIntervention.startTime"
+      :end-time="currentIntervention.endTime"
+      @alarms-selected="handleAIAlarmsSelected"
+    />
   </q-page>
 </template>
 
@@ -618,6 +652,8 @@ import { ref, onMounted, computed } from "vue";
 import { useQuasar } from "quasar";
 import dayjs from "dayjs";
 import AlarmGroupView from "src/components/alarms/AlarmGroupView.vue";
+import AIAssistantDialog from "src/components/dialogs/AIAssistantDialog.vue";
+import AIAlarmSearchDialog from "src/components/dialogs/AIAlarmSearchDialog.vue";
 import { useAppStore } from "stores/app";
 
 const $q = useQuasar();
@@ -642,6 +678,8 @@ const validationComment = ref("");
 const validationIsPlanned = ref(false);
 const searchingAlarms = ref(false);
 const searchPerformed = ref(false);
+const showAIAssistant = ref(false);
+const showAIAlarmSearch = ref(false);
 
 const yesterdayDate = computed(() => {
   return dayjs().subtract(1, "day").format("YYYY-MM-DD");
@@ -1303,16 +1341,29 @@ const moveToNextIntervention = () => {
   }
 };
 
+const openAIAlarmSearch = () => {
+  if (!currentIntervention.value) return;
+  showAIAlarmSearch.value = true;
+};
+
+const handleAIAlarmsSelected = (alarmIds) => {
+  selectedMatchingAlarms.value = alarmIds;
+  searchPerformed.value = true;
+
+  // Update matchingAlarms to show selected ones
+  matchingAlarms.value = matchingAlarms.value.filter((alarm) =>
+    alarmIds.includes(alarm.dbId)
+  );
+
+  $q.notify({
+    type: "positive",
+    message: `${alarmIds.length} alarme(s) sélectionnée(s) par l'IA`,
+    position: "top",
+  });
+};
+
 onMounted(async () => {
   await loadAlarms();
   await loadPendingInterventions();
 });
 </script>
-
-<style scoped>
-.ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-</style>

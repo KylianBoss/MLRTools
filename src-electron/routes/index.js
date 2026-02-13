@@ -14,6 +14,7 @@ import ChartsRouter from "./Charts.routes.js";
 import NotificationsRouter from "./Notifications.routes.js";
 import AuthRouter from "./Auth.routes.js";
 import InterventionsRouter from "./Interventions.routes.js";
+import AIRouter from "./AI.routes.js";
 
 const router = Router();
 
@@ -31,5 +32,6 @@ router.use("/charts", ChartsRouter);
 router.use("/notifications", NotificationsRouter);
 router.use("/auth", AuthRouter);
 router.use("/interventions", InterventionsRouter);
+router.use("/ai", AIRouter);
 
 export default router;

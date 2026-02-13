@@ -139,3 +139,49 @@ export const requireAnyPermission = (permissions) => {
     }
   };
 };
+
+/**
+ * Middleware to check if user is Admin only
+ */
+export const requireAdmin = async (req, res, next) => {
+  const db = getDB();
+  const username =
+    req.headers["x-username"] ||
+    req.body.username ||
+    req.query.username;
+
+  if (!username) {
+    return res.status(400).json({
+      error: "Username is required for admin check",
+    });
+  }
+
+  try {
+    const user = await db.models.Users.findOne({
+      where: { username },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (!user.autorised) {
+      return res.status(403).json({ error: "User not authorized" });
+    }
+
+    if (!user.isAdmin) {
+      return res.status(403).json({ 
+        error: "Admin access required" 
+      });
+    }
+
+    // Attach user info to request
+    req.userId = user.id;
+    req.user = user;
+
+    next();
+  } catch (error) {
+    console.error("Error checking admin access:", error);
+    res.status(500).json({ error: error.message });
+  }
+};

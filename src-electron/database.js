@@ -33,11 +33,15 @@ function initDB(config) {
       password: config.db_password,
       database: config.db_name,
       logging: false,
+      dialectOptions: {
+        connectTimeout: 10000, // 10 secondes pour établir la connexion
+      },
       pool: {
-        max: 10, // Maximum number of connection in pool (default: 5)
-        min: 0, // Minimum number of connection in pool
-        acquire: 60000, // The maximum time, in milliseconds, that pool will try to get connection before throwing error (default: 60000)
-        idle: 10000, // The maximum time, in milliseconds, that a connection can be idle before being released (default: 10000)
+        max: 15, // Augmenté de 10 à 15 pour plus de connexions simultanées
+        min: 2, // Minimum de connexions prêtes
+        acquire: 90000, // Augmenté à 90 secondes pour l'acquisition
+        idle: 20000, // Augmenté à 20 secondes avant libération
+        evict: 30000, // Vérifier les connexions toutes les 30 secondes
       },
     });
 
