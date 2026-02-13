@@ -218,8 +218,12 @@ router.post(
 
     try {
       // Use exact time range without margin
-      const startDateTime = `${plannedDate} ${startTime || "00:00:00"}`;
-      const endDateTime = `${plannedDate} ${endTime || "23:59:59"}`;
+      const startDateTime = dayjs(`${plannedDate} ${startTime || "00:00:00"}`)
+        .subtract(5, "minute")
+        .toISOString();
+      const endDateTime = dayjs(`${plannedDate} ${endTime || "23:59:59"}`)
+        .add(5, "minute")
+        .toISOString();
 
       let whereClause = {
         timeOfOccurence: {
