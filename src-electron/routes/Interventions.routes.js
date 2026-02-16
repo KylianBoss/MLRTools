@@ -274,72 +274,82 @@ router.post(
 
       // If alarmCode is provided, search more intelligently
       if (alarmCode) {
-        const locationParts = alarmCode.split(".");
-        if (locationParts.length >= 2) {
-          const dataSourcePart = locationParts[0].trim();
-          if (dataSourcePart) {
-            whereClause.dataSource = {
-              [db.Sequelize.Op.like]: `${dataSourcePart}%`,
-            };
-          }
-        } else {
-          const dataSourceOnly = alarmCode.trim();
-          if (dataSourceOnly) {
-            whereClause.dataSource = {
-              [db.Sequelize.Op.like]: `${dataSourceOnly}%`,
-            };
-          }
-        }
-
-        // Normalize search term (remove spaces, special chars for flexible matching)
-        const normalizedCode = alarmCode.replace(/[\s\-_]/g, "").toLowerCase();
-
-        // Build flexible search patterns
-        const searchPatterns = [
-          alarmCode, // Exact match
-          `%${alarmCode}%`, // Substring match
-          `%${normalizedCode}%`, // Normalized match
-        ];
-
-        // Try to extract numbers for numeric matching (e.g., "X003" -> "003" or "3")
-        const numMatch = alarmCode.match(/\d+/);
-        if (numMatch) {
-          const numPart = numMatch[0];
-          searchPatterns.push(`%${numPart}%`);
-          // Also try without leading zeros
-          const numWithoutZeros = parseInt(numPart, 10).toString();
-          if (numWithoutZeros !== numPart) {
-            searchPatterns.push(`%${numWithoutZeros}%`);
+        // Handle wildcard: "*" means all installations, no location filtering
+        if (alarmCode !== "*") {
+          const locationParts = alarmCode.split(".");
+          if (locationParts.length >= 2) {
+            const dataSourcePart = locationParts[0].trim();
+            if (dataSourcePart) {
+              whereClause.dataSource = {
+                [db.Sequelize.Op.like]: `${dataSourcePart}%`,
+              };
+            }
+          } else {
+            const dataSourceOnly = alarmCode.trim();
+            if (dataSourceOnly) {
+              whereClause.dataSource = {
+                [db.Sequelize.Op.like]: `${dataSourceOnly}%`,
+              };
+            }
           }
         }
 
-        const alarms = await db.models.Alarms.findAll({
-          where: {
-            [db.Sequelize.Op.or]: [
-              ...searchPatterns.map((pattern) => ({
-                alarmCode: { [db.Sequelize.Op.like]: pattern },
-              })),
-              ...searchPatterns.map((pattern) => ({
-                alarmText: { [db.Sequelize.Op.like]: pattern },
-              })),
-              // Also search in alarmArea for location-based interventions
-              ...searchPatterns.map((pattern) => ({
-                alarmArea: { [db.Sequelize.Op.like]: pattern },
-              })),
-            ],
-          },
-          attributes: ["alarmId"],
-          raw: true,
-        });
-
-        const alarmIds = alarms.map((a) => a.alarmId);
-        if (alarmIds.length > 0) {
-          whereClause.alarmId = { [db.Sequelize.Op.in]: alarmIds };
+        // For wildcard, skip code-based search patterns and return all time-based matches
+        if (alarmCode === "*") {
+          // Skip the detailed search patterns, will return all alarms in time range
         } else {
-          // No alarms found with this code, but still return time-based matches
-          console.log(
-            `No alarm codes matched for "${alarmCode}", returning time-based results only`
-          );
+          // Normalize search term (remove spaces, special chars for flexible matching)
+          const normalizedCode = alarmCode
+            .replace(/[\s\-_]/g, "")
+            .toLowerCase();
+
+          // Build flexible search patterns
+          const searchPatterns = [
+            alarmCode, // Exact match
+            `%${alarmCode}%`, // Substring match
+            `%${normalizedCode}%`, // Normalized match
+          ];
+
+          // Try to extract numbers for numeric matching (e.g., "X003" -> "003" or "3")
+          const numMatch = alarmCode.match(/\d+/);
+          if (numMatch) {
+            const numPart = numMatch[0];
+            searchPatterns.push(`%${numPart}%`);
+            // Also try without leading zeros
+            const numWithoutZeros = parseInt(numPart, 10).toString();
+            if (numWithoutZeros !== numPart) {
+              searchPatterns.push(`%${numWithoutZeros}%`);
+            }
+          }
+
+          const alarms = await db.models.Alarms.findAll({
+            where: {
+              [db.Sequelize.Op.or]: [
+                ...searchPatterns.map((pattern) => ({
+                  alarmCode: { [db.Sequelize.Op.like]: pattern },
+                })),
+                ...searchPatterns.map((pattern) => ({
+                  alarmText: { [db.Sequelize.Op.like]: pattern },
+                })),
+                // Also search in alarmArea for location-based interventions
+                ...searchPatterns.map((pattern) => ({
+                  alarmArea: { [db.Sequelize.Op.like]: pattern },
+                })),
+              ],
+            },
+            attributes: ["alarmId"],
+            raw: true,
+          });
+
+          const alarmIds = alarms.map((a) => a.alarmId);
+          if (alarmIds.length > 0) {
+            whereClause.alarmId = { [db.Sequelize.Op.in]: alarmIds };
+          } else {
+            // No alarms found with this code, but still return time-based matches
+            console.log(
+              `No alarm codes matched for "${alarmCode}", returning time-based results only`
+            );
+          }
         }
       }
 

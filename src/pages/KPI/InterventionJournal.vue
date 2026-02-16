@@ -186,7 +186,7 @@
                 <q-badge
                   v-if="intervention.alarmCode"
                   color="primary"
-                  :label="intervention.alarmCode"
+                  :label="getDisplayAlarmCode(intervention.alarmCode)"
                   class="q-mr-xs"
                 />
                 <span class="text-weight-medium">{{
@@ -357,7 +357,7 @@ const locationOptions = computed(() => {
 
     optionsByValue.set(value, {
       value,
-      label: value,
+      label: getDisplayAlarmCode(value),
       component: "",
     });
   });
@@ -395,6 +395,13 @@ const selectedLocation = computed(() => {
 const isLocationComplete = computed(() => {
   return Boolean(selectedLocationValue.value);
 });
+
+const getDisplayAlarmCode = (code) => {
+  if (code === "*") {
+    return "Toute l'installation";
+  }
+  return code;
+};
 
 watch(selectedLocationValue, () => {
   if (isAutoSelectingLocation.value) {

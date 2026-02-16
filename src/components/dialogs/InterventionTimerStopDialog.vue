@@ -135,12 +135,25 @@ const initialLocation = props.locations.find((location) => {
 });
 
 const selectedLocationValue = ref(
-  initialLocation ? buildLocationValue(initialLocation) : ""
+  initialAlarmCode === "*"
+    ? "*"
+    : initialLocation
+    ? buildLocationValue(initialLocation)
+    : ""
 );
 const locationInput = ref(selectedLocationValue.value || "");
 const locationFilter = ref("");
-const customLocationValues = ref([]);
+const customLocationValues = ref(
+  initialAlarmCode && !initialLocation ? [initialAlarmCode] : []
+);
 const isAutoSelectingLocation = ref(false);
+
+const getDisplayAlarmCode = (code) => {
+  if (code === "*") {
+    return "Toute l'installation";
+  }
+  return code;
+};
 
 const locationOptions = computed(() => {
   const optionsByValue = new Map();
@@ -170,7 +183,7 @@ const locationOptions = computed(() => {
 
     optionsByValue.set(value, {
       value,
-      label: value,
+      label: getDisplayAlarmCode(value),
       component: "",
     });
   });
