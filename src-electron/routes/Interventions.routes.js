@@ -5,6 +5,39 @@ import { requirePermission } from "../middlewares/permissions.js";
 
 const router = Router();
 
+// Get all interventions
+router.get("/journal", async (req, res) => {
+  const db = getDB();
+
+  try {
+    const interventions = await db.models.Intervention.findAll({
+      include: [
+        {
+          model: db.models.Users,
+          as: "creator",
+          attributes: ["fullname"],
+        },
+      ],
+      order: [["plannedDate", "ASC"], ['startTime', 'ASC']],
+    });
+
+    // Format data to include fullname at root level
+    const formattedInterventions = interventions.map((i) => {
+      const data = i.toJSON();
+      return {
+        ...data,
+        creatorFullname: data.creator?.fullname || data.createdBy,
+        creator: undefined,
+      };
+    });
+
+    res.json(formattedInterventions);
+  } catch (error) {
+    console.error("Error fetching interventions:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get interventions for a specific date
 router.get(
   "/journal/:date",
