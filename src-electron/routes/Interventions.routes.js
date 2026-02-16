@@ -18,7 +18,10 @@ router.get("/journal", async (req, res) => {
           attributes: ["fullname"],
         },
       ],
-      order: [["plannedDate", "ASC"], ['startTime', 'ASC']],
+      order: [
+        ["plannedDate", "ASC"],
+        ["startTime", "ASC"],
+      ],
     });
 
     // Format data to include fullname at root level
