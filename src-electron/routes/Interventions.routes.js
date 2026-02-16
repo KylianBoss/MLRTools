@@ -271,6 +271,23 @@ router.post(
 
       // If alarmCode is provided, search more intelligently
       if (alarmCode) {
+        const locationParts = alarmCode.split(".");
+        if (locationParts.length >= 2) {
+          const dataSourcePart = locationParts[0].trim();
+          if (dataSourcePart) {
+            whereClause.dataSource = {
+              [db.Sequelize.Op.like]: `${dataSourcePart}%`,
+            };
+          }
+        } else {
+          const dataSourceOnly = alarmCode.trim();
+          if (dataSourceOnly) {
+            whereClause.dataSource = {
+              [db.Sequelize.Op.like]: `${dataSourceOnly}%`,
+            };
+          }
+        }
+
         // Normalize search term (remove spaces, special chars for flexible matching)
         const normalizedCode = alarmCode.replace(/[\s\-_]/g, "").toLowerCase();
 

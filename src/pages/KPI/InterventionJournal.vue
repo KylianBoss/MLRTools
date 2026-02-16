@@ -68,12 +68,23 @@
         <div class="text-subtitle2 q-mb-sm">Enregistrer une intervention</div>
         <div class="row q-col-gutter-sm">
           <div class="col-12 col-md-6">
-            <q-input
-              v-model="form.alarmCode"
-              label="Code d'alarme"
+            <q-select
+              v-model="selectedLocationValue"
+              :options="filteredLocationOptions"
+              label="Position"
               outlined
               dense
-              hint="Ex: X003, Shuttle 67, etc."
+              clearable
+              use-input
+              new-value-mode="add-unique"
+              emit-value
+              map-options
+              option-label="label"
+              option-value="value"
+              input-debounce="0"
+              @filter="onLocationFilter"
+              @new-value="onLocationNewValue"
+              hint="Ex: X001.1120, X101.1360, etc."
             />
           </div>
           <div class="col-12 col-md-3">
@@ -83,6 +94,7 @@
               outlined
               dense
               type="time"
+              hint="Début de l'arrêt de l'installation"
             />
           </div>
           <div class="col-12 col-md-3">
@@ -92,6 +104,7 @@
               outlined
               dense
               type="time"
+              hint="Fin de l'arrêt de l'installation"
             />
           </div>
           <div class="col-12">
@@ -128,7 +141,7 @@
               label="Ajouter"
               icon="add"
               @click="addIntervention"
-              :disable="!form.alarmCode && !form.description"
+              :disable="!isLocationComplete"
               class="q-px-sm"
             />
           </div>
@@ -260,169 +273,39 @@
         </div>
       </q-card-section>
     </q-card>
-
-    <!-- Edit Dialog -->
-    <q-dialog v-model="editDialog" persistent>
-      <q-card style="min-width: 500px">
-        <q-card-section>
-          <div class="text-h6">Modifier l'intervention</div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <q-input
-            v-model="editForm.alarmCode"
-            label="Code d'alarme"
-            outlined
-            dense
-            class="q-mb-md"
-          />
-          <div class="row q-col-gutter-sm q-mb-md">
-            <div class="col-6">
-              <q-input
-                v-model="editForm.startTime"
-                label="Heure de début"
-                outlined
-                dense
-                type="time"
-              />
-            </div>
-            <div class="col-6">
-              <q-input
-                v-model="editForm.endTime"
-                label="Heure de fin"
-                outlined
-                dense
-                type="time"
-              />
-            </div>
-          </div>
-          <q-input
-            v-model="editForm.description"
-            label="Description"
-            outlined
-            dense
-            class="q-mb-md"
-          />
-          <q-input
-            v-model="editForm.comment"
-            label="Commentaire"
-            outlined
-            dense
-            type="textarea"
-            rows="3"
-            class="q-mb-md"
-          />
-          <q-toggle
-            v-model="editForm.isPlanned"
-            label="Intervention planifiée (maintenance)"
-            color="primary"
-          />
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat label="Annuler" color="grey-7" v-close-popup />
-          <q-btn label="Enregistrer" color="primary" @click="saveEdit" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <!-- Timer Stop Dialog -->
-    <q-dialog v-model="timerDialog" persistent>
-      <q-card style="min-width: 500px">
-        <q-card-section>
-          <div class="text-h6">Enregistrer l'intervention</div>
-          <div class="text-subtitle2 text-grey-7">
-            Durée totale: {{ displayTime }}
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <q-input
-            v-model="timerForm.alarmCode"
-            label="Code d'alarme *"
-            outlined
-            dense
-            class="q-mb-md"
-            hint="Ex: X003, Shuttle 67, etc."
-          />
-          <q-input
-            v-model="timerForm.description"
-            label="Description *"
-            outlined
-            dense
-            class="q-mb-md"
-            hint="Ex: chute d'une pile de caisse, maintenance du stingray"
-          />
-          <div class="row q-col-gutter-sm q-mb-md">
-            <div class="col-6">
-              <q-input
-                v-model="timerForm.startTime"
-                label="Heure de début"
-                outlined
-                dense
-                type="time"
-                readonly
-              />
-            </div>
-            <div class="col-6">
-              <q-input
-                v-model="timerForm.endTime"
-                label="Heure de fin"
-                outlined
-                dense
-                type="time"
-                readonly
-              />
-            </div>
-          </div>
-          <q-input
-            v-model="timerForm.comment"
-            label="Commentaire"
-            outlined
-            dense
-            type="textarea"
-            rows="3"
-            class="q-mb-md"
-          />
-          <q-toggle
-            v-model="timerForm.isPlanned"
-            label="Intervention planifiée (maintenance)"
-            color="primary"
-          />
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat label="Annuler" color="grey-7" @click="cancelTimer" />
-          <q-btn
-            label="Enregistrer"
-            color="primary"
-            @click="saveTimerIntervention"
-            :disable="!timerForm.alarmCode && !timerForm.description"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import {
+  ref,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+  watch,
+  nextTick,
+} from "vue";
 import { useQuasar } from "quasar";
 import { api } from "boot/axios";
 import dayjs from "dayjs";
 import { useAppStore } from "stores/app";
+import { useInterventionEditDialog } from "src/plugins/useInterventionEditDialog";
+import { useInterventionTimerStopDialog } from "src/plugins/useInterventionTimerStopDialog";
 
 const $q = useQuasar();
 const App = useAppStore();
+const { openEditDialog } = useInterventionEditDialog();
+const { openTimerStopDialog } = useInterventionTimerStopDialog();
 
 const interventions = ref([]);
 const loading = ref(false);
-const editDialog = ref(false);
+const locations = ref([]);
+const selectedLocationValue = ref("");
+const locationInput = ref("");
+const locationFilter = ref("");
+const customLocationValues = ref([]);
+const isAutoSelectingLocation = ref(false);
 
-// Timer state - utiliser le store global
-const timerDialog = ref(false);
-
-const timerRunning = computed(() => App.interventionTimer.running);
 const timerStartTime = computed(() => App.interventionTimer.startTime);
 const elapsedSeconds = ref(0);
 
@@ -438,24 +321,158 @@ const form = ref({
   isPlanned: false,
 });
 
-const editForm = ref({
-  id: null,
-  alarmCode: "",
-  description: "",
-  startTime: "",
-  endTime: "",
-  comment: "",
-  isPlanned: false,
+const buildLocationValue = (location) => {
+  if (!location?.dataSource || !location?.position) {
+    return "";
+  }
+
+  return `${location.dataSource}.${location.position}`;
+};
+
+const locationOptions = computed(() => {
+  const optionsByValue = new Map();
+
+  locations.value
+    .filter((location) => location.dataSource && location.position)
+    .forEach((location) => {
+      const value = buildLocationValue(location);
+      if (!value || optionsByValue.has(value)) {
+        return;
+      }
+
+      const label = location.component
+        ? `${value} - ${location.component}`
+        : value;
+      optionsByValue.set(value, {
+        value,
+        label,
+        component: location.component || "",
+      });
+    });
+
+  customLocationValues.value.forEach((value) => {
+    if (!value || optionsByValue.has(value)) {
+      return;
+    }
+
+    optionsByValue.set(value, {
+      value,
+      label: value,
+      component: "",
+    });
+  });
+
+  return [...optionsByValue.values()].sort((a, b) =>
+    a.label.localeCompare(b.label)
+  );
 });
 
-const timerForm = ref({
-  alarmCode: "",
-  description: "",
-  startTime: "",
-  endTime: "",
-  comment: "",
-  isPlanned: false,
+const filteredLocationOptions = computed(() => {
+  if (!locationFilter.value) {
+    return locationOptions.value;
+  }
+
+  const search = locationFilter.value.toLowerCase();
+  return locationOptions.value.filter((option) =>
+    option.label.toLowerCase().includes(search)
+  );
 });
+
+const selectedLocation = computed(() => {
+  if (!selectedLocationValue.value) {
+    return null;
+  }
+
+  return (
+    locations.value.find(
+      (location) =>
+        buildLocationValue(location).toLowerCase() ===
+        selectedLocationValue.value.toLowerCase()
+    ) || null
+  );
+});
+
+const isLocationComplete = computed(() => {
+  return Boolean(selectedLocationValue.value);
+});
+
+watch(selectedLocationValue, () => {
+  if (isAutoSelectingLocation.value) {
+    return;
+  }
+
+  locationInput.value = selectedLocationValue.value || "";
+});
+
+const findLocationByInput = (value) => {
+  const normalized = (value || "").trim();
+  if (!normalized) {
+    return null;
+  }
+
+  return (
+    locations.value.find((location) => {
+      return (
+        buildLocationValue(location).toLowerCase() === normalized.toLowerCase()
+      );
+    }) || null
+  );
+};
+
+const applyLocationMatch = (location) => {
+  if (!location) {
+    return;
+  }
+
+  isAutoSelectingLocation.value = true;
+  selectedLocationValue.value = buildLocationValue(location);
+  locationInput.value = selectedLocationValue.value;
+  nextTick(() => {
+    isAutoSelectingLocation.value = false;
+  });
+};
+
+const onLocationFilter = (value, update) => {
+  locationFilter.value = value;
+  locationInput.value = value;
+  tryAutoSelectFromInput(value);
+  update(() => {});
+};
+
+const onLocationNewValue = (value, done) => {
+  const normalized = (value || "").trim();
+  if (!normalized) {
+    return;
+  }
+
+  if (!customLocationValues.value.includes(normalized)) {
+    customLocationValues.value.push(normalized);
+  }
+
+  selectedLocationValue.value = normalized;
+  locationFilter.value = "";
+  if (done) {
+    done(normalized, "add-unique");
+  }
+};
+
+const tryAutoSelectFromInput = (value) => {
+  const match = findLocationByInput(value);
+  if (match) {
+    applyLocationMatch(match);
+  }
+};
+
+watch(
+  () => locations.value,
+  (list) => {
+    if (!list?.length || !locationInput.value) {
+      return;
+    }
+
+    tryAutoSelectFromInput(locationInput.value);
+  }
+);
 
 const todayDate = computed(() => {
   return dayjs().format("YYYY-MM-DD");
@@ -498,6 +515,16 @@ const loadInterventions = async () => {
 };
 
 const addIntervention = async () => {
+  if (!isLocationComplete.value) {
+    $q.notify({
+      type: "warning",
+      message: "Veuillez sélectionner une position",
+    });
+    return;
+  }
+
+  form.value.alarmCode = selectedLocationValue.value;
+
   if (!form.value.alarmCode && !form.value.description) {
     $q.notify({
       type: "warning",
@@ -526,6 +553,9 @@ const addIntervention = async () => {
       comment: "",
       isPlanned: false,
     };
+    selectedLocationValue.value = "";
+    locationInput.value = "";
+    locationFilter.value = "";
 
     // Reload list
     await loadInterventions();
@@ -539,22 +569,30 @@ const addIntervention = async () => {
   }
 };
 
-const editIntervention = (intervention) => {
-  editForm.value = {
-    id: intervention.id,
-    alarmCode: intervention.alarmCode || "",
-    description: intervention.description || "",
-    startTime: intervention.startTime || "",
-    endTime: intervention.endTime || "",
-    comment: intervention.comment || "",
-    isPlanned: intervention.isPlanned,
-  };
-  editDialog.value = true;
+const editIntervention = async (intervention) => {
+  const result = await openEditDialog({
+    intervention: {
+      id: intervention.id,
+      alarmCode: intervention.alarmCode || "",
+      description: intervention.description || "",
+      startTime: intervention.startTime || "",
+      endTime: intervention.endTime || "",
+      comment: intervention.comment || "",
+      isPlanned: intervention.isPlanned,
+    },
+    locations: locations.value,
+  });
+
+  if (!result) {
+    return;
+  }
+
+  await saveEdit(result);
 };
 
-const saveEdit = async () => {
+const saveEdit = async (payload) => {
   try {
-    const { id, ...updateData } = editForm.value;
+    const { id, ...updateData } = payload;
     await api.patch(`/interventions/journal/${id}`, updateData);
 
     $q.notify({
@@ -562,7 +600,6 @@ const saveEdit = async () => {
       message: "Intervention modifiée avec succès",
     });
 
-    editDialog.value = false;
     await loadInterventions();
   } catch (error) {
     console.error("Error updating intervention:", error);
@@ -625,14 +662,21 @@ const startTimer = () => {
   });
 };
 
-const stopTimer = () => {
+const stopTimer = async () => {
   if (timerInterval.value) {
     clearInterval(timerInterval.value);
   }
 
+  // If the intervention is less than a minute, just reset without showing the dialog
+  if (elapsedSeconds.value < 60) {
+    elapsedSeconds.value = 0;
+    App.stopInterventionTimer();
+    return;
+  }
+
   // Pre-fill the form with timer data
   const startDate = new Date(App.interventionTimer.startDate);
-  timerForm.value = {
+  const timerForm = {
     alarmCode: "",
     description: "",
     startTime: dayjs(startDate).format("HH:mm"),
@@ -641,7 +685,18 @@ const stopTimer = () => {
     isPlanned: false,
   };
 
-  timerDialog.value = true;
+  const result = await openTimerStopDialog({
+    timerForm,
+    displayTime: displayTime.value,
+    onCancel: cancelTimer,
+    locations: locations.value,
+  });
+
+  if (!result) {
+    return;
+  }
+
+  await saveTimerIntervention(result);
 };
 
 const cancelTimer = () => {
@@ -650,15 +705,14 @@ const cancelTimer = () => {
     timerInterval.value = null;
   }
 
-  timerDialog.value = false;
   elapsedSeconds.value = 0;
 
   // Arrêter le timer dans le store
   App.stopInterventionTimer();
 };
 
-const saveTimerIntervention = async () => {
-  if (!timerForm.value.alarmCode && !timerForm.value.description) {
+const saveTimerIntervention = async (payload) => {
+  if (!payload.alarmCode && !payload.description) {
     $q.notify({
       type: "warning",
       message: "Veuillez remplir au moins le code d'alarme ou la description",
@@ -669,7 +723,7 @@ const saveTimerIntervention = async () => {
   try {
     await api.post("/interventions/journal", {
       plannedDate: todayDate.value,
-      ...timerForm.value,
+      ...payload,
     });
 
     $q.notify({
@@ -683,20 +737,10 @@ const saveTimerIntervention = async () => {
       timerInterval.value = null;
     }
 
-    timerDialog.value = false;
     elapsedSeconds.value = 0;
 
     // Arrêter le timer dans le store
     App.stopInterventionTimer();
-
-    timerForm.value = {
-      alarmCode: "",
-      description: "",
-      startTime: "",
-      endTime: "",
-      comment: "",
-      isPlanned: false,
-    };
 
     // Reload list
     await loadInterventions();
@@ -712,6 +756,15 @@ const saveTimerIntervention = async () => {
 
 onMounted(async () => {
   await loadInterventions();
+
+  api
+    .get("/locations")
+    .then((response) => {
+      locations.value = response.data;
+    })
+    .catch((error) => {
+      console.error("Error loading locations:", error);
+    });
 
   // Démarrer l'interval local si le timer est en cours
   if (App.interventionTimer.running) {

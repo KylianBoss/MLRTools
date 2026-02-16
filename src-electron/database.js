@@ -122,73 +122,48 @@ function initDB(config) {
       }
     );
 
-    const Element = sequelize.define(
-      "Element",
-      {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-          comment: "Unique identifier for the element",
-        },
-        name: {
-          type: DataTypes.STRING,
-          allowNull: false,
-          comment: "Name of the element, e.g. 'Element 1', 'Element 2', etc.",
-        },
-      },
-      {
-        timestamps: false,
-        indexes: [
-          {
-            unique: true,
-            fields: ["name"],
-          },
-        ],
-      }
-    );
-
     const Location = sequelize.define(
       "Location",
       {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-          comment: "Unique identifier for the location",
-        },
         dataSource: {
           type: DataTypes.STRING,
-          allowNull: false,
-          comment: "Data source of the location, e.g. 'F001', 'F002', etc.",
+          primaryKey: true,
+          comment: "Data source identifier, e.g. 'F001', 'F002', etc.",
         },
-        module: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          comment: "Module of the location, e.g. '1131', '1132', etc.",
-        },
-        complement: {
-          type: DataTypes.INTEGER.UNSIGNED,
+        lac : {
+          type: DataTypes.STRING,
           allowNull: true,
-          defaultValue: 0,
-          comment: "Complement of the location, e.g. '01', '02', etc.",
+          comment: "LAC code for the location, if applicable",
         },
-        element: {
-          type: DataTypes.INTEGER.UNSIGNED,
+        position: {
+          type: DataTypes.STRING,
+          primaryKey: true,
+          allowNull: false,
+          comment: "Position identifier within the data source, e.g. '1011', '1435', etc.",
+        },
+        component: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Component name, e.g. 'Stingray N', 'KRC Kingdrive conveyor', etc.",
+        },
+        serial_number: {
+          type: DataTypes.STRING,
           allowNull: true,
-          references: {
-            model: Element,
-            key: "id",
-          },
-          comment: "ID of the element associated with the location",
+          comment: "Serial number of the component, if applicable",
         },
+        state: {
+          type: DataTypes.ENUM('operational', 'degraded', 'maintenance', 'failed', 'out_of_service', 'unknown'),
+          allowNull: false,
+          defaultValue: 'operational',
+          comment: "Current state of the location, e.g. 'operational', 'degraded', 'maintenance', 'failed', 'out_of_service', or 'unknown'",
+        }
       },
       {
         timestamps: false,
         indexes: [
           {
             unique: true,
-            fields: ["dataSource", "module", "complement"],
+            fields: ["dataSource", "position"],
           },
         ],
       }
@@ -501,6 +476,11 @@ function initDB(config) {
         fullname: {
           type: DataTypes.STRING,
           defaultValue: "Unknown",
+        },
+        initials: {
+          type: DataTypes.STRING(10),
+          allowNull: true,
+          comment: "Initials of the user, e.g. 'MLR_XAP', 'MVB_KFD', etc.",
         },
         email: {
           type: DataTypes.STRING,
@@ -882,467 +862,6 @@ function initDB(config) {
             fields: ["createdBy"],
           },
         ],
-      }
-    );
-
-    // Maintenance
-    const MaintenancePlan = sequelize.define(
-      "MaintenancePlan",
-      {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-        },
-        location: {
-          type: DataTypes.STRING,
-          allowNull: false,
-          comment: "Location of the maintenance",
-        },
-        type: {
-          type: DataTypes.ENUM("A", "B", "C", "D"),
-          allowNull: false,
-          comment:
-            "Type of maintenance, can be 'A', 'B', 'C'. A = Every 3 months, B = Every 6 months, C = Every 9 months, D = Every year",
-        },
-        description: {
-          type: DataTypes.STRING,
-          allowNull: false,
-          comment: "Description of the maintenance plan",
-        },
-        lastMaintenance: {
-          type: DataTypes.DATE,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Last time the maintenance was performed",
-        },
-        nextMaintenance: {
-          type: DataTypes.DATE,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Next scheduled maintenance time",
-        },
-        linkedTo: {
-          type: DataTypes.STRING,
-          allowNull: true,
-          defaultValue: null,
-          comment:
-            "If the maintenance plan is linked to a specific device or system, this field contains the identifier",
-        },
-      },
-      {
-        timestamps: false,
-        indexes: [
-          {
-            unique: true,
-            fields: ["location", "type"],
-          },
-        ],
-        hooks: {
-          // If the lastMaintenance is updated, update the nextMaintenance
-          afterUpdate: (maintenance) => {
-            if (maintenance.changed("lastMaintenance")) {
-              const now = dayjs(maintenance.lastMaintenance);
-              switch (maintenance.type) {
-                case "A":
-                  maintenance.nextMaintenance = now.add(3, "month").toDate();
-                  break;
-                case "B":
-                  maintenance.nextMaintenance = now.add(6, "month").toDate();
-                  break;
-                case "C":
-                  maintenance.nextMaintenance = now.add(9, "month").toDate();
-                  break;
-                default:
-                  maintenance.nextMaintenance = now.add(1, "year").toDate();
-                  break;
-              }
-              maintenance.save();
-            }
-          },
-        },
-      }
-    );
-
-    const MaintenanceSchedule = sequelize.define(
-      "MaintenanceSchedule",
-      {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-        },
-        maintenancePlanId: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          references: {
-            model: MaintenancePlan,
-            key: "id",
-          },
-          allowNull: false,
-          comment: "ID of the maintenance plan",
-        },
-        locationId: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: true,
-          references: {
-            model: Location,
-            key: "id",
-          },
-          defaultValue: null,
-          comment: "ID of the location where the maintenance is scheduled",
-        },
-        scheduledTime: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          comment: "Scheduled time for the maintenance",
-        },
-        status: {
-          type: DataTypes.ENUM(
-            "scheduled",
-            "assigned",
-            "in_progress",
-            "completed",
-            "cancelled"
-          ),
-          allowNull: false,
-          defaultValue: "scheduled",
-          comment:
-            "Status of the maintenance schedule, can be 'scheduled', 'assigned', 'completed', or 'cancelled'",
-        },
-        assignedTo: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: true,
-          references: {
-            model: Users,
-            key: "id",
-          },
-          comment: "User assigned to perform the maintenance",
-        },
-        notes: {
-          type: DataTypes.TEXT,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Notes about the maintenance schedule",
-        },
-        actualMaintenanceLogId: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: true,
-          comment: "ID of the actual maintenance log, if any",
-        },
-      },
-      {
-        timestamps: false,
-        indexes: [
-          {
-            unique: true,
-            fields: ["maintenancePlanId", "scheduledTime"],
-          },
-        ],
-        hooks: {
-          beforeCreate: (schedule) => {
-            if (!schedule.scheduledTime) {
-              schedule.scheduledTime = dayjs().add(1, "day").toDate();
-            }
-          },
-        },
-      }
-    );
-
-    const Maintenance = sequelize.define(
-      "Maintenance",
-      {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-        },
-        maintenancePlanId: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          references: {
-            model: MaintenancePlan,
-            key: "id",
-          },
-          allowNull: false,
-        },
-        performedBy: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          references: {
-            model: Users,
-            key: "id",
-          },
-          comment: "User who performed the maintenance",
-        },
-        startTime: {
-          type: DataTypes.DATE,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Start time of the maintenance",
-        },
-        endTime: {
-          type: DataTypes.DATE,
-          allowNull: true,
-          defaultValue: null,
-          comment: "End time of the maintenance",
-        },
-        duration: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Duration of the maintenance in seconds",
-        },
-        notes: {
-          type: DataTypes.TEXT,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Notes about the maintenance",
-        },
-        report: {
-          type: DataTypes.JSON,
-          allowNull: true,
-          defaultValue: null,
-          get() {
-            return JSON.parse(this.getDataValue("report"));
-          },
-          set(value) {
-            this.setDataValue("report", JSON.stringify(value));
-          },
-          comment:
-            "Report of the maintenance, can contain details about the steps performed",
-        },
-      },
-      {
-        timestamps: false,
-      }
-    );
-
-    const MaintenanceSteps = sequelize.define(
-      "MaintenanceSteps",
-      {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-        },
-        activityType: {
-          type: DataTypes.ENUM("preventive", "corrective", "inspection"),
-          allowNull: false,
-          defaultValue: "preventive",
-          comment:
-            "Type of activity for the step, can be 'preventive', 'corrective', or 'inspection'",
-        },
-        description: {
-          type: DataTypes.TEXT,
-          allowNull: false,
-          comment: "Description of the maintenance step",
-        },
-        defect: {
-          type: DataTypes.TEXT,
-          allowNull: true,
-          defaultValue: null,
-          comment:
-            "Explaination of things that means that the step has to be marked as defect",
-        },
-        process: {
-          type: DataTypes.TEXT,
-          allowNull: true,
-          defaultValue: null,
-          comment:
-            "Explaination of the process when this is an inspection step",
-        },
-        fixing: {
-          type: DataTypes.TEXT,
-          allowNull: true,
-          defaultValue: null,
-          comment:
-            "Explaination of things that means that the step has to be marked as fixing",
-        },
-        answerType: {
-          type: DataTypes.ENUM("boolean", "value", "replace"),
-          allowNull: false,
-          defaultValue: "boolean",
-          comment:
-            "Type of answer for the step, can be 'boolean', 'value' or 'replace'",
-        },
-        goodAnswer: {
-          type: DataTypes.STRING,
-          allowNull: true,
-          defaultValue: null,
-          comment:
-            "Good answer for the step, can be 'yes', 'no', or a specific value",
-        },
-        notesPlaceholder: {
-          type: DataTypes.TEXT,
-          allowNull: true,
-          defaultValue: null,
-          comment:
-            "Placeholder for notes in the step, can be used to provide additional information",
-        },
-        doneButton: {
-          type: DataTypes.BOOLEAN,
-          allowNull: false,
-          defaultValue: false,
-          comment: "If true, the step has a done button to mark it as done",
-        },
-        linkedImage: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: true,
-          references: {
-            model: "Images",
-            key: "id",
-          },
-          comment: "ID of the linked image for the step",
-        },
-      },
-      {
-        timestamps: false,
-      }
-    );
-
-    const MaintenancePlanSteps = sequelize.define(
-      "MaintenancePlanSteps",
-      {
-        maintenancePlanId: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          primaryKey: true,
-          references: {
-            model: MaintenancePlan,
-            key: "id",
-          },
-          comment: "ID of the maintenance plan",
-        },
-        stepId: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          primaryKey: true,
-          references: {
-            model: MaintenanceSteps,
-            key: "id",
-          },
-          comment: "ID of the maintenance step",
-        },
-        order: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
-          defaultValue: 0,
-          comment: "Order of the step in the plan",
-        },
-      },
-      {
-        timestamps: false,
-        indexes: [
-          {
-            unique: true,
-            fields: ["maintenancePlanId", "stepId"],
-          },
-        ],
-      }
-    );
-
-    // Maintenance associations
-    // MaintenancePlan.hasMany(Maintenance, {
-    //   foreignKey: "maintenancePlanId",
-    //   as: "maintenances",
-    // });
-    // Maintenance.belongsTo(MaintenancePlan, {
-    //   foreignKey: "maintenancePlanId",
-    //   as: "maintenancePlan",
-    // });
-    // MaintenanceSteps.belongsToMany(Maintenance, {
-    //   through: "MaintenanceStepsMaintenance",
-    //   foreignKey: "stepId",
-    //   otherKey: "maintenanceId",
-    //   as: "maintenances",
-    // });
-
-    const Images = sequelize.define(
-      "Images",
-      {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-        },
-        name: {
-          type: DataTypes.STRING,
-          allowNull: false,
-          comment: "Name of the image file",
-        },
-        data: {
-          type: DataTypes.BLOB("long"),
-          allowNull: false,
-          comment: "Image data in binary format",
-        },
-      },
-      {
-        timestamps: false,
-        indexes: [
-          {
-            unique: true,
-            fields: ["name"],
-          },
-        ],
-      }
-    );
-
-    const Stingrays = sequelize.define(
-      "Stingrays",
-      {
-        id: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          primaryKey: true,
-          autoIncrement: true,
-        },
-        state: {
-          type: DataTypes.ENUM("active", "broken", "ready", "testing"),
-          allowNull: false,
-          defaultValue: "ready",
-          comment: "State of the stingray, can be 'active' or 'inactive'",
-        },
-        location: {
-          type: DataTypes.STRING,
-          allowNull: true,
-          defaultValue: null,
-          comment:
-            "Location of the stingray, e.g. 'W001-01', 'W001-02', 'Maintenance', etc.",
-        },
-        lastLocationChange: {
-          type: DataTypes.DATE,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Last time the stingray was moved to a new location",
-        },
-        lastStateChange: {
-          type: DataTypes.DATE,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Last time the state of the stingray was changed",
-        },
-        lastMaintenance: {
-          type: DataTypes.DATE,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Last time the stingray was maintained",
-        },
-        nextMaintenance: {
-          type: DataTypes.DATE,
-          allowNull: true,
-          defaultValue: null,
-          comment: "Next scheduled maintenance time for the stingray",
-        },
-        lastUpdateBy: {
-          type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: true,
-          references: {
-            model: Users,
-            key: "id",
-          },
-          comment: "User who last updated the stingray",
-        },
-      },
-      {
-        timestamps: false,
       }
     );
 

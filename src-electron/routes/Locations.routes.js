@@ -9,24 +9,12 @@ router.get("/", async (req, res) => {
     const locations = await db.models.Location.findAll({
       order: [
         ["dataSource", "ASC"],
-        ["module", "ASC"],
-        ["complement", "ASC"],
+        ["lac", "ASC"],
+        ["position", "ASC"],
       ],
     });
 
-    const locationsWithDetails = await Promise.all(
-      locations.map(async (location) => {
-        const element = await db.models.Element.findByPk(location.element, {
-          attributes: ["name"],
-        });
-        return {
-          ...location.toJSON(),
-          element: element ? element.name : "N/A",
-        };
-      })
-    );
-
-    res.json(locationsWithDetails);
+    res.json(locations);
   } catch (error) {
     console.error("Error fetching locations:", error);
     res.status(500).json({ error: error.message });
@@ -34,4 +22,3 @@ router.get("/", async (req, res) => {
 });
 
 export default router;
-
