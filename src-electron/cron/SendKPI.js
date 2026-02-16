@@ -549,7 +549,8 @@ async function generateImage(data) {
     ...trendLine.data,
   ].sort((a, b) => a - b);
   const percentile90Index = Math.floor(allErrorValues.length * 0.9);
-  const maxScale = Math.round(allErrorValues[percentile90Index] * 1.5);
+  const maxScale =
+    data.options.maxY || Math.round(allErrorValues[percentile90Index] * 1.5);
 
   const browser = await getBrowser();
   const page = await browser.newPage();

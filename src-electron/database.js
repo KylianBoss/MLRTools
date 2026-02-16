@@ -341,6 +341,11 @@ function initDB(config) {
           defaultValue: true,
           comment: "If true, the group will be displayed in the charts page",
         },
+        maxY: {
+          type: DataTypes.FLOAT,
+          allowNull: true,
+          comment: "Max Y value for the charts"
+        }
       },
       {
         timestamps: false,
@@ -1078,6 +1083,11 @@ function initDB(config) {
           },
           comment: "ID of the user who created the chart",
         },
+        maxY: {
+          type: DataTypes.FLOAT,
+          allowNull: true,
+          comment: "Max Y value for the charts"
+        }
       },
       {
         timestamps: false,

@@ -305,6 +305,10 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
       }
     );
 
+    const group = await db.models.ZoneGroups.findOne({
+      where: { zoneGroupName: groupName },
+    });
+
     const chartData = [];
     for (let i = WINDOW - 1; i >= 0; i--) {
       const date = dayjs()
@@ -356,6 +360,7 @@ router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
       chartData: filledChartData,
       options: {
         xTickAmount: parseInt(CHART_X_TICK_AMOUNT),
+        maxY: group.maxY || null,
       },
     });
   } catch (error) {
