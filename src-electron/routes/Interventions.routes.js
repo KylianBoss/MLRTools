@@ -266,10 +266,10 @@ router.post(
           [db.Sequelize.Op.between]: [startDateTime, endDateTime],
         },
         // Exclude already treated alarms
-        [db.Sequelize.Op.or]: [
-          { x_treated: { [db.Sequelize.Op.is]: null } },
-          { x_treated: false },
-        ],
+        // [db.Sequelize.Op.or]: [
+        //   { x_treated: { [db.Sequelize.Op.is]: null } },
+        //   { x_treated: false },
+        // ],
       };
 
       // If alarmCode is provided, search more intelligently

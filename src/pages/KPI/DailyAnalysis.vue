@@ -538,6 +538,7 @@
                 :key="alarm.dbId"
                 clickable
                 @click="toggleAlarmSelection(alarm)"
+                :class="alarm.x_treated ? 'treated' : null"
               >
                 <q-item-section side>
                   <q-checkbox
@@ -604,7 +605,6 @@
             color="positive"
             icon="check"
             @click="validateIntervention"
-            :disable="selectedMatchingAlarms.length === 0"
           />
         </q-card-actions>
       </q-card>
@@ -1172,7 +1172,7 @@ const findMatchingAlarms = async () => {
     });
 
     matchingAlarms.value = response.data;
-    selectedMatchingAlarms.value = matchingAlarms.value.map((a) => a.dbId);
+    selectedMatchingAlarms.value = matchingAlarms.value.filter((a) => !a.x_treated).map((a) => a.dbId);
 
     // Pré-remplir le commentaire avec description et commentaire si disponibles
     if (!validationComment.value) {
@@ -1214,7 +1214,7 @@ const toggleAlarmSelection = (alarm) => {
 };
 
 const validateIntervention = async () => {
-  if (!currentIntervention.value || selectedMatchingAlarms.value.length === 0) {
+  if (!currentIntervention.value) {
     return;
   }
 
@@ -1228,11 +1228,18 @@ const validateIntervention = async () => {
       }
     );
 
-    $q.notify({
-      type: "positive",
-      message: "Intervention validée avec succès",
-      caption: `${selectedMatchingAlarms.value.length} alarme(s) groupée(s) et traitée(s)`,
-    });
+    if (selectedMatchingAlarms.value.length > 0) {
+      $q.notify({
+        type: "positive",
+        message: "Intervention validée avec succès",
+        caption: `${selectedMatchingAlarms.value.length} alarme(s) groupée(s) et traitée(s)`,
+      });
+    } else {
+      $q.notify({
+        type: "positive",
+        message: "Intervention validée avec succès",
+      });
+    }
 
     // Recharger les alarmes
     await loadAlarms();
@@ -1309,10 +1316,13 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.treated {
+  background: rgba(33, 186, 69, 0.3);
 }
 </style>
