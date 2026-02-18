@@ -430,27 +430,41 @@ router.post(
         return res.status(404).json({ error: "Intervention not found" });
       }
 
+      const alarmsQty = selectedAlarmIds.length;
+
       // Create a new group
       const maxGroup = await db.models.Datalog.max("x_group");
       const groupId = (maxGroup || 0) + 1;
 
-      // Update all selected alarms
-      await db.models.Datalog.update(
-        {
-          x_group: groupId,
-          x_comment: comment || intervention.comment,
-          x_state:
-            isPlanned !== undefined
-              ? isPlanned
-                ? "planned"
-                : "unplanned"
-              : intervention.isPlanned
-              ? "planned"
-              : "unplanned",
-          x_treated: true,
-        },
-        { where: { dbId: selectedAlarmIds } }
-      );
+      // Get all alarms by dbId
+      const alarmsToUpdate = await dm.models.Datalog.findAll({
+        where: { dbId: selectedAlarmIds },
+      });
+
+      // Check if the number of found alarms matches the number of selected IDs
+      if (alarmsToUpdate.length !== alarmsQty) {
+        console.warn(
+          `Warning: Number of alarms found (${alarmsToUpdate.length}) does not match number of selected IDs (${alarmsQty})`
+        );
+        return res.status(400).json({
+          error: `Mismatch in selected alarms. Found ${alarmsToUpdate.length} alarms for ${selectedAlarmIds.length} IDs.`,
+        });
+      }
+
+      // Update all selected alarms in a transaction
+      await db.sequelize.transaction(async (transaction) => {
+        for (const alarm of alarmsToUpdate) {
+          await alarm.update(
+            {
+              x_treated: true,
+              x_comment: comment || "",
+              x_group: groupId,
+              x_state: isPlanned ? "planned" : "unplanned",
+            },
+            { transaction }
+          );
+        }
+      });
 
       // Mark intervention as validated
       await intervention.update({
