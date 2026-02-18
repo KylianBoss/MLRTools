@@ -419,7 +419,7 @@ router.post(
     const { id } = req.params;
     const { selectedAlarmIds, comment, isPlanned } = req.body;
 
-    if (!selectedAlarmIds || selectedAlarmIds.length === 0) {
+    if (!selectedAlarmIds) {
       return res.status(400).json({ error: "selectedAlarmIds is required" });
     }
 
