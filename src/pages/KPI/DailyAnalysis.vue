@@ -553,6 +553,9 @@
                   <q-item-label caption>
                     {{ formatDate(alarm.timeOfOccurence) }} | Zone:
                     {{ alarm.dataSource }} - {{ alarm.alarmArea }}
+                    <span v-if="alarm.x_treated && alarm.x_comment" class="text-bold text-negative">
+                      => {{ alarm.x_comment }}
+                    </span>
                   </q-item-label>
                 </q-item-section>
               </q-item>
@@ -1172,7 +1175,9 @@ const findMatchingAlarms = async () => {
     });
 
     matchingAlarms.value = response.data;
-    selectedMatchingAlarms.value = matchingAlarms.value.filter((a) => !a.x_treated).map((a) => a.dbId);
+    selectedMatchingAlarms.value = matchingAlarms.value
+      .filter((a) => !a.x_treated)
+      .map((a) => a.dbId);
 
     // Pré-remplir le commentaire avec description et commentaire si disponibles
     if (!validationComment.value) {

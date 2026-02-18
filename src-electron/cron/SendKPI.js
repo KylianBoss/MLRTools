@@ -436,6 +436,124 @@ export async function generateKPIPDF() {
       }
       // END PLANNED INTERVENTIONS
 
+      // START UNPLANNED INTERVENTIONS
+      console.log("Generating unplanned interventions summary...");
+      await updateJob(
+        {
+          lastLog: "Generating unplanned interventions summary...",
+        },
+        jobName
+      );
+
+      // Récupérer toutes les alarmes non-planifiées avec commentaire
+      const unplannedAlarms = await db.models.Datalog.findAll({
+        where: {
+          timeOfOccurence: {
+            [db.Sequelize.Op.between]: [startOfDay, endOfDay],
+          },
+          x_state: {
+            [db.Sequelize.Op.ne]: "planned",
+          },
+          x_comment: {
+            [db.Sequelize.Op.ne]: null,
+          },
+        },
+        order: [
+          ["x_group", "ASC"],
+          ["timeOfOccurence", "ASC"],
+        ],
+        raw: true,
+      });
+
+      if (unplannedAlarms.length > 0) {
+        doc.addPage();
+
+        // Titre de la page
+        doc
+          .fontSize(20)
+          .fillColor("#000")
+          .text("Résumé des interventions non-planifiées", {
+            align: "center",
+          });
+        doc.moveDown();
+        doc
+          .fontSize(12)
+          .fillColor("#666")
+          .text(
+            `Date: ${yesterday.format("DD/MM/YYYY")} - ${
+              unplannedAlarms.length
+            } alarme(s)`,
+            {
+              align: "center",
+            }
+          );
+        doc.moveDown(2);
+
+        // Grouper les alarmes par x_group
+        const groupedUnplannedAlarms = unplannedAlarms.reduce((acc, alarm) => {
+          const groupKey = alarm.x_group || `single_${alarm.dbId}`;
+          if (!acc[groupKey]) {
+            acc[groupKey] = [];
+          }
+          acc[groupKey].push(alarm);
+          return acc;
+        }, {});
+
+        let yPosition = doc.y;
+        const maxY = doc.page.height - 60; // Marge du bas
+
+        for (const [groupKey, alarms] of Object.entries(
+          groupedUnplannedAlarms
+        )) {
+          const isGroup = !groupKey.startsWith("single_");
+          const firstAlarm = alarms[0]; // Premier alarme du groupe
+          const lastAlarm = alarms[alarms.length - 1]; // Dernière alarme du groupe
+
+          // Calculer le temps total de l'intervention
+          const startTime = dayjs(firstAlarm.timeOfOccurence);
+          const endTime = dayjs(
+            lastAlarm.timeOfAcknowledge || lastAlarm.timeOfOccurence
+          ).add(lastAlarm.duration || 0, "second");
+          const totalDuration = endTime.diff(startTime, "minute");
+          const hours = Math.floor(totalDuration / 60);
+          const minutes = totalDuration % 60;
+          const durationText =
+            hours > 0
+              ? `${hours}h${minutes.toString().padStart(2, "0")}`
+              : `${minutes}min`;
+
+          // Vérifier si on doit ajouter une nouvelle page
+          if (yPosition > maxY - 100) {
+            doc.addPage();
+            yPosition = 60;
+          }
+
+          // Encadré pour chaque intervention
+          doc.rect(30, yPosition - 5, pageWidth, 0).stroke();
+
+          // Titre = Commentaire
+          doc.fontSize(12).fillColor("#d32f2f").font("Helvetica-Bold");
+          doc.text(firstAlarm.x_comment || "Intervention", 35, yPosition, {
+            width: pageWidth - 10,
+          });
+          yPosition += 20;
+
+          // Détails de l'intervention
+          doc.fontSize(10).font("Helvetica").fillColor("#333");
+          doc.text(`Zone: ${firstAlarm.dataSource}`, 35, yPosition);
+          doc.text(`Début: ${startTime.format("HH:mm")}`, 200, yPosition);
+          doc.text(`Fin: ${endTime.format("HH:mm")}`, 350, yPosition);
+          doc.text(`Durée: ${durationText}`, 480, yPosition);
+
+          yPosition += 20; // Espacement entre les interventions
+        }
+
+        console.log("Unplanned interventions summary added to PDF.");
+      } else {
+        console.log("No unplanned interventions found for yesterday.");
+      }
+      // END UNPLANNED INTERVENTIONS
+
       doc.end();
 
       stream.on("finish", async () => {

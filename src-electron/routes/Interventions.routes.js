@@ -253,7 +253,7 @@ router.post(
     }
 
     try {
-      // Use exact time range without margin
+      // Use exact time range with 5 minutes margin
       const startDateTime = dayjs(`${plannedDate} ${startTime || "00:00:00"}`)
         .subtract(5, "minute")
         .toISOString();
@@ -261,15 +261,26 @@ router.post(
         .add(5, "minute")
         .toISOString();
 
+      // Get alarms to find the alarms type primary or null
+      const primaryAlarms = await db.models.Alarms.findAll({
+        where: {
+          type: {
+            [db.Sequelize.Op.or]: ["primary", null],
+          },
+        },
+        attributes: ["alarmId"],
+        raw: true,
+      });
+      console.log(primaryAlarms)
+
       let whereClause = {
         timeOfOccurence: {
           [db.Sequelize.Op.between]: [startDateTime, endDateTime],
         },
-        // Exclude already treated alarms
-        // [db.Sequelize.Op.or]: [
-        //   { x_treated: { [db.Sequelize.Op.is]: null } },
-        //   { x_treated: false },
-        // ],
+        // Check to take only the primary alarms or null type
+        alarmId: {
+          [db.Sequelize.Op.in]: primaryAlarms.map((a) => a.alarmId),
+        },
       };
 
       // If alarmCode is provided, search more intelligently
