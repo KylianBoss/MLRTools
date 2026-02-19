@@ -470,7 +470,8 @@ router.post(
       }
 
       // Update all selected alarms in a transaction
-      await db.sequelize.transaction(async (transaction) => {
+      const t = await db.transaction();
+      try {
         for (const alarm of alarmsToUpdate) {
           await alarm.update(
             {
@@ -479,10 +480,15 @@ router.post(
               x_group: groupId,
               x_state: isPlanned ? "planned" : "unplanned",
             },
-            { transaction }
+            { transaction: t }
           );
         }
-      });
+        await t.commit();
+      } catch (error) {
+        await t.rollback();
+        console.error("Error updating alarms:", error);
+        return res.status(500).json({ error: "Failed to update alarms" });
+      }
 
       // Mark intervention as validated
       await intervention.update({
