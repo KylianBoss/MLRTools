@@ -271,16 +271,23 @@ router.post(
         attributes: ["alarmId"],
         raw: true,
       });
-      console.log(primaryAlarms)
 
-      let whereClause = {
-        timeOfOccurence: {
+      const whereClause = {};
+      if (dayjs(startDateTime).diff(dayjs(endDateTime), "minute") > 0) {
+        whereClause.timeOfOccurence = {
           [db.Sequelize.Op.between]: [startDateTime, endDateTime],
-        },
-        // Check to take only the primary alarms or null type
-        alarmId: {
-          [db.Sequelize.Op.in]: primaryAlarms.map((a) => a.alarmId),
-        },
+        };
+      } else {
+        whereClause.timeOfOccurence = {
+          [db.Sequelize.Op.between]: [
+            dayjs(startDateTime).startOf("day").toISOString(),
+            dayjs(endDateTime).endOf("day").toISOString(),
+          ],
+        };
+      }
+      // Check to take only the primary alarms or null type
+      whereClause.alarmId = {
+        [db.Sequelize.Op.in]: primaryAlarms.map((a) => a.alarmId),
       };
 
       // If alarmCode is provided, search more intelligently
@@ -448,7 +455,7 @@ router.post(
       const groupId = (maxGroup || 0) + 1;
 
       // Get all alarms by dbId
-      const alarmsToUpdate = await dm.models.Datalog.findAll({
+      const alarmsToUpdate = await db.models.Datalog.findAll({
         where: { dbId: selectedAlarmIds },
       });
 
