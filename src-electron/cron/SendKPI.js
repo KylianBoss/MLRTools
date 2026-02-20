@@ -386,8 +386,7 @@ export async function generateKPIPDF() {
         let yPosition = doc.y;
         const maxY = doc.page.height - 60; // Marge du bas
 
-        for (const [groupKey, alarms] of Object.entries(groupedPlannedAlarms)) {
-          const isGroup = !groupKey.startsWith("single_");
+        for (const [_, alarms] of Object.entries(groupedPlannedAlarms)) {
           const firstAlarm = alarms[0]; // Premier alarme du groupe
           const lastAlarm = alarms[alarms.length - 1]; // Dernière alarme du groupe
 
@@ -404,18 +403,12 @@ export async function generateKPIPDF() {
               ? `${hours}h${minutes.toString().padStart(2, "0")}`
               : `${minutes}min`;
 
-          // Vérifier si on doit ajouter une nouvelle page
-          if (yPosition > maxY - 100) {
-            doc.addPage();
-            yPosition = 60;
-          }
-
           // Encadré pour chaque intervention
           doc.rect(30, yPosition - 5, pageWidth, 0).stroke();
 
           // Titre = Commentaire
           doc.fontSize(12).fillColor("#0066cc").font("Helvetica-Bold");
-          doc.text(firstAlarm.x_comment || "Intervention", 35, yPosition, {
+          doc.text(firstAlarm.x_comment || firstAlarm.alarmText, 35, yPosition, {
             width: pageWidth - 10,
           });
           yPosition += 20;
@@ -426,8 +419,15 @@ export async function generateKPIPDF() {
           doc.text(`Début: ${startTime.format("HH:mm")}`, 200, yPosition);
           doc.text(`Fin: ${endTime.format("HH:mm")}`, 350, yPosition);
           doc.text(`Durée: ${durationText}`, 480, yPosition);
+          doc.text(`Nombre d'alarmes: ${alarms.length}`, 580, yPosition);
 
           yPosition += 20; // Espacement entre les interventions
+
+          // Vérifier si on doit ajouter une nouvelle page
+          if (yPosition > maxY) {
+            doc.addPage();
+            yPosition = 30;
+          }
         }
 
         console.log("Planned interventions summary added to PDF.");
@@ -502,10 +502,9 @@ export async function generateKPIPDF() {
         let yPosition = doc.y;
         const maxY = doc.page.height - 60; // Marge du bas
 
-        for (const [groupKey, alarms] of Object.entries(
+        for (const [_, alarms] of Object.entries(
           groupedUnplannedAlarms
         )) {
-          const isGroup = !groupKey.startsWith("single_");
           const firstAlarm = alarms[0]; // Premier alarme du groupe
           const lastAlarm = alarms[alarms.length - 1]; // Dernière alarme du groupe
 
@@ -522,18 +521,12 @@ export async function generateKPIPDF() {
               ? `${hours}h${minutes.toString().padStart(2, "0")}`
               : `${minutes}min`;
 
-          // Vérifier si on doit ajouter une nouvelle page
-          if (yPosition > maxY - 100) {
-            doc.addPage();
-            yPosition = 60;
-          }
-
           // Encadré pour chaque intervention
           doc.rect(30, yPosition - 5, pageWidth, 0).stroke();
 
           // Titre = Commentaire
           doc.fontSize(12).fillColor("#d32f2f").font("Helvetica-Bold");
-          doc.text(firstAlarm.x_comment || "Intervention", 35, yPosition, {
+          doc.text(firstAlarm.x_comment || firstAlarm.alarmText, 35, yPosition, {
             width: pageWidth - 10,
           });
           yPosition += 20;
@@ -544,8 +537,15 @@ export async function generateKPIPDF() {
           doc.text(`Début: ${startTime.format("HH:mm")}`, 200, yPosition);
           doc.text(`Fin: ${endTime.format("HH:mm")}`, 350, yPosition);
           doc.text(`Durée: ${durationText}`, 480, yPosition);
+          doc.text(`Nombre d'alarmes: ${alarms.length}`, 580, yPosition);
 
           yPosition += 20; // Espacement entre les interventions
+
+          // Vérifier si on doit ajouter une nouvelle page
+          if (yPosition > maxY) {
+            doc.addPage();
+            yPosition = 30;
+          }
         }
 
         console.log("Unplanned interventions summary added to PDF.");
