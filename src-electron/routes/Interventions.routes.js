@@ -2,8 +2,11 @@ import { Router } from "express";
 import { getDB } from "../database.js";
 import dayjs from "dayjs";
 import { requirePermission } from "../middlewares/permissions.js";
+import { Op } from "sequelize";
+import isBetween from "dayjs/plugin/isBetween.js";
 
 const router = Router();
+dayjs.extend(isBetween);
 
 // Get all interventions
 router.get("/journal", async (req, res) => {
@@ -261,164 +264,82 @@ router.post(
         .add(5, "minute")
         .toISOString();
 
-      // Get alarms to find the alarms type primary or null
+      // Get all alarms for the day
+      const MIN_ALARM_DURATION = await db.models.Settings.getValue(
+        "MIN_ALARM_DURATION"
+      );
+
       const primaryAlarms = await db.models.Alarms.findAll({
         where: {
-          type: {
-            [db.Sequelize.Op.or]: ["primary", null],
-          },
+          type: "primary",
         },
         attributes: ["alarmId"],
-        raw: true,
-      });
-
-      const whereClause = {};
-      if (dayjs(startDateTime).diff(dayjs(endDateTime), "minute") > 0) {
-        whereClause.timeOfOccurence = {
-          [db.Sequelize.Op.between]: [startDateTime, endDateTime],
-        };
-      } else {
-        whereClause.timeOfOccurence = {
-          [db.Sequelize.Op.between]: [
-            dayjs(startDateTime).startOf("day").toISOString(),
-            dayjs(endDateTime).endOf("day").toISOString(),
-          ],
-        };
-      }
-      // Check to take only the primary alarms or null type
-      whereClause.alarmId = {
-        [db.Sequelize.Op.in]: primaryAlarms.map((a) => a.alarmId),
-      };
-
-      // If alarmCode is provided, search more intelligently
-      if (alarmCode) {
-        // Handle wildcard: "*" means all installations, no location filtering
-        if (alarmCode !== "*") {
-          const locationParts = alarmCode.split(".");
-          if (locationParts.length >= 2) {
-            const dataSourcePart = locationParts[0].trim();
-            if (dataSourcePart) {
-              whereClause.dataSource = {
-                [db.Sequelize.Op.like]: `${dataSourcePart}%`,
-              };
-            }
-          } else {
-            const dataSourceOnly = alarmCode.trim();
-            if (dataSourceOnly) {
-              whereClause.dataSource = {
-                [db.Sequelize.Op.like]: `${dataSourceOnly}%`,
-              };
-            }
-          }
-        }
-
-        // For wildcard, skip code-based search patterns and return all time-based matches
-        if (alarmCode === "*") {
-          // Skip the detailed search patterns, will return all alarms in time range
-        } else {
-          // Normalize search term (remove spaces, special chars for flexible matching)
-          const normalizedCode = alarmCode
-            .replace(/[\s\-_]/g, "")
-            .toLowerCase();
-
-          // Build flexible search patterns
-          const searchPatterns = [
-            alarmCode, // Exact match
-            `%${alarmCode}%`, // Substring match
-            `%${normalizedCode}%`, // Normalized match
-          ];
-
-          // Try to extract numbers for numeric matching (e.g., "X003" -> "003" or "3")
-          const numMatch = alarmCode.match(/\d+/);
-          if (numMatch) {
-            const numPart = numMatch[0];
-            searchPatterns.push(`%${numPart}%`);
-            // Also try without leading zeros
-            const numWithoutZeros = parseInt(numPart, 10).toString();
-            if (numWithoutZeros !== numPart) {
-              searchPatterns.push(`%${numWithoutZeros}%`);
-            }
-          }
-
-          const alarms = await db.models.Alarms.findAll({
-            where: {
-              [db.Sequelize.Op.or]: [
-                ...searchPatterns.map((pattern) => ({
-                  alarmCode: { [db.Sequelize.Op.like]: pattern },
-                })),
-                ...searchPatterns.map((pattern) => ({
-                  alarmText: { [db.Sequelize.Op.like]: pattern },
-                })),
-                // Also search in alarmArea for location-based interventions
-                ...searchPatterns.map((pattern) => ({
-                  alarmArea: { [db.Sequelize.Op.like]: pattern },
-                })),
-              ],
-            },
-            attributes: ["alarmId"],
-            raw: true,
-          });
-
-          const alarmIds = alarms.map((a) => a.alarmId);
-          if (alarmIds.length > 0) {
-            whereClause.alarmId = { [db.Sequelize.Op.in]: alarmIds };
-          } else {
-            // No alarms found with this code, but still return time-based matches
-            console.log(
-              `No alarm codes matched for "${alarmCode}", returning time-based results only`
-            );
-          }
-        }
-      }
-
-      const datalogs = await db.models.Datalog.findAll({
-        where: whereClause,
+      }).then((primaryAlarms) => primaryAlarms.map((a) => a.alarmId));
+      let alarms = await db.models.Datalog.findAll({
+        where: {
+          duration: {
+            [Op.gte]: MIN_ALARM_DURATION,
+          },
+          timeOfOccurence: {
+            [Op.between]: [
+              dayjs().subtract(1, "day").startOf("day").toDate(),
+              dayjs().subtract(1, "day").endOf("day").toDate(),
+            ],
+          },
+          alarmId: primaryAlarms,
+        },
         order: [["timeOfOccurence", "ASC"]],
       });
 
-      // Calculate relevance score for each alarm
-      const results = datalogs.map((log) => {
-        const logData = log.toJSON();
-        let score = 0;
+      // If time difference between start and end dateTime is equal to 0 minutes, continue, otherwise filter alarms ba date and time
+      if (dayjs(endDateTime).diff(dayjs(startDateTime), "minute") > 0) {
+        console.log(
+          "Looking for alarms between ",
+          startDateTime,
+          " and ",
+          endDateTime
+        );
+        alarms = alarms.filter(
+          (a) =>
+            dayjs(a.timeOfOccurence).isBetween(startDateTime, endDateTime) ||
+            dayjs(a.timeOfOccurence).isSame(startDateTime) ||
+            dayjs(a.timeOfOccurence).isSame(endDateTime) ||
+            dayjs(a.timeOfAcknowledge).isBetween(startDateTime, endDateTime) ||
+            dayjs(a.timeOfAcknowledge).isSame(startDateTime) ||
+            dayjs(a.timeOfAcknowledge).isSame(endDateTime)
+        );
+      }
 
-        // Score based on alarm code matching
-        if (alarmCode && logData) {
-          const alarmCodeLower = (logData.alarmCode || "").toLowerCase();
-          const alarmTextLower = (logData.alarmText || "").toLowerCase();
-          const searchLower = alarmCode.toLowerCase();
+      // Check for the alarmCode
+      if (alarmCode !== "*") {
+        const [dataSource, layoutPosition] = alarmCode
+          .split(".")
+          .map((part) => part.trim());
 
-          if (alarmCodeLower === searchLower) score += 100; // Exact match
-          else if (alarmCodeLower.includes(searchLower))
-            score += 50; // Contains
-          else if (alarmTextLower.includes(searchLower)) score += 30; // In text
-        }
-
-        // Score based on time proximity (closer to intervention time = higher score)
-        if (startTime && logData.timeOfOccurence) {
-          const interventionStart = dayjs(`${plannedDate} ${startTime}`);
-          const alarmTime = dayjs(logData.timeOfOccurence);
-          const diffMinutes = Math.abs(
-            alarmTime.diff(interventionStart, "minute")
+        if (/stingray.\d/i.test(alarmCode)) {
+          const [_, number] = alarmCode.split(".");
+          alarms = alarms.filter((a) =>
+            a.alarmText.toLowerCase().includes(`Shuttle ${number}`)
           );
-
-          if (diffMinutes <= 5) score += 20; // Very close (within 5 min)
-          else if (diffMinutes <= 15) score += 10; // Close (within 15 min)
-          else if (diffMinutes <= 30) score += 5; // Moderate (within 30 min)
+        } else {
+          alarms = alarms.filter((a) =>
+            a.dataSource.toLowerCase().includes(dataSource.toLowerCase())
+          );
         }
 
-        return {
-          ...logData,
-          relevanceScore: score,
-        };
-      });
-
-      // Sort by relevance score (descending), then by time
-      results.sort((a, b) => {
-        if (b.relevanceScore !== a.relevanceScore) {
-          return b.relevanceScore - a.relevanceScore;
+        if (layoutPosition) {
+          alarms = alarms.filter((a) =>
+            a.alarmArea.toLowerCase().includes(layoutPosition.toLowerCase())
+          );
         }
-        return new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence);
-      });
+      }
+
+      // Sort  by time
+      alarms.sort(
+        (a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence)
+      );
+
+      const results = alarms.map((log) => log.toJSON());
 
       res.json(results);
     } catch (error) {
