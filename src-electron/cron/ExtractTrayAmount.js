@@ -57,57 +57,6 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
       const dateStart = dayjs(date).startOf("day");
       const dateEnd = dayjs(date).endOf("day");
 
-      // const splits = [
-      //   {
-      //     start: `${date} 00:00:00`,
-      //     end: `${date} 02:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 02:00:00`,
-      //     end: `${date} 04:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 04:00:00`,
-      //     end: `${date} 06:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 06:00:00`,
-      //     end: `${date} 08:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 08:00:00`,
-      //     end: `${date} 10:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 10:00:00`,
-      //     end: `${date} 12:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 12:00:00`,
-      //     end: `${date} 14:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 14:00:00`,
-      //     end: `${date} 16:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 16:00:00`,
-      //     end: `${date} 18:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 18:00:00`,
-      //     end: `${date} 20:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 20:00:00`,
-      //     end: `${date} 22:00:00`,
-      //   },
-      //   {
-      //     start: `${date} 22:00:00`,
-      //     end: `${dayjs(date).add(1, "day").format("YYYY-MM-DD")} 00:00:00`,
-      //   },
-      // ];
-
       global.sendNotificationToElectron(
         "Extract tray amount",
         "Starting extraction..."
@@ -549,14 +498,6 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
         console.log("No missing days found.");
       }
 
-      // Set the bot to restart
-      const bot = await db.models.Users.findOne({
-        where: { isBot: true },
-      });
-      if (bot) {
-        bot.update({ needsRestart: true });
-      }
-
       // Send notification to admins
       const admins = await db.models.Users.findAll({
         where: { isAdmin: true },
@@ -603,13 +544,30 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
         });
       }
 
-      // Set the bot to restart
-      const bot = await db.models.Users.findOne({
-        where: { isBot: true },
-      });
-      if (bot) {
-        bot.update({ needsRestart: true });
+      // Ajout d'une tâche dans la JobQueue pour retenter l'extraction 10 minutes après, max 5 fois
+      if (retryCount + 1 < MAX_RETRY) {
+        // Trouver l'utilisateur bot
+        const bot = await db.models.Users.findOne({ where: { isBot: true } });
+        await db.models.JobQueue.create({
+          jobName: `Extract Tray Amount Retry - ${dayjs(date).format(
+            "DD/MM/YYYY"
+          )}`,
+          action: "extractTrayAmount",
+          args: {
+            date: dayjs(date).format("YYYY-MM-DD"),
+            headless: true,
+            retryCount: retryCount + 1,
+          },
+          requestedBy: bot ? bot.id : null,
+          scheduledAt: dayjs().add(10, "minute").toDate(),
+        });
+        console.log(
+          `Retry extraction scheduled in 10 minutes (attempt ${
+            retryCount + 1
+          }/${MAX_RETRY})`
+        );
       }
+
       reject(error);
     }
   });

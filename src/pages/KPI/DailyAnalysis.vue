@@ -112,6 +112,14 @@
           v-if="viewMode === 'table'"
         />
       </div>
+      <div class="col-auto">
+        <q-toggle
+          v-model="showTreated"
+          label="Afficher traitées"
+          color="positive"
+          v-if="viewMode === 'table'"
+        />
+      </div>
     </div>
 
     <!-- Group View -->
@@ -135,6 +143,7 @@
       flat
       bordered
       :rows-per-page-options="[10, 25, 50, 100]"
+      v-model:pagination="pagination"
       virtual-scroll
     >
       <!-- Group Badge -->
@@ -450,6 +459,12 @@
                 </q-item-label>
               </q-item-section>
             </q-item>
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Utilisateur assigné</q-item-label>
+                <q-item-label>{{ currentAlarm.assignedUser || 'Non assigné' }}</q-item-label>
+              </q-item-section>
+            </q-item>
             <q-item v-if="currentAlarm.x_group">
               <q-item-section>
                 <q-item-label caption>Groupe</q-item-label>
@@ -538,7 +553,6 @@
                 :key="alarm.dbId"
                 clickable
                 @click="toggleAlarmSelection(alarm)"
-                :class="alarm.x_treated ? 'treated' : null"
               >
                 <q-item-section side>
                   <q-checkbox
@@ -553,9 +567,6 @@
                   <q-item-label caption>
                     {{ formatDate(alarm.timeOfOccurence) }} | Zone:
                     {{ alarm.dataSource }} - {{ alarm.alarmArea }}
-                    <span v-if="alarm.x_treated && alarm.x_comment" class="text-bold text-negative">
-                      => {{ alarm.x_comment }}
-                    </span>
                   </q-item-label>
                 </q-item-section>
               </q-item>
@@ -630,12 +641,14 @@ const alarms = ref([]);
 const selectedAlarms = ref([]);
 const loading = ref(false);
 const showGrouped = ref(true);
+const showTreated = ref(true);
 const viewMode = ref("table");
 const commentDialog = ref(false);
 const detailsDialog = ref(false);
 const currentAlarm = ref(null);
 const commentText = ref("");
 const searchText = ref("");
+const pagination = ref({ page: 1, rowsPerPage: 50 });
 const validationDialog = ref(false);
 const pendingInterventions = ref([]);
 const currentIntervention = ref(null);
@@ -748,6 +761,11 @@ const filteredAlarms = computed(() => {
   // Filter by showGrouped
   if (!showGrouped.value) {
     filtered = filtered.filter((alarm) => !alarm.x_group);
+  }
+
+  // Filter by showTreated
+  if (!showTreated.value) {
+    filtered = filtered.filter((alarm) => !alarm.x_treated);
   }
 
   // Filter by search text
@@ -1100,6 +1118,45 @@ const saveComment = async () => {
     }
 
     commentDialog.value = false;
+
+    // Si l'alarme fait partie d'un groupe, proposer de marquer comme traitées
+    if (groupId) {
+      const groupAlarms = alarms.value.filter((a) => a.x_group === groupId);
+      const untreatedCount = groupAlarms.filter((a) => !a.x_treated).length;
+
+      if (untreatedCount > 0) {
+        $q.dialog({
+          title: "Marquer comme traitées ?",
+          message: `Souhaitez-vous marquer les ${untreatedCount} alarme(s) non traitée(s) de ce groupe comme traitées ?`,
+          cancel: { label: "Non", flat: true, color: "grey-7" },
+          ok: { label: "Oui, marquer comme traitées", color: "positive" },
+          persistent: true,
+        }).onOk(async () => {
+          const dbIdsToMark = groupAlarms
+            .filter((a) => !a.x_treated)
+            .map((a) => a.dbId);
+          try {
+            await api.patch("/alarms/mark-treated", { dbIds: dbIdsToMark });
+            dbIdsToMark.forEach((id) => {
+              const alarmToUpdate = alarms.value.find((a) => a.dbId === id);
+              if (alarmToUpdate) alarmToUpdate.x_treated = true;
+            });
+            $q.notify({
+              type: "positive",
+              message: `${dbIdsToMark.length} alarme(s) du groupe marquée(s) comme traitée(s)`,
+            });
+          } catch (err) {
+            console.error("Error marking group as treated:", err);
+            $q.notify({
+              type: "negative",
+              message: "Échec du marquage comme traitées",
+              caption: err.message,
+            });
+          }
+        });
+      }
+    }
+
     currentAlarm.value = null;
     commentText.value = "";
   } catch (error) {
@@ -1175,12 +1232,10 @@ const findMatchingAlarms = async () => {
     });
 
     matchingAlarms.value = response.data;
-    selectedMatchingAlarms.value = matchingAlarms.value
-      .filter((a) => !a.x_treated)
-      .map((a) => a.dbId);
+    selectedMatchingAlarms.value = matchingAlarms.value.map((a) => a.dbId);
 
-    // Pré-remplir le commentaire avec description et commentaire si disponibles
-    if (!validationComment.value) {
+    // Pré-remplir le commentaire avec description et commentaire
+    if (selectedMatchingAlarms.value.length > 0) {
       const parts = [];
       if (currentIntervention.value.description) {
         parts.push(currentIntervention.value.description);
@@ -1219,7 +1274,7 @@ const toggleAlarmSelection = (alarm) => {
 };
 
 const validateIntervention = async () => {
-  if (!currentIntervention.value) {
+  if (!currentIntervention.value || selectedMatchingAlarms.value.length === 0) {
     return;
   }
 
@@ -1233,18 +1288,11 @@ const validateIntervention = async () => {
       }
     );
 
-    if (selectedMatchingAlarms.value.length > 0) {
-      $q.notify({
-        type: "positive",
-        message: "Intervention validée avec succès",
-        caption: `${selectedMatchingAlarms.value.length} alarme(s) groupée(s) et traitée(s)`,
-      });
-    } else {
-      $q.notify({
-        type: "positive",
-        message: "Intervention validée avec succès",
-      });
-    }
+    $q.notify({
+      type: "positive",
+      message: "Intervention validée avec succès",
+      caption: `${selectedMatchingAlarms.value.length} alarme(s) groupée(s) et traitée(s)`,
+    });
 
     // Recharger les alarmes
     await loadAlarms();
@@ -1321,13 +1369,10 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped lang="scss">
+<style scoped>
 .ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.treated {
-  background: rgba(33, 186, 69, 0.3);
 }
 </style>
