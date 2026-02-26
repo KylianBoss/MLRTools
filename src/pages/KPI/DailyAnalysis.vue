@@ -606,6 +606,7 @@
             label="Ignorer"
             color="grey-7"
             @click="ignoreIntervention"
+            :loading="validationLoading"
           />
           <q-btn
             flat
@@ -613,12 +614,14 @@
             color="orange"
             @click="skipIntervention"
             v-if="pendingInterventions.length > 1"
+            :loading="validationLoading"
           />
           <q-btn
             label="Valider"
             color="positive"
             icon="check"
             @click="validateIntervention"
+            :loading="validationLoading"
           />
         </q-card-actions>
       </q-card>
@@ -640,6 +643,7 @@ const App = useAppStore();
 const alarms = ref([]);
 const selectedAlarms = ref([]);
 const loading = ref(false);
+const validationLoading = ref(false);
 const showGrouped = ref(true);
 const showTreated = ref(true);
 const viewMode = ref("table");
@@ -1279,6 +1283,7 @@ const validateIntervention = async () => {
   }
 
   try {
+    validationLoading.value = true;
     await api.post(
       `/interventions/journal/${currentIntervention.value.id}/validate`,
       {
@@ -1288,6 +1293,7 @@ const validateIntervention = async () => {
       }
     );
 
+    validationLoading.value = false;
     $q.notify({
       type: "positive",
       message: "Intervention validée avec succès",
