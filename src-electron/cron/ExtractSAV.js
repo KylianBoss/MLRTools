@@ -298,22 +298,7 @@ export const extractSAV = async (date = null, retryCount = 0) => {
         type: "error",
       });
     }
-    // Ajout d'une tâche dans la JobQueue pour retenter l'extraction 10 minutes après, max 5 fois
-    if (retryCount + 1 < MAX_RETRY) {
-      // Trouver l'utilisateur bot
-      const bot = await db.models.Users.findOne({ where: { isBot: true } });
-      await db.models.JobQueue.create({
-        jobName: `Extract SAV Retry - ${dayjs(date).format("DD/MM/YYYY")}`,
-        action: "extractSAV",
-        args: {
-          date: dayjs(date).format("YYYY-MM-DD"),
-          retryCount: retryCount + 1,
-        },
-        requestedBy: bot ? bot.id : null,
-        scheduledAt: dayjs().add(10, "minute").toDate(),
-      });
-      console.log(`Retry SAV extraction scheduled in 10 minutes (attempt ${retryCount + 1}/${MAX_RETRY})`);
-    }
-    return Promise.reject(error); // Permet au système de retry automatique de fonctionner
+    // Le retry est géré automatiquement par le processeur de queue (processJobQueue)
+    return Promise.reject(error);
   }
 };

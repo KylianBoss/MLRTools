@@ -556,30 +556,7 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
         });
       }
 
-      // Ajout d'une tâche dans la JobQueue pour retenter l'extraction 10 minutes après, max 5 fois
-      if (retryCount + 1 < MAX_RETRY) {
-        // Trouver l'utilisateur bot
-        const bot = await db.models.Users.findOne({ where: { isBot: true } });
-        await db.models.JobQueue.create({
-          jobName: `Extract Tray Amount Retry - ${dayjs(date).format(
-            "DD/MM/YYYY"
-          )}`,
-          action: "extractTrayAmount",
-          args: {
-            date: dayjs(date).format("YYYY-MM-DD"),
-            headless: true,
-            retryCount: retryCount + 1,
-          },
-          requestedBy: bot ? bot.id : null,
-          scheduledAt: dayjs().add(10, "minute").toDate(),
-        });
-        console.log(
-          `Retry extraction scheduled in 10 minutes (attempt ${
-            retryCount + 1
-          }/${MAX_RETRY})`
-        );
-      }
-
+      // Le retry est géré automatiquement par le processeur de queue (processJobQueue)
       reject(error);
     }
   });
