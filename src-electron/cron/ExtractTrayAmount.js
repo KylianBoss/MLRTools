@@ -411,12 +411,12 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
       );
 
       // Remove data in cache to recalculate them
-      await db.models.cache_DowntimeMinutesByThousands.destroy({
+      await db.models.cache_DowntimeMinutesByThousand.destroy({
         where: {
           date: dayjs(date).format("YYYY-MM-DD"),
         }
       });
-      await db.models.cache_ErrorsByThousands.destroy({
+      await db.models.cache_ErrorsByThousand.destroy({
         where: {
           date: dayjs(date).format("YYYY-MM-DD"),
         }
