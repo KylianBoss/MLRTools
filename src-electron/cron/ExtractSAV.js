@@ -101,29 +101,29 @@ export const extractSAV = async (date = null, retryCount = 0) => {
 
     const fd = data.map(async (line) => {
       const startDate = dayjs(
-        line["Time of occurrence"],
+        line[1],
         "D MMM YYYY à HH:mm:ss",
         "fr"
       );
       const endDate = dayjs(
-        line["Acknowledge instant"],
+        line[2],
         "D MMM YYYY à HH:mm:ss",
         "fr"
       );
       if (!startDate.isValid() || !endDate.isValid()) return null;
 
-      const alarmCode = line["Alarm code"];
+      const alarmCode = line[11];
       if (!alarmCode || alarmCode.trim() === "") return null; // Skip if no
 
-      const dbId = line["Database ID"];
+      const dbId = line[0];
       if (!dbId || dbId.trim() === "") return null; // Skip if no DB ID
 
-      const dataSource = line["Data source"];
-      const alarmArea = line["Alarm area"];
-      const alarmText = line["Alarm text"];
-      const severity = line["Severity"];
-      const classification = line["Classification"];
-      const assignedUser = line["Assigned user"];
+      const dataSource = line[5];
+      const alarmArea = line[9];
+      const alarmText = line[12];
+      const severity = line[13];
+      const classification = line[14];
+      const assignedUser = line[16];
       const alarmId = `${dataSource || ""}.${alarmArea || ""}.${
         alarmCode || ""
       }`.toUpperCase();
