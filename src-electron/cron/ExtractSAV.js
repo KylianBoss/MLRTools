@@ -104,7 +104,7 @@ export const extractSAV = async (date = null, retryCount = 0) => {
       await updateJob(
         {
           lastRun: new Date(),
-          lastLog: `Processing line : ${JSON.stringify(line)}`,
+          lastLog: line,
         },
         jobName
       );
