@@ -7,6 +7,7 @@ import { extractTrayAmount } from "../cron/ExtractTrayAmount.js";
 import { extractWMS } from "../cron/ExtractWMS.js";
 import { extractSAV } from "../cron/ExtractSAV.js";
 import { sendKPI } from "../cron/SendKPI.js";
+import { cleanDB } from "../cron/CleanDB.js";
 
 const router = Router();
 
@@ -38,6 +39,9 @@ async function executeJobAction(action, args = {}) {
     case "sendKPI":
       const options = args || {};
       return await sendKPI(options);
+
+    case "cleanDB":
+      return await cleanDB(args.retryCount || 0);
 
     default:
       throw new Error(`Unknown action: ${action}`);

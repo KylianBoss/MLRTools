@@ -113,6 +113,7 @@ const availableActions = [
   { label: "Extract WMS", value: "extractWMS" },
   { label: "Extract SAV", value: "extractSAV" },
   { label: "Send KPI", value: "sendKPI" },
+  { label: "Clean DB", value: "cleanDB" },
 ];
 
 const columns = [
