@@ -77,7 +77,7 @@ export const cleanDB = async (retryCount = 0) => {
     );
 
     // Clean request logs (keep last 30 days)
-    await db.models.RequestLog.destroy({
+    await db.models.RequestLogs.destroy({
       where: {
         timestamp: {
           [db.Sequelize.Op.lt]: cutoffDate,

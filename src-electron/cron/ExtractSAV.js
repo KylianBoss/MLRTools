@@ -147,7 +147,7 @@ export const extractSAV = async (date = null, retryCount = 0) => {
       if (alarmCode === "M6130.0203") return null; // Don't put in DB the warning from the shuttle
       if (alarmCode === "M6130.0202") return null; // Don't put in DB the warning from the shuttle
 
-      updateJob(
+      await updateJob(
         {
           lastRun: new Date(),
           lastLog: JSON.stringify({
