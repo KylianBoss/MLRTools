@@ -100,6 +100,15 @@ export const extractSAV = async (date = null, retryCount = 0) => {
     });
 
     const fd = data.map(async (line) => {
+      console.log("Processing line:", line);
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Processing line : ${JSON.stringify(line)}`,
+        },
+        jobName
+      );
+
       const dbId = line[0];
       if (!dbId || dbId.trim() === "") return null; // Skip if no DB ID
       const startDate = dayjs(line[1], "D MMM YYYY à HH:mm:ss", "fr").format(
@@ -108,7 +117,7 @@ export const extractSAV = async (date = null, retryCount = 0) => {
       const endDate = dayjs(line[2], "D MMM YYYY à HH:mm:ss", "fr").format(
         "YYYY-MM-DD HH:mm:ss"
       );
-      if (!startDate.isValid() || !endDate.isValid()) return null;
+      if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid()) return null;
       const duration = line[3] || 0;
       const acknowledged = line[4];
       const dataSource = line[5];
