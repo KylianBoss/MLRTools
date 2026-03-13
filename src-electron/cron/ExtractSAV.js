@@ -99,11 +99,15 @@ export const extractSAV = async (date = null, retryCount = 0) => {
         });
     });
 
-    const dbId = line[0];
-    if (!dbId || dbId.trim() === "") return null; // Skip if no DB ID
     const fd = data.map(async (line) => {
-      const startDate = dayjs(line[1], "D MMM YYYY à HH:mm:ss", "fr").format("YYYY-MM-DD HH:mm:ss");
-      const endDate = dayjs(line[2], "D MMM YYYY à HH:mm:ss", "fr").format("YYYY-MM-DD HH:mm:ss");
+      const dbId = line[0];
+      if (!dbId || dbId.trim() === "") return null; // Skip if no DB ID
+      const startDate = dayjs(line[1], "D MMM YYYY à HH:mm:ss", "fr").format(
+        "YYYY-MM-DD HH:mm:ss"
+      );
+      const endDate = dayjs(line[2], "D MMM YYYY à HH:mm:ss", "fr").format(
+        "YYYY-MM-DD HH:mm:ss"
+      );
       if (!startDate.isValid() || !endDate.isValid()) return null;
       const duration = line[3] || 0;
       const acknowledged = line[4];
@@ -118,10 +122,22 @@ export const extractSAV = async (date = null, retryCount = 0) => {
       const alarmText = line[12];
       const severity = line[13];
       const classification = line[14];
-      const timeOfClassification = dayjs(line[15], "D MMM YYYY à HH:mm:ss", "fr").format("YYYY-MM-DD HH:mm:ss");
+      const timeOfClassification = dayjs(
+        line[15],
+        "D MMM YYYY à HH:mm:ss",
+        "fr"
+      ).format("YYYY-MM-DD HH:mm:ss");
       const assignedUser = line[16];
-      const timeOfAssignment = dayjs(line[17], "D MMM YYYY à HH:mm:ss", "fr").format("YYYY-MM-DD HH:mm:ss");
-      const timeOfTreatement = dayjs(line[18], "D MMM YYYY à HH:mm:ss", "fr").format("YYYY-MM-DD HH:mm:ss");
+      const timeOfAssignment = dayjs(
+        line[17],
+        "D MMM YYYY à HH:mm:ss",
+        "fr"
+      ).format("YYYY-MM-DD HH:mm:ss");
+      const timeOfTreatement = dayjs(
+        line[18],
+        "D MMM YYYY à HH:mm:ss",
+        "fr"
+      ).format("YYYY-MM-DD HH:mm:ss");
       const alarmId = `${dataSource || ""}.${alarmArea || ""}.${
         alarmCode || ""
       }`.toUpperCase();
