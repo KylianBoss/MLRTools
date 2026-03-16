@@ -85,7 +85,7 @@ export const extractSAV = async (date = null, retryCount = 0) => {
     await new Promise((resolve) => {
       fs.createReadStream(filePath, "utf8")
         .pipe(csv({ separator: ";" }))
-        .on("data", (row) => data.push(row))
+        .on("data", (row) => data.push(Object.values(row)))
         .on("end", async () => {
           console.log(`Downloaded file: ${fileName}`);
           await updateJob(
@@ -101,13 +101,6 @@ export const extractSAV = async (date = null, retryCount = 0) => {
 
     const fd = data.map(async (line) => {
       console.log("Processing line:", line);
-      await updateJob(
-        {
-          lastRun: new Date(),
-          lastLog: line,
-        },
-        jobName
-      );
 
       const dbId = line[0];
       if (!dbId || dbId.trim() === "") return null; // Skip if no DB ID
@@ -188,7 +181,7 @@ export const extractSAV = async (date = null, retryCount = 0) => {
         dbId,
         timeOfOccurence: startDate,
         timeOfAcknowledge: endDate,
-        duration: dayjs.duration(endDate.diff(startDate)).asSeconds(),
+        duration: dayjs(endDate).diff(dayjs(startDate), "seconds"),
         dataSource,
         alarmArea,
         alarmCode,
