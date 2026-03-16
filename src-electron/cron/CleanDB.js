@@ -99,6 +99,8 @@ export const cleanDB = async (retryCount = 0) => {
       {
         lastRun: new Date(),
         lastLog: "DB cleaning completed.",
+        endAt: new Date(),
+        actualState: "idle",
       },
       jobName
     );
