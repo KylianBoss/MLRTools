@@ -241,6 +241,23 @@ router.post("/initialize", async (req, res) => {
           await executeJobAction(job.action, parsedArgs);
         } catch (error) {
           console.error(`Error executing scheduled job ${job.jobName}:`, error);
+
+          // Créer un job de retry dans la queue
+          const retryDelay = 10; // minutes
+          const scheduledFor = new Date(Date.now() + retryDelay * 60 * 1000);
+          const retryArgs = { ...parsedArgs, retryCount: 1 };
+
+          await db.models.JobQueue.create({
+            jobName: `${job.jobName} (Retry 1)`,
+            action: job.action,
+            args: retryArgs,
+            requestedBy: null,
+            scheduledFor: scheduledFor,
+          });
+
+          console.log(
+            `Scheduled retry 1/5 for cron job: ${job.jobName} at ${scheduledFor.toLocaleString()}`
+          );
         }
       });
 

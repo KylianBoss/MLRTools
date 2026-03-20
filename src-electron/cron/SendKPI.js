@@ -10,6 +10,8 @@ import { app } from "electron";
 
 const jobName = "sendKPI";
 const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
+const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_RETRIES = 2; // nombre de tentatives supplémentaires après échec
 
 // Utilisation de puppeteer pour générer les graphiques (plus stable que canvas dans Electron)
 let browserInstance = null;
@@ -23,6 +25,41 @@ export async function closePuppeteerBrowser() {
     browserInstance = null;
     console.log("Puppeteer browser closed");
   }
+}
+
+/**
+ * Exécute une promesse avec un timeout
+ */
+function withTimeout(promise, ms, message = "Operation timed out") {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${message} (exceeded ${ms / 60000} minutes)`));
+    }, ms);
+    promise
+      .then((result) => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
+/**
+ * Vérifie si un PDF existe déjà pour la date du jour (veille)
+ */
+function getExistingPDFPath() {
+  const outputDir = path.join(process.cwd(), "storage", "prints");
+  const fileName = `KPI_Report_${dayjs()
+    .subtract(1, "day")
+    .format("YYYY-MM-DD")}.pdf`;
+  const filePath = path.join(outputDir, fileName);
+  if (fs.existsSync(filePath)) {
+    return filePath;
+  }
+  return null;
 }
 
 export const sendKPI = async (options = {}) => {
@@ -42,25 +79,75 @@ export const sendKPI = async (options = {}) => {
   );
 
   try {
-    // Génération du PDF KPI
-    await updateJob(
-      {
-        lastLog: "Generating KPI PDF report...",
-      },
-      jobName
-    );
+    // Vérifier si un PDF existe déjà pour cette date
+    const existingPDF = getExistingPDFPath();
+    let pdfPath;
 
-    console.log("Generating KPI PDF report...");
-    const pdfPath = await generateKPIPDF();
+    if (existingPDF) {
+      console.log(`Existing PDF found: ${existingPDF}, skipping generation.`);
+      await updateJob(
+        {
+          lastLog: `Existing PDF found: ${existingPDF}, skipping generation.`,
+        },
+        jobName
+      );
+      pdfPath = existingPDF;
+    } else {
+      // Génération du PDF KPI avec timeout et retry
+      let attempt = 0;
+      let lastError = null;
 
-    await updateJob(
-      {
-        lastLog: `PDF generated: ${pdfPath}`,
-      },
-      jobName
-    );
+      while (attempt <= MAX_RETRIES) {
+        attempt++;
+        try {
+          await updateJob(
+            {
+              lastLog: `Generating KPI PDF report... (attempt ${attempt}/${MAX_RETRIES + 1})`,
+            },
+            jobName
+          );
 
-    console.log(`PDF generated: ${pdfPath}`);
+          console.log(`Generating KPI PDF report... (attempt ${attempt}/${MAX_RETRIES + 1})`);
+          pdfPath = await withTimeout(
+            generateKPIPDF(),
+            TIMEOUT_MS,
+            "PDF generation timed out"
+          );
+
+          await updateJob(
+            {
+              lastLog: `PDF generated: ${pdfPath}`,
+            },
+            jobName
+          );
+
+          console.log(`PDF generated: ${pdfPath}`);
+          lastError = null;
+          break; // Succès, on sort de la boucle
+        } catch (err) {
+          lastError = err;
+          console.error(`Attempt ${attempt}/${MAX_RETRIES + 1} failed:`, err.message);
+
+          // Fermer le navigateur puppeteer pour repartir proprement
+          await closePuppeteerBrowser();
+
+          if (attempt <= MAX_RETRIES) {
+            await updateJob(
+              {
+                lastLog: `Attempt ${attempt} failed: ${err.message}. Retrying...`,
+              },
+              jobName
+            );
+            console.log(`Retrying in 5 seconds...`);
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+          }
+        }
+      }
+
+      if (lastError) {
+        throw lastError;
+      }
+    }
 
     // Envoi du PDF par mail ou simple génération pour téléchargement
     if (sendEmail) {
@@ -72,7 +159,11 @@ export const sendKPI = async (options = {}) => {
       );
 
       console.log("Sending PDF by email...");
-      await sendPDFByEmail(pdfPath);
+      await withTimeout(
+        sendPDFByEmail(pdfPath),
+        TIMEOUT_MS,
+        "Email sending timed out"
+      );
 
       await updateJob(
         {
