@@ -74,6 +74,15 @@
       </div>
       <div class="col-auto">
         <q-btn
+          color="secondary"
+          label="Grouper auto"
+          icon="auto_awesome"
+          :disable="!App.userHasAccess('canGroupAlarms')"
+          @click="openAutoGroupDialog"
+        />
+      </div>
+      <div class="col-auto">
+        <q-btn
           color="positive"
           label="Marquer comme traité"
           icon="check"
@@ -626,6 +635,110 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <!-- Auto-Group Dialog -->
+    <q-dialog
+      v-model="autoGroupDialog"
+      persistent
+      transition-show="scale"
+      transition-hide="scale"
+    >
+      <q-card style="min-width: 700px; max-width: 900px">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">
+            Groupement automatique
+            <q-badge color="primary" class="q-ml-sm">
+              {{ currentAutoGroupIndex + 1 }} /
+              {{ autoGroupProposals.length }}
+            </q-badge>
+          </div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section v-if="currentAutoGroup">
+          <div class="q-mb-md">
+            <div class="text-subtitle1 text-weight-bold">
+              <q-icon name="location_on" class="q-mr-xs" />
+              {{ currentAutoGroup.location }}
+            </div>
+            <div class="text-caption text-grey-7">
+              {{ currentAutoGroup.alarms.length }} alarmes détectées dans un
+              intervalle de 5 minutes
+            </div>
+          </div>
+
+          <!-- Alarm List with Checkboxes -->
+          <q-list bordered separator>
+            <q-item
+              v-for="alarm in currentAutoGroup.alarms"
+              :key="alarm.dbId"
+              clickable
+              @click="toggleAutoGroupAlarm(alarm.dbId)"
+            >
+              <q-item-section side>
+                <q-checkbox
+                  :model-value="selectedAutoGroupAlarms.includes(alarm.dbId)"
+                  @update:model-value="toggleAutoGroupAlarm(alarm.dbId)"
+                />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>
+                  {{ alarm.alarmCode }} - {{ alarm.alarmText }}
+                </q-item-label>
+                <q-item-label caption>
+                  <q-icon name="schedule" size="xs" />
+                  {{ formatDate(alarm.timeOfOccurence) }} →
+                  {{ formatDate(alarm.timeOfAcknowledge) }}
+                  | Durée: {{ formatDuration(alarm.duration) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+
+          <!-- Comment -->
+          <div class="q-mt-md">
+            <q-input
+              v-model="autoGroupComment"
+              label="Commentaire"
+              outlined
+              type="textarea"
+              rows="2"
+              hint="Ce commentaire sera ajouté à toutes les alarmes du groupe"
+            />
+          </div>
+
+          <!-- Planned Toggle -->
+          <div class="q-mt-md">
+            <q-toggle
+              v-model="autoGroupIsPlanned"
+              label="Planifié (maintenance)"
+              color="primary"
+            />
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            label="Passer"
+            color="orange"
+            @click="skipAutoGroup"
+            :loading="autoGroupLoading"
+            v-if="
+              currentAutoGroupIndex < autoGroupProposals.length - 1
+            "
+          />
+          <q-btn
+            label="Valider"
+            color="positive"
+            icon="check"
+            @click="validateAutoGroup"
+            :loading="autoGroupLoading"
+            :disable="selectedAutoGroupAlarms.length < 2"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -663,8 +776,17 @@ const validationIsPlanned = ref(false);
 const searchingAlarms = ref(false);
 const searchPerformed = ref(false);
 
+// Auto-groupement
+const autoGroupDialog = ref(false);
+const autoGroupProposals = ref([]);
+const currentAutoGroupIndex = ref(0);
+const selectedAutoGroupAlarms = ref([]);
+const autoGroupComment = ref("");
+const autoGroupIsPlanned = ref(false);
+const autoGroupLoading = ref(false);
+
 const yesterdayDate = computed(() => {
-  return dayjs().subtract(1, "day").format("YYYY-MM-DD");
+  return dayjs().subtract(1, "day").format("DD.MM.YYYY");
 });
 
 const columns = [
@@ -820,7 +942,7 @@ const loadAlarms = async () => {
 };
 
 const formatDate = (dateString) => {
-  return dayjs(dateString).format("YYYY-MM-DD HH:mm:ss");
+  return dayjs(dateString).format("DD.MM.YYYY HH:mm");
 };
 
 const formatDuration = (seconds) => {
@@ -1366,6 +1488,190 @@ const moveToNextIntervention = () => {
     // Fermer le modal
     validationDialog.value = false;
     currentIntervention.value = null;
+  }
+};
+
+// --- Auto-groupement ---
+
+const currentAutoGroup = computed(() => {
+  return autoGroupProposals.value[currentAutoGroupIndex.value] || null;
+});
+
+const computeAutoGroups = () => {
+  const GAP_MS = 5 * 60 * 1000; // 5 minutes
+
+  // 1. Filtrer les alarmes non groupées et non traitées
+  const candidates = alarms.value.filter(
+    (a) => !a.x_group && !a.x_treated
+  );
+
+  // 2. Regrouper par emplacement (dataSource + alarmArea)
+  const byLocation = {};
+  candidates.forEach((a) => {
+    const key = `${a.dataSource}.${a.alarmArea}`;
+    if (!byLocation[key]) byLocation[key] = [];
+    byLocation[key].push(a);
+  });
+
+  const proposals = [];
+
+  // 3. Pour chaque emplacement, trier et chercher les clusters
+  Object.entries(byLocation).forEach(([location, locationAlarms]) => {
+    if (locationAlarms.length < 2) return;
+
+    // Trier par timeOfOccurence
+    locationAlarms.sort(
+      (a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence)
+    );
+
+    // 4. Créer les clusters
+    let currentCluster = [locationAlarms[0]];
+
+    for (let i = 1; i < locationAlarms.length; i++) {
+      const prev = currentCluster[currentCluster.length - 1];
+      const curr = locationAlarms[i];
+
+      const prevEnd = new Date(prev.timeOfAcknowledge || prev.timeOfOccurence).getTime();
+      const currStart = new Date(curr.timeOfOccurence).getTime();
+      const gap = currStart - prevEnd;
+
+      if (gap <= GAP_MS) {
+        currentCluster.push(curr);
+      } else {
+        // Sauvegarder le cluster s'il a au moins 2 alarmes
+        if (currentCluster.length >= 2) {
+          proposals.push({ location, alarms: [...currentCluster] });
+        }
+        currentCluster = [curr];
+      }
+    }
+    // Dernier cluster
+    if (currentCluster.length >= 2) {
+      proposals.push({ location, alarms: [...currentCluster] });
+    }
+  });
+
+  return proposals;
+};
+
+const openAutoGroupDialog = () => {
+  const proposals = computeAutoGroups();
+
+  if (proposals.length === 0) {
+    $q.notify({
+      type: "info",
+      message: "Aucun groupe automatique trouvé",
+      caption:
+        "Aucune alarme non traitée sur le même emplacement dans un intervalle de 5 minutes",
+    });
+    return;
+  }
+
+  autoGroupProposals.value = proposals;
+  currentAutoGroupIndex.value = 0;
+  selectedAutoGroupAlarms.value = proposals[0].alarms.map((a) => a.dbId);
+  autoGroupComment.value = "";
+  autoGroupIsPlanned.value = false;
+  autoGroupDialog.value = true;
+};
+
+const toggleAutoGroupAlarm = (dbId) => {
+  const index = selectedAutoGroupAlarms.value.indexOf(dbId);
+  if (index > -1) {
+    selectedAutoGroupAlarms.value.splice(index, 1);
+  } else {
+    selectedAutoGroupAlarms.value.push(dbId);
+  }
+};
+
+const validateAutoGroup = async () => {
+  if (selectedAutoGroupAlarms.value.length < 2) {
+    $q.notify({
+      type: "warning",
+      message: "Veuillez sélectionner au moins 2 alarmes pour créer un groupe",
+    });
+    return;
+  }
+
+  try {
+    autoGroupLoading.value = true;
+
+    // 1. Créer le groupe
+    const response = await api.post("/alarms/group-alarms", {
+      dbIds: selectedAutoGroupAlarms.value,
+    });
+
+    const groupId = response.data.groupId;
+
+    // 2. Mettre à jour le commentaire si renseigné
+    if (autoGroupComment.value.trim()) {
+      await api.patch("/alarms/update-comment", {
+        dbId: selectedAutoGroupAlarms.value[0],
+        comment: autoGroupComment.value,
+      });
+    }
+
+    // 3. Mettre à jour l'état planifié/non planifié
+    await api.patch("/alarms/update-state", {
+      dbId: selectedAutoGroupAlarms.value[0],
+      state: autoGroupIsPlanned.value ? "planned" : "unplanned",
+      updateGroup: true,
+    });
+
+    // 4. Marquer comme traitées
+    await api.patch("/alarms/mark-treated", {
+      dbIds: selectedAutoGroupAlarms.value,
+    });
+
+    // 5. Mettre à jour l'UI
+    selectedAutoGroupAlarms.value.forEach((dbId) => {
+      const alarm = alarms.value.find((a) => a.dbId === dbId);
+      if (alarm) {
+        alarm.x_group = groupId;
+        alarm.x_treated = true;
+        alarm.x_state = autoGroupIsPlanned.value ? "planned" : "unplanned";
+        if (autoGroupComment.value.trim()) {
+          alarm.x_comment = autoGroupComment.value;
+        }
+      }
+    });
+
+    $q.notify({
+      type: "positive",
+      message: `Groupe créé avec ${selectedAutoGroupAlarms.value.length} alarmes`,
+    });
+
+    moveToNextAutoGroup();
+  } catch (error) {
+    console.error("Error creating auto-group:", error);
+    $q.notify({
+      type: "negative",
+      message: "Erreur lors de la création du groupe",
+      caption: error.message,
+    });
+  } finally {
+    autoGroupLoading.value = false;
+  }
+};
+
+const skipAutoGroup = () => {
+  moveToNextAutoGroup();
+};
+
+const moveToNextAutoGroup = () => {
+  currentAutoGroupIndex.value++;
+
+  if (currentAutoGroupIndex.value < autoGroupProposals.value.length) {
+    // Pré-sélectionner toutes les alarmes du prochain groupe
+    const nextGroup = autoGroupProposals.value[currentAutoGroupIndex.value];
+    selectedAutoGroupAlarms.value = nextGroup.alarms.map((a) => a.dbId);
+    autoGroupComment.value = "";
+    autoGroupIsPlanned.value = false;
+  } else {
+    // Tous les groupes traités
+    autoGroupDialog.value = false;
+    autoGroupProposals.value = [];
+    currentAutoGroupIndex.value = 0;
   }
 };
 
