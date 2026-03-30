@@ -234,6 +234,13 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
         },
         jobName
       );
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: results,
+        },
+        jobName
+      );
 
       const palettisationData = results;
       const graiPalettised = palettisationData.map((row) => row["GRAI"]);
