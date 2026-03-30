@@ -219,7 +219,7 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
       // }
 
       const results = await MVNDB.query(
-        `SELECT * FROM lnm.ACTIVITY_DATA WHERE ACTIVITE = 'Palettisation' AND DATE(JOUR) = TO_DATE('${date}', 'YYYY-MM-DD')`,
+        `SELECT * FROM lnm.ACTIVITY_DATA WHERE ACTIVITE = 'Palettisation' AND TRUNC(JOUR) = TO_DATE('${date}', 'YYYY-MM-DD')`,
         {
           type: Sequelize.QueryTypes.SELECT,
         }
