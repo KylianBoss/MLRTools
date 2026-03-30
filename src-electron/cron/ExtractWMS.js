@@ -219,11 +219,10 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
       // }
 
       const results = await MVNDB.query(
-        `SELECT * FROM lnm.ACTIVITY_DATA FETCH FIRST 10 ROWS ONLY`,
-        /*{
-          replacements: { dateParam: date },
+        `SELECT * FROM lnm.ACTIVITY_DATA WHERE ACTIVITE = 'Palettisation' AND DATE(JOUR) = TO_DATE('${date}', 'YYYY-MM-DD')`,
+        {
           type: Sequelize.QueryTypes.SELECT,
-        }*/
+        }
       );
       console.log(`Found ${results.length} palettisation records for ${date}`);
       console.log(results);
@@ -237,7 +236,7 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
       await updateJob(
         {
           lastRun: new Date(),
-          lastLog: results,
+          lastLog: JSON.stringify(results),
         },
         jobName
       );
