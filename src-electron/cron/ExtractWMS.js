@@ -225,7 +225,6 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
         }
       );
       console.log(`Found ${results.length} palettisation records for ${date}`);
-      console.log(results);
       await updateJob(
         {
           lastRun: new Date(),
@@ -233,16 +232,9 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
         },
         jobName
       );
-      await updateJob(
-        {
-          lastRun: new Date(),
-          lastLog: JSON.stringify(results),
-        },
-        jobName
-      );
 
       const palettisationData = results;
-      const graiPalettised = palettisationData.map((row) => row["GRAI"]);
+      const graiPalettised = palettisationData.map((row) => row.GRAI);
       const uniqueGrai = [...new Set(graiPalettised)];
       const totalBoxes = uniqueGrai.length;
       console.log(`Total boxes for ${date}: ${totalBoxes}`);
