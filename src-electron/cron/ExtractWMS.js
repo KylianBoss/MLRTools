@@ -218,12 +218,12 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
       //   }
       // }
 
-      const [results] = await MVNDB.query(
+      const results = await MVNDB.query(
         `SELECT * FROM lnm.ACTIVITY_DATA FETCH FIRST 10 ROWS ONLY`,
-        {
+        /*{
           replacements: { dateParam: date },
           type: Sequelize.QueryTypes.SELECT,
-        }
+        }*/
       );
       console.log(`Found ${results.length} palettisation records for ${date}`);
       console.log(results);
