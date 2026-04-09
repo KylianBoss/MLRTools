@@ -156,8 +156,8 @@ router.get("/resume", async (req, res) => {
   try {
     db.query("CALL getGroupedAlarms(:from, :to, :dataSource)", {
       replacements: {
-        from: dayjs(from + "00:00:00").format("YYYY-MM-DD HH:mm:ss"),
-        to: dayjs(to + "23:59:59").format("YYYY-MM-DD HH:mm:ss"),
+        from: dayjs(from).startOf('day').format("YYYY-MM-DD HH:mm:ss"),
+        to: dayjs(to).add(1, 'day').startOf('day').format("YYYY-MM-DD HH:mm:ss"),
         dataSource,
       },
     })

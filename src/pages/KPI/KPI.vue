@@ -360,6 +360,7 @@ import MessagesByDay from "src/components/charts/MessagesByDay.vue";
 import ErrorsPerZoneCount from "src/components/charts/ErrorsPerZoneCount.vue";
 import VueApexCharts from "vue3-apexcharts";
 import html2canvas from "html2canvas";
+import { t } from "semver/internal/re";
 
 dayjs.extend(isBetween);
 dayjs.extend(utc);
@@ -378,8 +379,8 @@ const dataSources = [
   "F002",
   "F003",
   "F004",
-  "F005",
-  "F006",
+  // "F005",
+  // "F006",
   "F007",
   "F008",
   "F009",
@@ -622,7 +623,9 @@ const getData = (filter) => {
             day[day.length - 1].timeOfAcknowledge
           ).diff(day[0].timeOfOccurence, "second");
 
-          const runtime = totalTimeInSeconds / 60;
+          // const runtime = totalTimeInSeconds / 60;
+          // On considère que la machine est supposée tourner 24h/24 * le nombre de jours entre from et to
+          const runtime = 1440 * dayjs(to).diff(dayjs(from), "day") + 1440;
           const stoptime =
             day.reduce((acc, message) => {
               if (message.alarmCode == 0) return acc;
@@ -633,7 +636,7 @@ const getData = (filter) => {
             return acc + 1;
           }, 0);
           const MTTR = stoptime / Math.max(nbFaillures, 1);
-          const MTBF = runtime / Math.max(nbFaillures, 1);
+          const MTBF = (runtime - stoptime) / Math.max(nbFaillures, 1);
           const dispo = MTBF / (MTBF + MTTR);
           dayResume.value.push({
             dataSource,
@@ -657,7 +660,9 @@ const getData = (filter) => {
                 duration: mapValue(
                   message.duration,
                   0,
-                  totalTimeInSeconds,
+                  // totalTimeInSeconds,
+                  // On considère que la machine est supposée tourner 24h/24 * le nombre de jours entre from et to
+                  1440 * 60 * dayjs(to).diff(dayjs(from), "day") + 1440 * 60,
                   0,
                   100
                 ),
@@ -698,32 +703,29 @@ const getData = (filter) => {
     KPITop3Duration.value = kpiTop3Duration;
     // $q.loading.hide();
     // Add total at the end of the table
+    const t_runtime = dayResume.value.reduce(
+      (acc, day) => acc + day.runtime,
+      0
+    );
+    const t_stoptime = dayResume.value.reduce(
+      (acc, day) => acc + day.stoptime,
+      0
+    );
+    const t_nbFaillures = dayResume.value.reduce(
+      (acc, day) => acc + day.nbFaillures,
+      0
+    );
+    const t_MTBF = (t_runtime - t_stoptime) / Math.max(t_nbFaillures, 1);
+    const t_MTTR = t_stoptime / Math.max(t_nbFaillures, 1);
+    const t_dispo = t_MTBF / (t_MTBF + t_MTTR);
     dayResume.value.push({
       dataSource: "Total",
-      runtime:
-        dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
-        dayResume.value.length,
-      stoptime: dayResume.value.reduce((acc, day) => acc + day.stoptime, 0),
-      nbFaillures: dayResume.value.reduce(
-        (acc, day) => acc + day.nbFaillures,
-        0
-      ),
-      MTBF:
-        dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
-        dayResume.value.length /
-        dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0),
-      MTTR:
-        dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
-        dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0),
-      dispo:
-        dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
-        dayResume.value.length /
-        dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0) /
-        (dayResume.value.reduce((acc, day) => acc + day.runtime, 0) /
-          dayResume.value.length /
-          dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0) +
-          dayResume.value.reduce((acc, day) => acc + day.stoptime, 0) /
-            dayResume.value.reduce((acc, day) => acc + day.nbFaillures, 0)),
+      runtime: t_runtime,
+      stoptime: t_stoptime,
+      nbFaillures: t_nbFaillures,
+      MTBF: t_MTBF,
+      MTTR: t_MTTR,
+      dispo: t_dispo,
     });
     console.info("All data received");
     $q.loading.hide();
