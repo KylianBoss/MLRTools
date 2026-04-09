@@ -199,7 +199,7 @@ const getData = async () => {
     .map((item) => parseFloat(item.errors))
     .sort((a, b) => a - b);
   const percentile90Index = Math.floor(errorValues.length * 0.9);
-  const max = Math.round(errorValues[percentile90Index] * 1.5);
+  const max = options.maxY || Math.round(errorValues[percentile90Index] * 1.5);
 
   // Calculer la ligne de tendance (régression linéaire)
   const calculateTrendLine = (values) => {

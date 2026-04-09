@@ -302,6 +302,63 @@ export async function generateKPIPDF() {
 
       const pageWidth = doc.page.width - 60;
 
+      // START SEVEN DAYS AVERAGE PAGE
+      console.log("Generating Seven Days Average page...");
+      await updateJob(
+        { lastLog: "Generating Seven Days Average page..." },
+        jobName
+      );
+
+      const sevenDaysResponse = await fetch(
+        `http://localhost:${process.env.PORT || 3000}/kpi/charts/global-last-7-days`
+      );
+      const sevenDaysData = await sevenDaysResponse.json();
+
+      const top10Response = await fetch(
+        `http://localhost:${process.env.PORT || 3000}/kpi/charts/global-last-7-days/top-10`
+      );
+      const top10Data = await top10Response.json();
+
+      const amountsResponse = await fetch(
+        `http://localhost:${process.env.PORT || 3000}/kpi/charts/amount`
+      );
+      const amountsData = await amountsResponse.json();
+
+      doc.addPage();
+
+      // Titre
+      doc
+        .fontSize(18)
+        .fillColor("#000")
+        .text("Rapport des 7 derniers jours", { align: "center" });
+      doc
+        .fontSize(12)
+        .fillColor("#666")
+        .text(
+          `Traité ${sevenDaysData.total_LHM_processed.toLocaleString("fr-CH")} LHM sur les 7 derniers jours`,
+          { align: "center" }
+        );
+
+      // Graphique
+      const sevenDaysImageBuffer = await generateSevenDaysAverageImage(sevenDaysData);
+      if (sevenDaysImageBuffer) {
+        doc.image(sevenDaysImageBuffer, 30, 80, {
+          width: pageWidth,
+          height: 180,
+        });
+      }
+
+      // Tableau top-10
+      const { tableRows: sevenDaysRows, tableColumns: sevenDaysColumns } =
+        formatSevenDaysTableData(top10Data, amountsData);
+
+      if (sevenDaysRows.length > 0) {
+        generateTable(doc, sevenDaysRows, sevenDaysColumns, 30, 270, pageWidth);
+      }
+
+      console.log("Seven Days Average page added to PDF.");
+      // END SEVEN DAYS AVERAGE PAGE
+
       // START GROUP CHART
       // Générer les graphiques pour chaque groupe
       for (const group of groups) {
@@ -1307,6 +1364,217 @@ function formatDataForTable(data) {
   }
 
   return { tableRows, tableColumns, sortedDates };
+}
+
+/**
+ * Génère l'image du graphique SevenDaysAverage
+ */
+async function generateSevenDaysAverageImage(data) {
+  const max = Math.round(
+    Math.max(data.errors_per_thousand, data.downtime_minutes_per_thousand) * 1.5
+  );
+
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+  await page.setViewport({ width: 900, height: 400, deviceScaleFactor: 2 });
+
+  const configuration = {
+    type: "bar",
+    data: {
+      datasets: [
+        {
+          label: "Nombre de pannes",
+          data: [
+            {
+              x: "Nombre d'erreurs moyen",
+              y: parseFloat(data.errors_per_thousand.toFixed(2)),
+            },
+          ],
+          backgroundColor: "#008ffb",
+        },
+        {
+          label: "Temps de pannes [min]",
+          data: [
+            {
+              x: "Temps de panne moyen",
+              y: parseFloat(data.downtime_minutes_per_thousand.toFixed(2)),
+            },
+          ],
+          backgroundColor: "#00e396",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: "Rapport des 7 derniers jours",
+          font: { size: 18, weight: "bold" },
+        },
+        legend: { display: true, position: "bottom" },
+        datalabels: { display: false },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          min: 0,
+          max: max,
+          title: { display: true, text: "Valeur / 1000 trays" },
+        },
+      },
+    },
+  };
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+      <style>
+        body { margin: 0; padding: 0; background: white; }
+        #chartContainer { width: 100vw; height: 100vh; }
+        canvas { width: 100% !important; height: 100% !important; }
+      </style>
+    </head>
+    <body>
+      <div id="chartContainer">
+        <canvas id="myChart"></canvas>
+      </div>
+      <script>
+        const ctx = document.getElementById('myChart');
+        const config = ${JSON.stringify(configuration)};
+        new Chart(ctx, config);
+      </script>
+    </body>
+    </html>
+  `;
+
+  await page.setContent(htmlContent);
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  const chartElement = await page.$("#chartContainer");
+  const imageBuffer = await chartElement.screenshot({ type: "png" });
+  await page.close();
+  return imageBuffer;
+}
+
+/**
+ * Formate les données top-10 des 7 derniers jours pour le tableau
+ */
+function formatSevenDaysTableData(top10Data, amountsData) {
+  const alarmMap = new Map();
+  const dates = new Set();
+
+  top10Data.forEach((row) => {
+    dates.add(row.alarm_date);
+    if (!alarmMap.has(row.alarmId)) {
+      alarmMap.set(row.alarmId, {
+        dataSource: row.dataSource,
+        alarmArea: row.alarmArea,
+        alarmId: row.alarmId,
+        error: row.alarmText,
+        dailyBreakdown: {},
+      });
+    }
+    alarmMap.get(row.alarmId).dailyBreakdown[row.alarm_date] = row.daily_count;
+  });
+
+  const sortedDates = Array.from(dates).sort();
+
+  const tableColumns = [
+    { name: "dataSource", label: "Source", align: "left" },
+    { name: "alarmArea", label: "Module", align: "left" },
+    { name: "error", label: "Erreur", align: "left" },
+  ];
+
+  sortedDates.forEach((date) => {
+    const dateObj = new Date(date);
+    const formattedDate = `${String(dateObj.getDate()).padStart(2, "0")}/${String(
+      dateObj.getMonth() + 1
+    ).padStart(2, "0")}`;
+    tableColumns.push({ name: date, label: formattedDate, align: "center" });
+  });
+
+  const tableRows = Array.from(alarmMap.values()).map((alarm) => {
+    const row = {
+      alarmId: alarm.alarmId,
+      dataSource: alarm.dataSource,
+      alarmArea: alarm.alarmArea,
+      error: alarm.error,
+    };
+    sortedDates.forEach((date) => {
+      row[date] = alarm.dailyBreakdown[date] || 0;
+    });
+    return row;
+  });
+
+  // Lignes de quantités
+  tableRows.unshift({
+    dataSource: "----",
+    alarmArea: "----",
+    error: "Quantité de trays sortie (entrée palletiseurs)",
+    ...Object.fromEntries(
+      sortedDates.map((date) => {
+        const total = amountsData
+          .filter(
+            (t) =>
+              t.date === date && ["X101", "X102", "X103", "X104"].includes(t.zoneName)
+          )
+          .reduce((sum, curr) => sum + curr.total, 0);
+        return [date, total];
+      })
+    ),
+  });
+  tableRows.unshift({
+    dataSource: "----",
+    alarmArea: "----",
+    error: "Quantité de trays entrée (sortie dépalettiseurs)",
+    ...Object.fromEntries(
+      sortedDates.map((date) => {
+        const total = amountsData
+          .filter(
+            (t) =>
+              t.date === date && ["X001", "X002", "X003", "X004"].includes(t.zoneName)
+          )
+          .reduce((sum, curr) => sum + curr.total, 0);
+        return [date, total];
+      })
+    ),
+  });
+  tableRows.unshift({
+    dataSource: "----",
+    alarmArea: "----",
+    error: "Quantité de palettes sortie",
+    ...Object.fromEntries(
+      sortedDates.map((date) => {
+        const total = amountsData
+          .filter((t) => t.date === date && ["F013"].includes(t.zoneName))
+          .reduce((sum, curr) => sum + curr.total, 0);
+        return [date, total];
+      })
+    ),
+  });
+  tableRows.unshift({
+    dataSource: "----",
+    alarmArea: "----",
+    error: "Quantité de palettes entrée",
+    ...Object.fromEntries(
+      sortedDates.map((date) => {
+        const total = amountsData
+          .filter(
+            (t) =>
+              t.date === date &&
+              ["X001_PAL", "X002_PAL", "X003_PAL"].includes(t.zoneName)
+          )
+          .reduce((sum, curr) => sum + curr.total, 0);
+        return [date, total];
+      })
+    ),
+  });
+
+  return { tableRows, tableColumns };
 }
 
 /**
