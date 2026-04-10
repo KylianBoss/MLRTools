@@ -471,7 +471,9 @@
             <q-item>
               <q-item-section>
                 <q-item-label caption>Utilisateur assigné</q-item-label>
-                <q-item-label>{{ currentAlarm.assignedUser || 'Non assigné' }}</q-item-label>
+                <q-item-label>{{
+                  currentAlarm.assignedUser || "Non assigné"
+                }}</q-item-label>
               </q-item-section>
             </q-item>
             <q-item v-if="currentAlarm.x_group">
@@ -724,9 +726,16 @@
             color="orange"
             @click="skipAutoGroup"
             :loading="autoGroupLoading"
-            v-if="
-              currentAutoGroupIndex < autoGroupProposals.length - 1
-            "
+            v-if="currentAutoGroupIndex < autoGroupProposals.length - 1"
+          />
+          <q-btn
+            flat
+            label="Valider tout"
+            color="deep-purple"
+            icon="done_all"
+            @click="validateAllAutoGroups"
+            :loading="autoGroupLoading"
+            v-if="autoGroupProposals.length > 1"
           />
           <q-btn
             label="Valider"
@@ -744,7 +753,7 @@
 
 <script setup>
 import { api } from "boot/axios";
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useQuasar } from "quasar";
 import dayjs from "dayjs";
 import AlarmGroupView from "src/components/alarms/AlarmGroupView.vue";
@@ -1501,9 +1510,7 @@ const computeAutoGroups = () => {
   const GAP_MS = 5 * 60 * 1000; // 5 minutes
 
   // 1. Filtrer les alarmes non groupées et non traitées
-  const candidates = alarms.value.filter(
-    (a) => !a.x_group && !a.x_treated
-  );
+  const candidates = alarms.value.filter((a) => !a.x_group && !a.x_treated);
 
   // 2. Regrouper par emplacement (dataSource + alarmArea)
   const byLocation = {};
@@ -1531,7 +1538,9 @@ const computeAutoGroups = () => {
       const prev = currentCluster[currentCluster.length - 1];
       const curr = locationAlarms[i];
 
-      const prevEnd = new Date(prev.timeOfAcknowledge || prev.timeOfOccurence).getTime();
+      const prevEnd = new Date(
+        prev.timeOfAcknowledge || prev.timeOfOccurence
+      ).getTime();
       const currStart = new Date(curr.timeOfOccurence).getTime();
       const gap = currStart - prevEnd;
 
@@ -1540,14 +1549,26 @@ const computeAutoGroups = () => {
       } else {
         // Sauvegarder le cluster s'il a au moins 2 alarmes
         if (currentCluster.length >= 2) {
-          proposals.push({ location, alarms: [...currentCluster] });
+          // Si l'une des alarmes contient le mot "collision" ajouter automatiquement le commentaire "Collision"
+          const comment = currentCluster.some((a) =>
+            a.alarmText.toLowerCase().includes("collision")
+          )
+            ? "Collision"
+            : null;
+          proposals.push({ location, alarms: [...currentCluster], comment });
         }
         currentCluster = [curr];
       }
     }
     // Dernier cluster
     if (currentCluster.length >= 2) {
-      proposals.push({ location, alarms: [...currentCluster] });
+      // Si l'une des alarmes contient le mot "collision" ajouter automatiquement le commentaire "Collision"
+      const comment = currentCluster.some((a) =>
+        a.alarmText.toLowerCase().includes("collision")
+      )
+        ? "Collision"
+        : null;
+      proposals.push({ location, alarms: [...currentCluster], comment });
     }
   });
 
@@ -1570,7 +1591,7 @@ const openAutoGroupDialog = () => {
   autoGroupProposals.value = proposals;
   currentAutoGroupIndex.value = 0;
   selectedAutoGroupAlarms.value = proposals[0].alarms.map((a) => a.dbId);
-  autoGroupComment.value = "";
+  autoGroupComment.value = proposals[0].comment || "";
   autoGroupIsPlanned.value = false;
   autoGroupDialog.value = true;
 };
@@ -1658,6 +1679,66 @@ const skipAutoGroup = () => {
   moveToNextAutoGroup();
 };
 
+const validateAllAutoGroups = async () => {
+  const remaining = autoGroupProposals.value.slice(currentAutoGroupIndex.value);
+  let created = 0;
+  let failed = 0;
+
+  try {
+    autoGroupLoading.value = true;
+
+    for (const proposal of remaining) {
+      const dbIds = proposal.alarms.map((a) => a.dbId);
+      if (dbIds.length < 2) continue;
+
+      try {
+        const response = await api.post("/alarms/group-alarms", { dbIds });
+        const groupId = response.data.groupId;
+
+        if (proposal.comment) {
+          await api.patch("/alarms/update-comment", {
+            dbId: dbIds[0],
+            comment: proposal.comment,
+          });
+        }
+
+        await api.patch("/alarms/update-state", {
+          dbId: dbIds[0],
+          state: "unplanned",
+          updateGroup: true,
+        });
+
+        await api.patch("/alarms/mark-treated", { dbIds });
+
+        dbIds.forEach((dbId) => {
+          const alarm = alarms.value.find((a) => a.dbId === dbId);
+          if (alarm) {
+            alarm.x_group = groupId;
+            alarm.x_treated = true;
+            alarm.x_state = "unplanned";
+            if (proposal.comment) alarm.x_comment = proposal.comment;
+          }
+        });
+
+        created++;
+      } catch {
+        failed++;
+      }
+    }
+
+    autoGroupDialog.value = false;
+    autoGroupProposals.value = [];
+    currentAutoGroupIndex.value = 0;
+
+    $q.notify({
+      type: failed === 0 ? "positive" : "warning",
+      message: `${created} groupe(s) créé(s)${failed > 0 ? `, ${failed} échec(s)` : ""}`,
+    });
+  } finally {
+    autoGroupLoading.value = false;
+  }
+};
+
 const moveToNextAutoGroup = () => {
   currentAutoGroupIndex.value++;
 
@@ -1665,7 +1746,7 @@ const moveToNextAutoGroup = () => {
     // Pré-sélectionner toutes les alarmes du prochain groupe
     const nextGroup = autoGroupProposals.value[currentAutoGroupIndex.value];
     selectedAutoGroupAlarms.value = nextGroup.alarms.map((a) => a.dbId);
-    autoGroupComment.value = "";
+    autoGroupComment.value = nextGroup.comment || "";
     autoGroupIsPlanned.value = false;
   } else {
     // Tous les groupes traités
@@ -1675,9 +1756,35 @@ const moveToNextAutoGroup = () => {
   }
 };
 
+const handleKeyboardShortcuts = (e) => {
+  // Ignorer si un dialog est ouvert ou si le focus est dans un input
+  if (autoGroupDialog.value || commentDialog.value) return;
+  const tag = document.activeElement?.tagName?.toLowerCase();
+  if (tag === "input" || tag === "textarea") return;
+
+  if (e.ctrlKey && e.key === "g") {
+    e.preventDefault();
+    if (selectedAlarms.value.length >= 2 && App.userHasAccess("canGroupAlarms")) {
+      groupSelectedAlarms();
+    }
+  }
+
+  if (e.ctrlKey && e.key === "t") {
+    e.preventDefault();
+    if (selectedAlarms.value.length > 0 && App.userHasAccess("canMarkAsTreated")) {
+      markAsTreated();
+    }
+  }
+};
+
 onMounted(async () => {
   await loadAlarms();
   await loadPendingInterventions();
+  window.addEventListener("keydown", handleKeyboardShortcuts);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleKeyboardShortcuts);
 });
 </script>
 
