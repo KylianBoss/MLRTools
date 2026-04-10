@@ -392,6 +392,11 @@ const access = [
   },
   {
     section: "DDS",
+    label: "Peut gérer les règles de groupement automatique",
+    value: "canManageAutoGroupRules",
+  },
+  {
+    section: "DDS",
     label: "Peut dégrouper des alarmes",
     value: "canUngroupAlarms",
   },

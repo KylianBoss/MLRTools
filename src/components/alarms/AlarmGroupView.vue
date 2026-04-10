@@ -20,10 +20,10 @@
               round
               dense
               icon="unfold_more"
-              @click="group.expanded = !group.expanded"
+              @click="toggleExpanded(group.groupId)"
             >
               <q-tooltip>{{
-                group.expanded ? "Réduire" : "Étendre"
+                expandedState[group.groupId] ? "Réduire" : "Étendre"
               }}</q-tooltip>
             </q-btn>
           </div>
@@ -31,7 +31,7 @@
       </q-card-section>
 
       <q-slide-transition>
-        <div v-show="group.expanded">
+        <div v-show="expandedState[group.groupId]">
           <q-separator />
           <q-card-section>
             <q-list separator>
@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import dayjs from "dayjs";
 
 const props = defineProps({
@@ -200,6 +200,9 @@ const calculateRealDuration = (alarms) => {
   return Math.round(totalMs / 1000);
 };
 
+// État expanded par groupId, persisté hors du computed
+const expandedState = ref({});
+
 // Group alarms by x_group
 const alarmGroups = computed(() => {
   const grouped = {};
@@ -211,10 +214,16 @@ const alarmGroups = computed(() => {
           groupId: alarm.x_group,
           alarms: [],
           totalDuration: 0,
-          expanded: true,
         };
       }
       grouped[alarm.x_group].alarms.push(alarm);
+    }
+  });
+
+  // Initialiser expanded pour les nouveaux groupes
+  Object.keys(grouped).forEach((id) => {
+    if (expandedState.value[id] === undefined) {
+      expandedState.value[id] = true;
     }
   });
 
@@ -226,6 +235,10 @@ const alarmGroups = computed(() => {
   // Convert to array and sort by group ID
   return Object.values(grouped).sort((a, b) => a.groupId - b.groupId);
 });
+
+const toggleExpanded = (groupId) => {
+  expandedState.value[groupId] = !expandedState.value[groupId];
+};
 
 const formatDate = (dateString) => {
   return dayjs(dateString).format("YYYY-MM-DD HH:mm:ss");

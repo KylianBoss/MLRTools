@@ -4,7 +4,7 @@ import { Op, QueryTypes, Sequelize } from "sequelize";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import "dayjs/locale/fr.js";
-import { requireAnyPermission } from "../middlewares/permissions.js";
+import { requireAnyPermission, requirePermission } from "../middlewares/permissions.js";
 
 dayjs.extend(customParseFormat);
 dayjs.locale("fr");
@@ -736,6 +736,10 @@ router.get("/daily-analysis", async (req, res) => {
   try {
     const db = getDB();
 
+    const targetDate = req.query.date
+      ? dayjs(req.query.date)
+      : dayjs().subtract(1, "day");
+
     const MIN_ALARM_DURATION = await db.models.Settings.getValue(
       "MIN_ALARM_DURATION"
     );
@@ -753,8 +757,8 @@ router.get("/daily-analysis", async (req, res) => {
         },
         timeOfOccurence: {
           [Op.between]: [
-            dayjs().subtract(1, "day").startOf("day").toDate(),
-            dayjs().subtract(1, "day").endOf("day").toDate(),
+            targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+            targetDate.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
           ],
         },
         alarmId: primaryAlarms,
@@ -984,6 +988,82 @@ router.patch(
       res.json({ success: true });
     } catch (e) {
       console.error("Error ungrouping alarm:", e);
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
+// --- AutoGroupRules CRUD ---
+
+router.get(
+  "/auto-group-rules",
+  requireAnyPermission(["canGroupAlarms", "canManageAutoGroupRules"]),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const rules = await db.models.AutoGroupRules.findAll({
+        order: [["id", "ASC"]],
+      });
+      res.json(rules);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
+router.post(
+  "/auto-group-rules",
+  requirePermission("canManageAutoGroupRules"),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const { name, keyword, comment, groupBy, zone } = req.body;
+      if (!name || !keyword || !comment || !groupBy) {
+        return res.status(400).json({ error: "name, keyword, comment et groupBy sont requis" });
+      }
+      const rule = await db.models.AutoGroupRules.create({
+        name,
+        keyword,
+        comment,
+        groupBy,
+        zone: zone || null,
+        updatedBy: req.userId,
+      });
+      res.status(201).json(rule);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
+router.put(
+  "/auto-group-rules/:id",
+  requirePermission("canManageAutoGroupRules"),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const rule = await db.models.AutoGroupRules.findByPk(req.params.id);
+      if (!rule) return res.status(404).json({ error: "Règle introuvable" });
+      const { name, keyword, comment, groupBy, zone, enabled } = req.body;
+      await rule.update({ name, keyword, comment, groupBy, zone: zone || null, enabled, updatedBy: req.userId });
+      res.json(rule);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
+router.delete(
+  "/auto-group-rules/:id",
+  requirePermission("canManageAutoGroupRules"),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const rule = await db.models.AutoGroupRules.findByPk(req.params.id);
+      if (!rule) return res.status(404).json({ error: "Règle introuvable" });
+      await rule.destroy();
+      res.json({ success: true });
+    } catch (e) {
       res.status(500).json({ error: e.message });
     }
   }

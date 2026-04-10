@@ -8,6 +8,7 @@ import { extractWMS } from "../cron/ExtractWMS.js";
 import { extractSAV } from "../cron/ExtractSAV.js";
 import { sendKPI } from "../cron/SendKPI.js";
 import { cleanDB } from "../cron/CleanDB.js";
+import { autoGroupAlarmsJob } from "../cron/AutoGroupAlarms.js";
 
 const router = Router();
 
@@ -42,6 +43,9 @@ async function executeJobAction(action, args = {}) {
 
     case "cleanDB":
       return await cleanDB(args.retryCount || 0);
+
+    case "autoGroupAlarms":
+      return await autoGroupAlarmsJob(args.retryCount || 0);
 
     default:
       throw new Error(`Unknown action: ${action}`);

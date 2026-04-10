@@ -283,6 +283,57 @@ function initDB(config) {
       }
     );
 
+    const AutoGroupRules = sequelize.define(
+      "AutoGroupRules",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        name: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Nom de la règle, ex: 'Collision'",
+        },
+        keyword: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Mot-clé à chercher dans alarmText (insensible à la casse)",
+        },
+        comment: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment: "Commentaire automatiquement appliqué aux alarmes du groupe",
+        },
+        groupBy: {
+          type: DataTypes.ENUM("location", "zone"),
+          allowNull: false,
+          defaultValue: "location",
+          comment: "'location' = dataSource+alarmArea, 'zone' = toute la liste de dataSources",
+        },
+        zone: {
+          type: DataTypes.JSON,
+          allowNull: true,
+          comment: "Array de dataSources concernées (utilisé si groupBy = zone)",
+        },
+        enabled: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: true,
+        },
+        updatedBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+        },
+      },
+      {
+        timestamps: true,
+        createdAt: false,
+        updatedAt: "updatedAt",
+      }
+    );
+
     const Zones = sequelize.define(
       "Zones",
       {

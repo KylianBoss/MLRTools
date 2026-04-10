@@ -1,12 +1,36 @@
 <template>
   <q-page padding>
-    <div class="q-mb-md">
-      <div class="text-h4 q-mb-sm">Analyse des alarmes quotidiennes</div>
-      <div class="text-subtitle2 text-grey-7">
-        Analyser et classifier les alarmes primaires de la veille ({{
-          yesterdayDate
-        }})
+    <div class="q-mb-md row items-center q-gutter-md">
+      <div>
+        <div class="text-h4 q-mb-sm">Analyse des alarmes quotidiennes</div>
+        <div class="text-subtitle2 text-grey-7">
+          Analyser et classifier les alarmes primaires du {{ selectedDate }}
+        </div>
       </div>
+      <q-input
+        v-model="selectedDate"
+        mask="##.##.####"
+        dense
+        outlined
+        label="Date"
+        style="width: 140px"
+      >
+        <template v-slot:append>
+          <q-icon name="event" class="cursor-pointer">
+            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-date
+                v-model="selectedDate"
+                mask="DD.MM.YYYY"
+                :options="(d) => d <= dayjs().format('YYYY/MM/DD')"
+              >
+                <div class="row items-center justify-end">
+                  <q-btn v-close-popup label="Fermer" color="primary" flat />
+                </div>
+              </q-date>
+            </q-popup-proxy>
+          </q-icon>
+        </template>
+      </q-input>
     </div>
 
     <!-- Statistics Cards -->
@@ -80,6 +104,16 @@
           :disable="!App.userHasAccess('canGroupAlarms')"
           @click="openAutoGroupDialog"
         />
+      </div>
+      <div class="col-auto" v-if="App.userHasAccess('canManageAutoGroupRules')">
+        <q-btn
+          flat
+          color="secondary"
+          icon="rule"
+          @click="rulesDialog = true"
+        >
+          <q-tooltip>Gérer les règles de groupement</q-tooltip>
+        </q-btn>
       </div>
       <div class="col-auto">
         <q-btn
@@ -657,7 +691,13 @@
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
-        <q-card-section v-if="currentAutoGroup">
+        <!-- Chargement "Valider tout" -->
+        <q-card-section v-if="autoGroupValidatingAll" class="column items-center q-py-xl">
+          <q-spinner-dots color="deep-purple" size="60px" />
+          <div class="text-subtitle1 q-mt-md text-grey-7">Création des groupes en cours...</div>
+        </q-card-section>
+
+        <q-card-section v-else-if="currentAutoGroup">
           <div class="q-mb-md">
             <div class="text-subtitle1 text-weight-bold">
               <q-icon name="location_on" class="q-mr-xs" />
@@ -719,7 +759,7 @@
           </div>
         </q-card-section>
 
-        <q-card-actions align="right">
+        <q-card-actions v-if="!autoGroupValidatingAll" align="right">
           <q-btn
             flat
             label="Passer"
@@ -748,12 +788,116 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Rules Dialog -->
+    <q-dialog v-model="rulesDialog" persistent transition-show="scale" transition-hide="scale">
+      <q-card style="min-width: 750px; max-width: 950px">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">Règles de groupement automatique</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section>
+          <q-table
+            :rows="autoGroupRules"
+            :columns="rulesColumns"
+            row-key="id"
+            flat
+            dense
+            :pagination="{ rowsPerPage: 10 }"
+          >
+            <template v-slot:top-right>
+              <q-btn
+                color="primary"
+                icon="add"
+                label="Ajouter"
+                size="sm"
+                @click="openRuleForm()"
+              />
+            </template>
+
+            <template v-slot:body-cell-groupBy="props">
+              <q-td :props="props">
+                <q-badge :color="props.row.groupBy === 'zone' ? 'deep-purple' : 'blue-grey'">
+                  {{ props.row.groupBy === "zone" ? "Zone" : "Emplacement" }}
+                </q-badge>
+              </q-td>
+            </template>
+
+            <template v-slot:body-cell-zone="props">
+              <q-td :props="props">
+                <span v-if="props.row.zone">
+                  {{ props.row.zone.join(", ") }}
+                </span>
+                <span v-else class="text-grey-5">—</span>
+              </q-td>
+            </template>
+
+            <template v-slot:body-cell-enabled="props">
+              <q-td :props="props">
+                <q-toggle
+                  :model-value="props.row.enabled"
+                  @update:model-value="toggleRuleEnabled(props.row)"
+                  color="positive"
+                  dense
+                />
+              </q-td>
+            </template>
+
+            <template v-slot:body-cell-actions="props">
+              <q-td :props="props">
+                <q-btn flat round dense icon="edit" size="sm" color="grey-7" @click="openRuleForm(props.row)" />
+                <q-btn flat round dense icon="delete" size="sm" color="negative" @click="deleteRule(props.row)" />
+              </q-td>
+            </template>
+          </q-table>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Rule Form Dialog -->
+    <q-dialog v-model="ruleFormDialog" persistent>
+      <q-card style="min-width: 500px">
+        <q-card-section>
+          <div class="text-h6">{{ editingRule?.id ? "Modifier la règle" : "Nouvelle règle" }}</div>
+        </q-card-section>
+
+        <q-card-section class="q-gutter-sm">
+          <q-input v-model="ruleForm.name" label="Nom" outlined dense />
+          <q-input v-model="ruleForm.keyword" label="Mot-clé (dans alarmText)" outlined dense hint="Insensible à la casse" />
+          <q-input v-model="ruleForm.comment" label="Commentaire appliqué" outlined dense />
+          <q-select
+            v-model="ruleForm.groupBy"
+            :options="[{ label: 'Emplacement (dataSource + alarmArea)', value: 'location' }, { label: 'Zone (liste de dataSources)', value: 'zone' }]"
+            label="Groupement"
+            outlined
+            dense
+            emit-value
+            map-options
+          />
+          <q-input
+            v-if="ruleForm.groupBy === 'zone'"
+            v-model="ruleFormZoneText"
+            label="dataSources (séparées par des virgules)"
+            outlined
+            dense
+            hint="Ex: F004, F005, F006"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Annuler" color="grey-7" v-close-popup />
+          <q-btn label="Enregistrer" color="primary" @click="saveRule" :loading="ruleFormLoading" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
 import { api } from "boot/axios";
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { useQuasar } from "quasar";
 import dayjs from "dayjs";
 import AlarmGroupView from "src/components/alarms/AlarmGroupView.vue";
@@ -793,10 +937,12 @@ const selectedAutoGroupAlarms = ref([]);
 const autoGroupComment = ref("");
 const autoGroupIsPlanned = ref(false);
 const autoGroupLoading = ref(false);
+const autoGroupValidatingAll = ref(false);
 
-const yesterdayDate = computed(() => {
-  return dayjs().subtract(1, "day").format("DD.MM.YYYY");
-});
+const selectedDate = ref(dayjs().subtract(1, "day").format("DD.MM.YYYY"));
+const selectedDateISO = computed(() =>
+  dayjs(selectedDate.value, "DD.MM.YYYY").format("YYYY-MM-DD")
+);
 
 const columns = [
   {
@@ -936,7 +1082,9 @@ const pendingCount = computed(() => {
 const loadAlarms = async () => {
   loading.value = true;
   try {
-    const response = await api.get("/alarms/daily-analysis");
+    const response = await api.get("/alarms/daily-analysis", {
+      params: { date: selectedDateISO.value },
+    });
     alarms.value = response.data;
   } catch (error) {
     console.error("Error fetching daily analysis data:", error);
@@ -1340,7 +1488,7 @@ const loadPendingInterventions = async () => {
 
   try {
     const response = await api.get(
-      `/interventions/pending/${yesterdayDate.value}`
+      `/interventions/pending/${selectedDateISO.value}`
     );
     pendingInterventions.value = response.data;
 
@@ -1363,7 +1511,7 @@ const findMatchingAlarms = async () => {
       alarmCode: currentIntervention.value.alarmCode,
       startTime: currentIntervention.value.startTime,
       endTime: currentIntervention.value.endTime,
-      plannedDate: yesterdayDate.value,
+      plannedDate: selectedDateISO.value,
     });
 
     matchingAlarms.value = response.data;
@@ -1500,75 +1648,189 @@ const moveToNextIntervention = () => {
   }
 };
 
+// --- Gestion des règles ---
+
+const rulesDialog = ref(false);
+const ruleFormDialog = ref(false);
+const ruleFormLoading = ref(false);
+const editingRule = ref(null);
+const ruleForm = ref({ name: "", keyword: "", comment: "", groupBy: "location" });
+const ruleFormZoneText = ref("");
+
+const rulesColumns = [
+  { name: "name", label: "Nom", field: "name", align: "left", sortable: true },
+  { name: "keyword", label: "Mot-clé", field: "keyword", align: "left" },
+  { name: "comment", label: "Commentaire", field: "comment", align: "left" },
+  { name: "groupBy", label: "Groupement", field: "groupBy", align: "center" },
+  { name: "zone", label: "Zone (dataSources)", field: "zone", align: "left" },
+  { name: "enabled", label: "Actif", field: "enabled", align: "center" },
+  { name: "actions", label: "", field: "actions", align: "right" },
+];
+
+const openRuleForm = (rule = null) => {
+  editingRule.value = rule;
+  if (rule) {
+    ruleForm.value = { name: rule.name, keyword: rule.keyword, comment: rule.comment, groupBy: rule.groupBy };
+    ruleFormZoneText.value = rule.zone ? rule.zone.join(", ") : "";
+  } else {
+    ruleForm.value = { name: "", keyword: "", comment: "", groupBy: "location" };
+    ruleFormZoneText.value = "";
+  }
+  ruleFormDialog.value = true;
+};
+
+const saveRule = async () => {
+  if (!ruleForm.value.name || !ruleForm.value.keyword || !ruleForm.value.comment) {
+    $q.notify({ type: "warning", message: "Tous les champs sont requis" });
+    return;
+  }
+  try {
+    ruleFormLoading.value = true;
+    const zone =
+      ruleForm.value.groupBy === "zone"
+        ? ruleFormZoneText.value.split(",").map((s) => s.trim()).filter(Boolean)
+        : null;
+
+    const payload = { ...ruleForm.value, zone };
+
+    if (editingRule.value?.id) {
+      await api.put(`/alarms/auto-group-rules/${editingRule.value.id}`, payload);
+    } else {
+      await api.post("/alarms/auto-group-rules", payload);
+    }
+
+    await loadAutoGroupRules();
+    ruleFormDialog.value = false;
+    $q.notify({ type: "positive", message: "Règle enregistrée" });
+  } catch (e) {
+    $q.notify({ type: "negative", message: "Erreur lors de l'enregistrement", caption: e.message });
+  } finally {
+    ruleFormLoading.value = false;
+  }
+};
+
+const toggleRuleEnabled = async (rule) => {
+  try {
+    await api.put(`/alarms/auto-group-rules/${rule.id}`, { ...rule, enabled: !rule.enabled });
+    await loadAutoGroupRules();
+  } catch (e) {
+    $q.notify({ type: "negative", message: "Erreur", caption: e.message });
+  }
+};
+
+const deleteRule = (rule) => {
+  $q.dialog({
+    title: "Supprimer la règle",
+    message: `Supprimer la règle "${rule.name}" ?`,
+    cancel: { label: "Annuler", flat: true, color: "grey-7" },
+    ok: { label: "Supprimer", color: "negative" },
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      await api.delete(`/alarms/auto-group-rules/${rule.id}`);
+      await loadAutoGroupRules();
+      $q.notify({ type: "positive", message: "Règle supprimée" });
+    } catch (e) {
+      $q.notify({ type: "negative", message: "Erreur", caption: e.message });
+    }
+  });
+};
+
 // --- Auto-groupement ---
+
+const autoGroupRules = ref([]);
+
+const loadAutoGroupRules = async () => {
+  try {
+    const response = await api.get("/alarms/auto-group-rules");
+    autoGroupRules.value = response.data;
+  } catch (e) {
+    console.error("Erreur chargement règles auto-group:", e);
+  }
+};
+
+const resolveAutoGroupComment = (cluster) => {
+  for (const rule of autoGroupRules.value) {
+    if (cluster.some((a) => a.alarmText.toLowerCase().includes(rule.keyword.toLowerCase()))) {
+      return rule.comment;
+    }
+  }
+  return null;
+};
 
 const currentAutoGroup = computed(() => {
   return autoGroupProposals.value[currentAutoGroupIndex.value] || null;
 });
 
-const computeAutoGroups = () => {
-  const GAP_MS = 5 * 60 * 1000; // 5 minutes
+const buildClusters = (alarmList) => {
+  const GAP_MS = 5 * 60 * 1000;
+  if (alarmList.length < 2) return [];
+  const sorted = [...alarmList].sort(
+    (a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence)
+  );
+  const clusters = [];
+  let current = [sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = current[current.length - 1];
+    const curr = sorted[i];
+    const prevEnd = new Date(prev.timeOfAcknowledge || prev.timeOfOccurence).getTime();
+    const currStart = new Date(curr.timeOfOccurence).getTime();
+    if (currStart - prevEnd <= GAP_MS) {
+      current.push(curr);
+    } else {
+      if (current.length >= 2) clusters.push([...current]);
+      current = [curr];
+    }
+  }
+  if (current.length >= 2) clusters.push(current);
+  return clusters;
+};
 
+const computeAutoGroups = () => {
   // 1. Filtrer les alarmes non groupées et non traitées
   const candidates = alarms.value.filter((a) => !a.x_group && !a.x_treated);
 
-  // 2. Regrouper par emplacement (dataSource + alarmArea)
+  const proposals = [];
+  const usedDbIds = new Set();
+
+  // --- Règles avec groupBy: "zone" ---
+  for (const rule of autoGroupRules.value) {
+    if (rule.groupBy !== "zone" || !rule.zone) continue;
+
+    const zoneAlarms = candidates.filter(
+      (a) =>
+        a.alarmText.toLowerCase().includes(rule.keyword.toLowerCase()) &&
+        rule.zone.includes(a.dataSource) &&
+        !usedDbIds.has(a.dbId)
+    );
+
+    for (const cluster of buildClusters(zoneAlarms)) {
+      cluster.forEach((a) => usedDbIds.add(a.dbId));
+      proposals.push({
+        location: rule.name,
+        alarms: cluster,
+        comment: rule.comment,
+      });
+    }
+  }
+
+  // --- Règles par défaut (groupBy: "location") ---
+  const remainingCandidates = candidates.filter((a) => !usedDbIds.has(a.dbId));
+
   const byLocation = {};
-  candidates.forEach((a) => {
+  remainingCandidates.forEach((a) => {
     const key = `${a.dataSource}.${a.alarmArea}`;
     if (!byLocation[key]) byLocation[key] = [];
     byLocation[key].push(a);
   });
 
-  const proposals = [];
-
-  // 3. Pour chaque emplacement, trier et chercher les clusters
   Object.entries(byLocation).forEach(([location, locationAlarms]) => {
-    if (locationAlarms.length < 2) return;
-
-    // Trier par timeOfOccurence
-    locationAlarms.sort(
-      (a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence)
-    );
-
-    // 4. Créer les clusters
-    let currentCluster = [locationAlarms[0]];
-
-    for (let i = 1; i < locationAlarms.length; i++) {
-      const prev = currentCluster[currentCluster.length - 1];
-      const curr = locationAlarms[i];
-
-      const prevEnd = new Date(
-        prev.timeOfAcknowledge || prev.timeOfOccurence
-      ).getTime();
-      const currStart = new Date(curr.timeOfOccurence).getTime();
-      const gap = currStart - prevEnd;
-
-      if (gap <= GAP_MS) {
-        currentCluster.push(curr);
-      } else {
-        // Sauvegarder le cluster s'il a au moins 2 alarmes
-        if (currentCluster.length >= 2) {
-          // Si l'une des alarmes contient le mot "collision" ajouter automatiquement le commentaire "Collision"
-          const comment = currentCluster.some((a) =>
-            a.alarmText.toLowerCase().includes("collision")
-          )
-            ? "Collision"
-            : null;
-          proposals.push({ location, alarms: [...currentCluster], comment });
-        }
-        currentCluster = [curr];
-      }
-    }
-    // Dernier cluster
-    if (currentCluster.length >= 2) {
-      // Si l'une des alarmes contient le mot "collision" ajouter automatiquement le commentaire "Collision"
-      const comment = currentCluster.some((a) =>
-        a.alarmText.toLowerCase().includes("collision")
-      )
-        ? "Collision"
-        : null;
-      proposals.push({ location, alarms: [...currentCluster], comment });
+    for (const cluster of buildClusters(locationAlarms)) {
+      proposals.push({
+        location,
+        alarms: cluster,
+        comment: resolveAutoGroupComment(cluster),
+      });
     }
   });
 
@@ -1593,6 +1855,8 @@ const openAutoGroupDialog = () => {
   selectedAutoGroupAlarms.value = proposals[0].alarms.map((a) => a.dbId);
   autoGroupComment.value = proposals[0].comment || "";
   autoGroupIsPlanned.value = false;
+  autoGroupValidatingAll.value = false;
+  autoGroupLoading.value = false;
   autoGroupDialog.value = true;
 };
 
@@ -1672,6 +1936,7 @@ const validateAutoGroup = async () => {
     });
   } finally {
     autoGroupLoading.value = false;
+    autoGroupValidatingAll.value = false;
   }
 };
 
@@ -1686,6 +1951,7 @@ const validateAllAutoGroups = async () => {
 
   try {
     autoGroupLoading.value = true;
+    autoGroupValidatingAll.value = true;
 
     for (const proposal of remaining) {
       const dbIds = proposal.alarms.map((a) => a.dbId);
@@ -1724,6 +1990,7 @@ const validateAllAutoGroups = async () => {
       } catch {
         failed++;
       }
+      currentAutoGroupIndex.value++;
     }
 
     autoGroupDialog.value = false;
@@ -1732,7 +1999,9 @@ const validateAllAutoGroups = async () => {
 
     $q.notify({
       type: failed === 0 ? "positive" : "warning",
-      message: `${created} groupe(s) créé(s)${failed > 0 ? `, ${failed} échec(s)` : ""}`,
+      message: `${created} groupe(s) créé(s)${
+        failed > 0 ? `, ${failed} échec(s)` : ""
+      }`,
     });
   } finally {
     autoGroupLoading.value = false;
@@ -1764,22 +2033,34 @@ const handleKeyboardShortcuts = (e) => {
 
   if (e.ctrlKey && e.key === "g") {
     e.preventDefault();
-    if (selectedAlarms.value.length >= 2 && App.userHasAccess("canGroupAlarms")) {
+    if (
+      selectedAlarms.value.length >= 2 &&
+      App.userHasAccess("canGroupAlarms")
+    ) {
       groupSelectedAlarms();
     }
   }
 
   if (e.ctrlKey && e.key === "t") {
     e.preventDefault();
-    if (selectedAlarms.value.length > 0 && App.userHasAccess("canMarkAsTreated")) {
+    if (
+      selectedAlarms.value.length > 0 &&
+      App.userHasAccess("canMarkAsTreated")
+    ) {
       markAsTreated();
     }
   }
 };
 
+watch(selectedDate, async (val) => {
+  if (val?.length === 10) {
+    await loadAlarms();
+    await loadPendingInterventions();
+  }
+});
+
 onMounted(async () => {
-  await loadAlarms();
-  await loadPendingInterventions();
+  await Promise.all([loadAlarms(), loadPendingInterventions(), loadAutoGroupRules()]);
   window.addEventListener("keydown", handleKeyboardShortcuts);
 });
 
