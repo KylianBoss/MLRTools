@@ -80,4 +80,42 @@ router.post("/", async (req, res) => {
   }
 });
 
+router.get("/ai-chat-credentials", async (req, res) => {
+  try {
+    const config = await fs.readFile(CONFIG_PATH, "utf-8");
+    const parsed = JSON.parse(config);
+    if (parsed.aiChatUsername && parsed.aiChatPassword) {
+      res.json({
+        configured: true,
+        username: parsed.aiChatUsername,
+        password: parsed.aiChatPassword,
+      });
+    } else {
+      res.json({ configured: false });
+    }
+  } catch {
+    res.json({ configured: false });
+  }
+});
+
+router.post("/ai-chat-credentials", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password required" });
+    }
+    let current = {};
+    try {
+      const raw = await fs.readFile(CONFIG_PATH, "utf-8");
+      current = JSON.parse(raw);
+    } catch {}
+    current.aiChatUsername = username;
+    current.aiChatPassword = password;
+    await fs.writeFile(CONFIG_PATH, JSON.stringify(current));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

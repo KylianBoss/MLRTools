@@ -430,6 +430,12 @@ const access = [
     label: "Peut valider des interventions",
     value: "canValidateInterventions",
   },
+  // AI Chat
+  {
+    section: "IA",
+    label: "Accès à l'assistant IA",
+    value: "canAccessAIChat",
+  },
   // Admin accesses
   { section: "Admin", label: "DB", value: "canAccessAdminDB" },
   { section: "Admin", label: "Users", value: "canAccessAdminUser" },

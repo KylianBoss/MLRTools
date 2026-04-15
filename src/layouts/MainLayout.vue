@@ -180,6 +180,14 @@
               label="Données de production"
             />
           </q-expansion-item>
+          <!-- AI CHAT -->
+          <drawer-item
+            to="ai-chat"
+            autorisation="canAccessAIChat"
+            icon="mdi-robot-outline"
+            label="Assistant IA"
+            v-if="App.userHasAccess('canAccessAIChat') || App.isAdmin || App.isTechnician"
+          />
           <!-- TOOLS -->
           <q-expansion-item
             expand-separator

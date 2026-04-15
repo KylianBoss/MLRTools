@@ -79,6 +79,29 @@ const routes = [
           },
         ],
       },
+      // === AI CHAT === //
+      {
+        path: "ai-chat",
+        name: "ai-chat",
+        component: () => import("pages/AIChatPage.vue"),
+        beforeEnter: (to, from, next) => {
+          const App = useAppStore();
+          if (
+            App.user &&
+            (App.user.UserAccesses.includes("canAccessAIChat") ||
+              App.user.isAdmin ||
+              App.user.isTechnician)
+          ) {
+            next();
+          } else {
+            App.feedBackNotification(
+              "Vous n'avez pas les droits pour accéder à cette page",
+              "negative"
+            );
+            next({ name: "home" });
+          }
+        },
+      },
       // === TOOLS === //
       {
         path: "tools",
