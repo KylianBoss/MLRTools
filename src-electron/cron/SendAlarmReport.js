@@ -49,9 +49,11 @@ export const sendAlarmReport = async (retryCount = 0) => {
     const minDuration = minDurationSetting ? parseInt(minDurationSetting.value) || 0 : 0;
     const Op = db.Sequelize.Op;
 
-    // Récupérer les alarmId de type "primary"
+    // Récupérer les alarmId de type "primary" ou non classifié (null)
     const primaryAlarmIds = await db.models.Alarms.findAll({
-      where: { type: "primary" },
+      where: {
+        [Op.or]: [{ type: "primary" }, { type: null }],
+      },
       attributes: ["alarmId"],
     }).then((rows) => rows.map((a) => a.alarmId));
 
@@ -253,7 +255,7 @@ function buildEmailHtml(data) {
         <tr>
           <td style="padding:12px;background:#f3f4f6;border-radius:6px;text-align:center;width:50%;">
             <div style="font-size:32px;font-weight:bold;color:#1e3a5f;">${totalPrimary}</div>
-            <div style="font-size:13px;color:#6b7280;margin-top:4px;">Alarmes primaires (J-1)</div>
+            <div style="font-size:13px;color:#6b7280;margin-top:4px;">Alarmes primaires</div>
           </td>
           <td style="width:16px;"></td>
           <td style="padding:12px;background:#f3f4f6;border-radius:6px;text-align:center;width:50%;">
@@ -263,11 +265,11 @@ function buildEmailHtml(data) {
         </tr>
       </table>
 
-      <h2 style="font-size:15px;color:#374151;margin:0 0 12px;">Détail par technicien</h2>
+      <h2 style="font-size:15px;color:#374151;margin:0 0 12px;">Détail par personne</h2>
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
         <thead>
           <tr style="background:#f9fafb;">
-            <th style="padding:8px 12px;text-align:left;color:#6b7280;font-weight:600;border-bottom:2px solid #e5e7eb;">Technicien</th>
+            <th style="padding:8px 12px;text-align:left;color:#6b7280;font-weight:600;border-bottom:2px solid #e5e7eb;">Personne</th>
             <th style="padding:8px 12px;text-align:center;color:#6b7280;font-weight:600;border-bottom:2px solid #e5e7eb;">Alarmes</th>
             <th style="padding:8px 12px;text-align:center;color:#6b7280;font-weight:600;border-bottom:2px solid #e5e7eb;">Temps moyen de prise</th>
           </tr>
