@@ -73,6 +73,8 @@
       </q-card>
     </div>
     <div v-else>
+      <WarehouseAnimation />
+
       <q-card class="q-ma-md bg-blue-1">
         <q-card-section>
           <div class="row items-start q-gutter-md">
@@ -141,6 +143,7 @@ import { api } from "boot/axios";
 import { ref, onMounted } from "vue";
 import { EventSource } from "eventsource";
 import { useRouter } from "vue-router";
+import WarehouseAnimation from "components/WarehouseAnimation.vue";
 
 const App = useAppStore();
 const router = useRouter();
@@ -221,4 +224,4 @@ onMounted(async () => {
 });
 </script>
 
-<style></style>
+<style scoped></style>
