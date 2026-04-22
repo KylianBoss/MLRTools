@@ -30,23 +30,21 @@ export const extractWMS = async (manualDate = null, retryCount = 0) => {
   const db = getDB();
   if (retryCount >= MAX_RETRY) {
     console.warn(
-      `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
+      `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${manualDate}`
     );
     await updateJob(
       {
         actualState: "error",
         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        lastLog: `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`,
+        lastLog: `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${manualDate}`,
         endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         cronExpression: "30 0 * * *",
         args: null,
       },
       jobName
     );
-    return reject(
-      new Error(
-        `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
-      )
+    throw new Error(
+      `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${manualDate}`
     );
   }
 

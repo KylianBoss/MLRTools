@@ -31,10 +31,8 @@ export const extractSAV = async (date = null, retryCount = 0) => {
       },
       jobName
     );
-    return reject(
-      new Error(
-        `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
-      )
+    throw new Error(
+      `Maximum retry count reached (${MAX_RETRY}), aborting extraction for date ${date}`
     );
   }
 

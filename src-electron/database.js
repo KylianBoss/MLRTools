@@ -800,12 +800,12 @@ function initDB(config) {
         },
         requestedBy: {
           type: DataTypes.INTEGER.UNSIGNED,
-          allowNull: false,
+          allowNull: true,
           references: {
             model: "Users",
             key: "id",
           },
-          comment: "User ID who requested the job",
+          comment: "User ID who requested the job, null for automatic retries",
         },
         status: {
           type: DataTypes.ENUM("pending", "running", "completed", "failed"),
