@@ -1069,4 +1069,40 @@ router.delete(
   }
 );
 
+// Marquer la journée J-1 comme traitée manuellement (empêche le cron autoGroupAlarms de s'exécuter)
+router.patch(
+  "/mark-daily-done",
+  requirePermission("canMarkAsTreated"),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const yesterday = dayjs().subtract(1, "day").format("YYYY-MM-DD");
+      await db.models.Settings.upsert({
+        key: "dailyAnalysisDoneDate",
+        value: yesterday,
+        description: "Date de la dernière analyse quotidienne traitée manuellement",
+        updatedAt: new Date(),
+      });
+      res.json({ success: true, date: yesterday });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
+// Récupérer si la journée J-1 a déjà été traitée manuellement
+router.get("/daily-done-status", async (req, res) => {
+  try {
+    const db = getDB();
+    const yesterday = dayjs().subtract(1, "day").format("YYYY-MM-DD");
+    const setting = await db.models.Settings.findByPk("dailyAnalysisDoneDate");
+    res.json({
+      done: setting?.value === yesterday,
+      date: setting?.value || null,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;

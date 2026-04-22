@@ -16,7 +16,7 @@ export const autoGroupAlarmsJob = async (retryCount = 0) => {
         lastRun: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         lastLog: `Maximum retry count reached (${MAX_RETRY}), aborting auto group`,
         endAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        cronExpression: "0 6 * * 6,0",
+        cronExpression: "5 8 * * *",
       },
       jobName
     );
@@ -25,6 +25,25 @@ export const autoGroupAlarmsJob = async (retryCount = 0) => {
 
   const targetDate = dayjs().subtract(1, "day");
   const targetDateLabel = targetDate.format("DD.MM.YYYY");
+  const targetDateISO = targetDate.format("YYYY-MM-DD");
+
+  // Vérifier si l'analyse a déjà été faite manuellement pour J-1
+  const doneSetting = await db.models.Settings.findByPk("dailyAnalysisDoneDate");
+  if (doneSetting?.value === targetDateISO) {
+    const skipMsg = `Analyse du ${targetDateLabel} déjà effectuée manuellement — cron ignoré.`;
+    console.log(`[AutoGroupAlarms] ${skipMsg}`);
+    await updateJob(
+      {
+        lastRun: new Date(),
+        actualState: "idle",
+        lastLog: skipMsg,
+        endAt: new Date(),
+        cronExpression: "5 8 * * *",
+      },
+      jobName
+    );
+    return;
+  }
 
   console.log(`[AutoGroupAlarms] Starting for ${targetDateLabel}...`);
 
@@ -35,7 +54,7 @@ export const autoGroupAlarmsJob = async (retryCount = 0) => {
       lastLog: `Groupement automatique en cours pour le ${targetDateLabel}...`,
       startAt: new Date(),
       endAt: null,
-      cronExpression: "0 6 * * 6,0",
+      cronExpression: "5 8 * * *",
     },
     jobName
   );

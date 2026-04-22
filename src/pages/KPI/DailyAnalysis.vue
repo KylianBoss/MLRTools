@@ -136,6 +136,24 @@
           @click="loadAlarms"
         />
       </div>
+      <div class="col-auto" v-if="isYesterday">
+        <q-btn
+          :color="dailyDone ? 'positive' : 'orange'"
+          :label="dailyDone ? 'Journée traitée' : 'Marquer journée traitée'"
+          :icon="dailyDone ? 'check_circle' : 'done_all'"
+          :outline="dailyDone"
+          :disable="dailyDone"
+          @click="markDailyDone"
+          :loading="dailyDoneLoading"
+        >
+          <q-tooltip v-if="dailyDone">
+            L'analyse du {{ selectedDate }} a déjà été marquée comme traitée — le cron automatique ne s'exécutera pas.
+          </q-tooltip>
+          <q-tooltip v-else>
+            Marquer l'analyse du {{ selectedDate }} comme traitée manuellement — le cron automatique de ce matin sera ignoré.
+          </q-tooltip>
+        </q-btn>
+      </div>
       <div class="col"></div>
       <div class="col-auto">
         <q-btn-toggle
@@ -943,6 +961,44 @@ const selectedDate = ref(dayjs().subtract(1, "day").format("DD.MM.YYYY"));
 const selectedDateISO = computed(() =>
   dayjs(selectedDate.value, "DD.MM.YYYY").format("YYYY-MM-DD")
 );
+
+const isYesterday = computed(() =>
+  selectedDateISO.value === dayjs().subtract(1, "day").format("YYYY-MM-DD")
+);
+
+const dailyDone = ref(false);
+const dailyDoneLoading = ref(false);
+
+const loadDailyDoneStatus = async () => {
+  try {
+    const response = await api.get("/alarms/daily-done-status");
+    dailyDone.value = response.data.done;
+  } catch (error) {
+    console.error("Error loading daily done status:", error);
+  }
+};
+
+const markDailyDone = async () => {
+  try {
+    dailyDoneLoading.value = true;
+    await api.patch("/alarms/mark-daily-done");
+    dailyDone.value = true;
+    $q.notify({
+      type: "positive",
+      message: `Journée du ${selectedDate.value} marquée comme traitée`,
+      caption: "Le cron automatique de demain matin sera ignoré pour cette date.",
+    });
+  } catch (error) {
+    console.error("Error marking daily done:", error);
+    $q.notify({
+      type: "negative",
+      message: "Échec du marquage de la journée",
+      caption: error.message,
+    });
+  } finally {
+    dailyDoneLoading.value = false;
+  }
+};
 
 const columns = [
   {
@@ -2056,11 +2112,13 @@ watch(selectedDate, async (val) => {
   if (val?.length === 10) {
     await loadAlarms();
     await loadPendingInterventions();
+    if (isYesterday.value) await loadDailyDoneStatus();
+    else dailyDone.value = false;
   }
 });
 
 onMounted(async () => {
-  await Promise.all([loadAlarms(), loadPendingInterventions(), loadAutoGroupRules()]);
+  await Promise.all([loadAlarms(), loadPendingInterventions(), loadAutoGroupRules(), loadDailyDoneStatus()]);
   window.addEventListener("keydown", handleKeyboardShortcuts);
 });
 
