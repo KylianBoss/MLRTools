@@ -35,6 +35,7 @@ router.put("/", async (req, res) => {
     UserAccesses,
     isBot,
     recieveDailyReport,
+    recieveDailyAlarmsByUser,
     isTechnician,
   } = req.body;
   try {
@@ -45,6 +46,7 @@ router.put("/", async (req, res) => {
         autorised,
         isBot,
         recieveDailyReport,
+        recieveDailyAlarmsByUser,
         isTechnician,
       },
       {

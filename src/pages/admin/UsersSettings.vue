@@ -100,6 +100,16 @@
               "
             />
           </q-td>
+          <q-td key="recieveDailyAlarmsByUser" :props="props" class="text-center">
+            <q-toggle
+              v-model="props.row.recieveDailyAlarmsByUser"
+              color="secondary"
+              @update:model-value="App.updateUser(props.row)"
+              :disable="
+                !props.row.email || !props.row.autorised || props.row.isBot
+              "
+            />
+          </q-td>
           <q-td key="isTechnician" :props="props" class="text-center">
             <q-toggle
               v-model="props.row.isTechnician"
@@ -250,6 +260,13 @@ const columns = [
     label: "DAILY REPORT",
     align: "center",
     field: "recieveDailyReport",
+    sortable: true,
+  },
+  {
+    name: "recieveDailyAlarmsByUser",
+    label: "ALARM REPORT",
+    align: "center",
+    field: "recieveDailyAlarmsByUser",
     sortable: true,
   },
   {

@@ -52,6 +52,13 @@
               />
             </div>
 
+            <!-- Arguments pour sendAlarmReport -->
+            <div v-if="selectedAction === 'sendAlarmReport'" class="q-mt-md">
+              <div class="text-caption text-grey">
+                Génère et envoie le rapport des alarmes primaires de J-1 aux utilisateurs configurés (ALARM REPORT).
+              </div>
+            </div>
+
             <!-- Arguments pour sendKPI -->
             <div v-if="selectedAction === 'sendKPI'" class="q-mt-md">
               <q-toggle
@@ -254,6 +261,7 @@ const availableActions = [
   { label: "Extract WMS", value: "extractWMS" },
   { label: "Extract SAV", value: "extractSAV" },
   { label: "Send KPI", value: "sendKPI" },
+  { label: "Send Alarm Report", value: "sendAlarmReport" },
   { label: "Clean DB", value: "cleanDB" },
 ];
 

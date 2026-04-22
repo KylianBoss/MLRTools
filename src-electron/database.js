@@ -572,6 +572,11 @@ function initDB(config) {
           defaultValue: false,
           comment: "If true, the user will receive daily reports",
         },
+        recieveDailyAlarmsByUser: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+          comment: "If true, the user will receive daily alarm reports by user",
+        },
         autorised: {
           type: DataTypes.BOOLEAN,
           defaultValue: false,
