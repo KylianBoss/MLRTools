@@ -218,6 +218,11 @@ const routes = [
             name: "admin-cron-jobs",
             component: () => import("src/pages/admin/CronJobsManager.vue"),
           },
+          {
+            path: "settings",
+            name: "admin-settings",
+            component: () => import("src/pages/admin/SettingsPage.vue"),
+          },
         ],
       },
       // === SETTINGS === //
