@@ -191,6 +191,18 @@ function initDB(config) {
           type: DataTypes.STRING,
           allowNull: false,
         },
+        dataSourceName: {
+          type: DataTypes.STRING,
+        },
+        lacName: {
+          type: DataTypes.STRING,
+        },
+        lac: {
+          type: DataTypes.STRING,
+        },
+        layoutPosition: {
+          type: DataTypes.STRING,
+        },
         alarmArea: {
           type: DataTypes.STRING,
         },
@@ -206,6 +218,15 @@ function initDB(config) {
         },
         classification: {
           type: DataTypes.STRING,
+        },
+        timeOfClassification: {
+          type: DataTypes.DATE,
+        },
+        timeOfAssignment: {
+          type: DataTypes.DATE,
+        },
+        timeOfTreatement: {
+          type: DataTypes.DATE,
         },
         assignedUser: {
           type: DataTypes.STRING,

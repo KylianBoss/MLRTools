@@ -149,46 +149,25 @@ export const extractSAV = async (date = null, retryCount = 0) => {
       if (alarmCode === "M6130.0203") return null; // Don't put in DB the warning from the shuttle
       if (alarmCode === "M6130.0202") return null; // Don't put in DB the warning from the shuttle
 
-      await updateJob(
-        {
-          lastRun: new Date(),
-          lastLog: JSON.stringify({
-            dbId,
-            startDate,
-            endDate,
-            duration,
-            acknowledged,
-            dataSource,
-            dataSourceName,
-            lacName,
-            lac,
-            alarmArea,
-            layoutPosition,
-            alarmCode,
-            alarmText,
-            severity,
-            classification,
-            timeOfClassification,
-            assignedUser,
-            timeOfAssignment,
-            timeOfTreatement,
-            alarmId,
-          }),
-        },
-        jobName
-      );
       return {
         dbId,
         timeOfOccurence: startDate,
         timeOfAcknowledge: endDate,
         duration: dayjs(endDate).diff(dayjs(startDate), "seconds"),
         dataSource,
+        dataSourceName,
+        lacName,
+        lac,
         alarmArea,
+        layoutPosition,
         alarmCode,
         alarmText,
         severity,
         classification,
+        timeOfClassification,
         assignedUser,
+        timeOfAssignment,
+        timeOfTreatement,
         alarmId,
       };
     });
@@ -208,12 +187,19 @@ export const extractSAV = async (date = null, retryCount = 0) => {
         "timeOfAcknowledge",
         "duration",
         "dataSource",
+        "dataSourceName",
+        "lacName",
+        "lac",
         "alarmArea",
+        "layoutPosition",
         "alarmCode",
         "alarmText",
         "severity",
         "classification",
+        "timeOfClassification",
         "assignedUser",
+        "timeOfAssignment",
+        "timeOfTreatement",
         "alarmId",
       ],
     });
