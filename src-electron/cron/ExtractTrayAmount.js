@@ -39,6 +39,7 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
       );
     }
 
+    let browser = null;
     try {
       await updateJob(
         {
@@ -84,7 +85,7 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
         });
 
       // Setup puppeteer
-      const browser = await puppeteer.launch({
+      browser = await puppeteer.launch({
         headless: headless,
         args: [
           "--no-sandbox",
@@ -183,7 +184,7 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
       await Promise.all([
         page.waitForNavigation({
           waitUntil: "networkidle0",
-          timeout: 2 * 60 * 1000,
+          timeout: 3 * 60 * 1000,
         }),
         page.click('input[name="Search"]'),
       ]);
@@ -218,6 +219,7 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
           `No data to extract for date ${date}`
         );
         await browser.close();
+        resolve(zones);
         return;
       }
 
@@ -414,12 +416,12 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
       await db.models.cache_DowntimeMinutesByThousand.destroy({
         where: {
           date: dayjs(date).format("YYYY-MM-DD"),
-        }
+        },
       });
       await db.models.cache_ErrorsByThousand.destroy({
         where: {
           date: dayjs(date).format("YYYY-MM-DD"),
-        }
+        },
       });
 
       sleep(2000);
@@ -527,6 +529,9 @@ export const extractTrayAmount = (date, headless = true, retryCount = 0) => {
 
       resolve(zones);
     } catch (error) {
+      if (browser) {
+        try { await browser.close(); } catch (_) {}
+      }
       console.error("Error extracting tray amount:", error);
       global.sendNotificationToElectron(
         "Extract tray amount",

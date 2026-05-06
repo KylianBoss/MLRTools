@@ -223,7 +223,7 @@ router.post("/initialize", async (req, res) => {
       console.log(`Starting cron job: ${job.jobName} (${job.cronExpression})`);
 
       const task = cron.schedule(job.cronExpression, async () => {
-        console.log(`Cron triggered: ${job.jobName}`);
+        console.log(`Cron triggered: ${job.jobName}, enqueuing...`);
 
         // Parser les arguments du job si définis
         let parsedArgs = {};
@@ -233,7 +233,6 @@ router.post("/initialize", async (req, res) => {
             args.forEach((arg) => {
               const [key, value] = arg.split(":").map((s) => s.trim());
 
-              // Conversion des types basiques
               if (value === "true") parsedArgs[key] = true;
               else if (value === "false") parsedArgs[key] = false;
               else if (!isNaN(value)) parsedArgs[key] = Number(value);
@@ -244,29 +243,13 @@ router.post("/initialize", async (req, res) => {
           }
         }
 
-        // Exécuter l'action
-        try {
-          await executeJobAction(job.action, parsedArgs);
-        } catch (error) {
-          console.error(`Error executing scheduled job ${job.jobName}:`, error);
-
-          // Créer un job de retry dans la queue
-          const retryDelay = 10; // minutes
-          const scheduledFor = new Date(Date.now() + retryDelay * 60 * 1000);
-          const retryArgs = { ...parsedArgs, retryCount: 1 };
-
-          await db.models.JobQueue.create({
-            jobName: `${job.jobName} (Retry 1)`,
-            action: job.action,
-            args: retryArgs,
-            requestedBy: null,
-            scheduledFor: scheduledFor,
-          });
-
-          console.log(
-            `Scheduled retry 1/5 for cron job: ${job.jobName} at ${scheduledFor.toLocaleString()}`
-          );
-        }
+        await db.models.JobQueue.create({
+          jobName: job.jobName,
+          action: job.action,
+          args: { ...parsedArgs, retryCount: 0 },
+          requestedBy: null,
+          scheduledFor: null,
+        });
       });
 
       activeCronJobs.set(job.jobName, task);
