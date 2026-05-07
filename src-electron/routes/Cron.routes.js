@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getDB } from "../database.js";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
 import { sendCommandToFrontend } from "../electron-main.js";
 import cron from "node-cron";
 import { extractTrayAmount } from "../cron/ExtractTrayAmount.js";
@@ -10,6 +11,8 @@ import { sendKPI } from "../cron/SendKPI.js";
 import { cleanDB } from "../cron/CleanDB.js";
 import { autoGroupAlarmsJob } from "../cron/AutoGroupAlarms.js";
 import { sendAlarmReport } from "../cron/SendAlarmReport.js";
+
+dayjs.extend(utc);
 
 const router = Router();
 
@@ -161,6 +164,66 @@ async function processJobQueue() {
   }
 }
 
+/**
+ * Parse les arguments d'un job depuis la chaîne "key:value,key2:value2"
+ */
+function parseJobArgs(argsString) {
+  const parsed = {};
+  if (!argsString) return parsed;
+  try {
+    argsString.split(",").forEach((arg) => {
+      const [key, value] = arg.split(":").map((s) => s.trim());
+      if (value === "true") parsed[key] = true;
+      else if (value === "false") parsed[key] = false;
+      else if (!isNaN(value)) parsed[key] = Number(value);
+      else parsed[key] = value;
+    });
+  } catch (e) {
+    console.error("Error parsing job args:", e);
+  }
+  return parsed;
+}
+
+/**
+ * Retourne la dernière heure de déclenchement prévue aujourd'hui (UTC) si elle est déjà passée,
+ * ou null si le cron n'a pas encore dû se déclencher aujourd'hui.
+ * Supporte uniquement les expressions cron "minute hour * * *" (déclenchement quotidien fixe).
+ */
+function getLastTriggerToday(cronExpression) {
+  try {
+    const parts = cronExpression.trim().split(/\s+/);
+    if (parts.length !== 5) return null;
+
+    const [minutePart, hourPart, dom, month, dow] = parts;
+
+    // On ne gère le rattrapage que pour les crons à heure fixe (pas d'intervalles */n)
+    if (
+      minutePart.includes("*") ||
+      minutePart.includes("/") ||
+      hourPart.includes("*") ||
+      hourPart.includes("/")
+    ) {
+      return null;
+    }
+
+    const minute = parseInt(minutePart, 10);
+    const hour = parseInt(hourPart, 10);
+    if (isNaN(minute) || isNaN(hour)) return null;
+
+    const nowUtc = dayjs.utc();
+    const triggerToday = nowUtc.startOf("day").hour(hour).minute(minute).second(0);
+
+    // Le cron était prévu aujourd'hui et l'heure est déjà passée
+    if (triggerToday.isBefore(nowUtc)) {
+      return triggerToday.toDate();
+    }
+    return null;
+  } catch (e) {
+    console.error("Error computing last trigger:", e);
+    return null;
+  }
+}
+
 router.post("/initialize", async (req, res) => {
   const db = getDB();
   const { user } = req.body;
@@ -211,6 +274,8 @@ router.post("/initialize", async (req, res) => {
       },
     });
 
+    const missedJobs = [];
+
     for (const job of cronJobs) {
       // Valider l'expression cron
       if (!cron.validate(job.cronExpression)) {
@@ -225,23 +290,7 @@ router.post("/initialize", async (req, res) => {
       const task = cron.schedule(job.cronExpression, async () => {
         console.log(`Cron triggered: ${job.jobName}, enqueuing...`);
 
-        // Parser les arguments du job si définis
-        let parsedArgs = {};
-        if (job.args) {
-          try {
-            const args = job.args.split(",");
-            args.forEach((arg) => {
-              const [key, value] = arg.split(":").map((s) => s.trim());
-
-              if (value === "true") parsedArgs[key] = true;
-              else if (value === "false") parsedArgs[key] = false;
-              else if (!isNaN(value)) parsedArgs[key] = Number(value);
-              else parsedArgs[key] = value;
-            });
-          } catch (e) {
-            console.error(`Error parsing args for ${job.jobName}:`, e);
-          }
-        }
+        const parsedArgs = parseJobArgs(job.args);
 
         await db.models.JobQueue.create({
           jobName: job.jobName,
@@ -253,16 +302,48 @@ router.post("/initialize", async (req, res) => {
       });
 
       activeCronJobs.set(job.jobName, task);
+
+      // Vérifier si le cron aurait dû se déclencher aujourd'hui avant maintenant (UTC)
+      const lastExpectedTrigger = getLastTriggerToday(job.cronExpression);
+      if (lastExpectedTrigger) {
+        const startOfDay = dayjs.utc().startOf("day").toDate();
+        const alreadyQueued = await db.models.JobQueue.findOne({
+          where: {
+            action: job.action,
+            createdAt: { [db.Sequelize.Op.gte]: startOfDay },
+          },
+        });
+        if (!alreadyQueued) {
+          console.log(
+            `Missed cron detected: ${job.jobName} (should have run at ${lastExpectedTrigger.toISOString()}), enqueuing catch-up job...`
+          );
+          missedJobs.push(job);
+        }
+      }
     }
 
     // Démarrer le polling de la queue de jobs (toutes les 5 secondes)
     queuePollingInterval = setInterval(processJobQueue, 5000);
     console.log("Job queue polling started (every 5 seconds)");
 
+    // Enqueue les jobs manqués après avoir démarré le polling
+    for (const job of missedJobs) {
+      const parsedArgs = parseJobArgs(job.args);
+      await db.models.JobQueue.create({
+        jobName: `${job.jobName} (catch-up)`,
+        action: job.action,
+        args: { ...parsedArgs, retryCount: 0 },
+        requestedBy: null,
+        scheduledFor: null,
+      });
+      console.log(`Catch-up job created for: ${job.jobName}`);
+    }
+
     console.log("Cron jobs initialized successfully");
     res.json({
       message: "Cron jobs initialized successfully",
       jobsCount: activeCronJobs.size,
+      catchUpJobs: missedJobs.map((j) => j.jobName),
     });
   } catch (error) {
     console.error("Error initializing cron jobs:", error);
@@ -446,10 +527,10 @@ router.get("/status", async (req, res) => {
   });
 });
 
-// Start manually a cron job with custom arguments
+// Start manually a cron job with custom arguments (passe par la queue)
 router.post("/start", async (req, res) => {
   const db = getDB();
-  const { action, args } = req.body;
+  const { action, args, userId } = req.body;
 
   if (!action) {
     res.status(400).json({ error: "Action is required" });
@@ -468,14 +549,21 @@ router.post("/start", async (req, res) => {
 
     console.log(`Manual execution requested for: ${cronJob.jobName}`, args);
 
-    // Exécuter immédiatement avec les arguments fournis
-    const result = await executeJobAction(action, args || {});
+    const queuedJob = await db.models.JobQueue.create({
+      jobName: cronJob.jobName,
+      action: action,
+      args: { ...(args || {}), retryCount: 0 },
+      requestedBy: userId || null,
+      scheduledFor: null,
+    });
+
+    console.log(`Job queued for manual execution: ${cronJob.jobName} (Queue ID: ${queuedJob.id})`);
 
     res.json({
-      message: `Cron job ${cronJob.jobName} executed successfully`,
+      message: `Cron job ${cronJob.jobName} queued successfully`,
+      queueId: queuedJob.id,
       action,
       args,
-      result,
     });
   } catch (error) {
     console.error("Error starting cron job:", error);
