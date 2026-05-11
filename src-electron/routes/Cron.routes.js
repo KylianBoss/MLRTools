@@ -52,7 +52,7 @@ async function executeJobAction(action, args = {}) {
       return await autoGroupAlarmsJob(args.retryCount || 0);
 
     case "sendAlarmReport":
-      return await sendAlarmReport(args.retryCount || 0);
+      return await sendAlarmReport(args.retryCount || 0, args.date || null);
 
     default:
       throw new Error(`Unknown action: ${action}`);

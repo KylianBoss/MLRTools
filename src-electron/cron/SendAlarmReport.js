@@ -9,7 +9,7 @@ const jobName = "sendAlarmReport";
 const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 const MAX_RETRY = 3;
 
-export const sendAlarmReport = async (retryCount = 0) => {
+export const sendAlarmReport = async (retryCount = 0, date = null) => {
   const db = getDB();
 
   if (retryCount >= MAX_RETRY) {
@@ -26,7 +26,7 @@ export const sendAlarmReport = async (retryCount = 0) => {
     throw new Error(`Maximum retry count reached (${MAX_RETRY}), aborting alarm report`);
   }
 
-  const targetDate = dayjs().subtract(1, "day");
+  const targetDate = date ? dayjs(date) : dayjs().subtract(1, "day");
   const targetDateLabel = targetDate.format("DD.MM.YYYY");
   const targetDateISO = targetDate.format("YYYY-MM-DD");
 

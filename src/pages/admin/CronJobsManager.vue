@@ -54,9 +54,13 @@
 
             <!-- Arguments pour sendAlarmReport -->
             <div v-if="selectedAction === 'sendAlarmReport'" class="q-mt-md">
-              <div class="text-caption text-grey">
-                Génère et envoie le rapport des alarmes primaires de J-1 aux utilisateurs configurés (ALARM REPORT).
-              </div>
+              <q-input
+                v-model="args.date"
+                label="Date (optionnel)"
+                type="date"
+                filled
+                hint="Laisser vide pour J-1"
+              />
             </div>
 
             <!-- Arguments pour sendKPI -->
@@ -278,10 +282,10 @@ const resetArgs = () => {
     args.value = {
       date: "",
     };
+  } else if (selectedAction.value === "sendAlarmReport") {
+    args.value = { date: "" };
   } else if (selectedAction.value === "sendKPI") {
-    args.value = {
-      sendEmail: true,
-    };
+    args.value = { sendEmail: true };
   } else if (selectedAction.value === "cleanDB") {
     args.value = {};
   }
