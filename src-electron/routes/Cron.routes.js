@@ -277,34 +277,41 @@ router.post("/initialize", async (req, res) => {
     const missedJobs = [];
 
     for (const job of cronJobs) {
+      // Normaliser l'expression cron (supprimer les espaces multiples)
+      const cronExpression = job.cronExpression.trim().replace(/\s+/g, " ");
+
       // Valider l'expression cron
-      if (!cron.validate(job.cronExpression)) {
+      if (!cron.validate(cronExpression)) {
         console.error(
-          `Invalid cron expression for ${job.jobName}: ${job.cronExpression}`
+          `Invalid cron expression for ${job.jobName}: ${cronExpression}`
         );
         continue;
       }
 
-      console.log(`Starting cron job: ${job.jobName} (${job.cronExpression})`);
+      console.log(`Starting cron job: ${job.jobName} (${cronExpression})`);
 
-      const task = cron.schedule(job.cronExpression, async () => {
+      const task = cron.schedule(cronExpression, async () => {
         console.log(`Cron triggered: ${job.jobName}, enqueuing...`);
-
-        const parsedArgs = parseJobArgs(job.args);
-
-        await db.models.JobQueue.create({
-          jobName: job.jobName,
-          action: job.action,
-          args: { ...parsedArgs, retryCount: 0 },
-          requestedBy: null,
-          scheduledFor: null,
-        });
+        try {
+          const currentDb = getDB();
+          const parsedArgs = parseJobArgs(job.args);
+          await currentDb.models.JobQueue.create({
+            jobName: job.jobName,
+            action: job.action,
+            args: { ...parsedArgs, retryCount: 0 },
+            requestedBy: null,
+            scheduledFor: null,
+          });
+          console.log(`Job enqueued successfully: ${job.jobName}`);
+        } catch (err) {
+          console.error(`Failed to enqueue cron job ${job.jobName}:`, err);
+        }
       });
 
       activeCronJobs.set(job.jobName, task);
 
       // Vérifier si le cron aurait dû se déclencher aujourd'hui avant maintenant (UTC)
-      const lastExpectedTrigger = getLastTriggerToday(job.cronExpression);
+      const lastExpectedTrigger = getLastTriggerToday(cronExpression);
       if (lastExpectedTrigger) {
         const startOfDay = dayjs.utc().startOf("day").toDate();
         const alreadyQueued = await db.models.JobQueue.findOne({
@@ -322,9 +329,9 @@ router.post("/initialize", async (req, res) => {
       }
     }
 
-    // Démarrer le polling de la queue de jobs (toutes les 5 secondes)
-    queuePollingInterval = setInterval(processJobQueue, 5000);
-    console.log("Job queue polling started (every 5 seconds)");
+    // Démarrer le polling de la queue de jobs (toutes les 15 secondes)
+    queuePollingInterval = setInterval(processJobQueue, 15000);
+    console.log("Job queue polling started (every 15 seconds)");
 
     // Enqueue les jobs manqués après avoir démarré le polling
     for (const job of missedJobs) {
