@@ -216,97 +216,97 @@ export class AutoUpdater {
   }
 
   async downloadUpdate() {
-    try {
-      const updateInfo = await this.checkForUpdates();
-      const { downloadUrl, updateAvailable } = updateInfo;
+    const updateInfo = await this.checkForUpdates();
+    const { downloadUrl, updateAvailable, assetSize } = updateInfo;
 
-      if (!updateAvailable || !downloadUrl) {
-        throw new Error("No update available");
+    if (!updateAvailable || !downloadUrl) {
+      throw new Error("No update available");
+    }
+
+    this.console.info("Starting download from:", downloadUrl);
+
+    const downloadPath = path.join(app.getPath("temp"), "update.zip");
+
+    const sendProgress = (percent) => {
+      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+        this.mainWindow.webContents.send("download-progress", {
+          stage: "downloading",
+          percent,
+        });
       }
+    };
 
-      this.console.info("Starting download from:", downloadUrl);
-      this.console.info("Update info:", JSON.stringify(updateInfo, null, 2));
+    await new Promise((resolve, reject) => {
+      const doRequest = (url, redirectCount = 0) => {
+        if (redirectCount > 10) {
+          reject(new Error("Too many redirects"));
+          return;
+        }
 
-      const response = await axios({
-        method: "get",
-        url: downloadUrl,
-        responseType: "arraybuffer",
-        headers: {
-          Accept: "application/octet-stream",
-          "User-Agent": "MLR-Tools-Updater",
-        },
-        httpsAgent: new https.Agent({
+        const parsedUrl = new URL(url);
+        const options = {
+          hostname: parsedUrl.hostname,
+          path: parsedUrl.pathname + parsedUrl.search,
+          headers: {
+            Accept: "application/octet-stream",
+            "User-Agent": "MLR-Tools-Updater",
+          },
           rejectUnauthorized: false,
-        }),
-        maxRedirects: 10,
-        timeout: 600000, // 10 minutes
-      });
+        };
 
-      if (!response.data) {
-        throw new Error("No data received from download");
-      }
+        https.get(options, (res) => {
+          if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            res.resume();
+            doRequest(res.headers.location, redirectCount + 1);
+            return;
+          }
 
-      const dataSize = response.data.length || response.data.byteLength || 0;
-      this.console.info(
-        `Download completed. Size: ${dataSize} bytes (${(
-          dataSize /
-          1024 /
-          1024
-        ).toFixed(2)} MB)`
-      );
+          if (res.statusCode !== 200) {
+            reject(new Error(`HTTP ${res.statusCode}`));
+            return;
+          }
 
-      if (dataSize === 0) {
-        throw new Error("Downloaded file is empty");
-      }
+          const totalSize = parseInt(res.headers["content-length"] || "0", 10) || assetSize || 0;
+          let downloadedSize = 0;
+          const fileStream = fs.createWriteStream(downloadPath);
 
-      const downloadPath = path.join(app.getPath("temp"), "update.zip");
-      this.console.info("Saving to:", downloadPath);
-
-      fs.writeFileSync(downloadPath, response.data);
-
-      // Verify the file was written correctly
-      if (!fs.existsSync(downloadPath)) {
-        throw new Error("Failed to save update file - file does not exist");
-      }
-
-      const stats = fs.statSync(downloadPath);
-      this.console.info(
-        `File saved successfully. Size on disk: ${stats.size} bytes`
-      );
-
-      if (stats.size === 0) {
-        fs.unlinkSync(downloadPath);
-        throw new Error("Saved file is empty");
-      }
-
-      if (stats.size !== dataSize) {
-        this.console.warn(
-          `Warning: File size mismatch. Downloaded: ${dataSize}, Saved: ${stats.size}`
-        );
-      }
-
-      return { success: true, downloadPath };
-    } catch (error) {
-      const errorDetails = {
-        message: error.message,
-        code: error.code,
-        response: error.response
-          ? {
-              status: error.response.status,
-              statusText: error.response.statusText,
-              headers: error.response.headers,
+          res.on("data", (chunk) => {
+            downloadedSize += chunk.length;
+            if (totalSize > 0) {
+              sendProgress(Math.round((downloadedSize / totalSize) * 100));
             }
-          : null,
-        isAxiosError: error.isAxiosError,
+          });
+
+          res.pipe(fileStream);
+
+          fileStream.on("finish", () => {
+            fileStream.close();
+            this.console.info(`Download completed. Size: ${downloadedSize} bytes`);
+            if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+              this.mainWindow.webContents.send("download-progress", { stage: "complete" });
+            }
+            resolve();
+          });
+
+          fileStream.on("error", (err) => {
+            fs.unlink(downloadPath, () => {});
+            reject(err);
+          });
+
+          res.on("error", reject);
+        }).on("error", reject);
       };
 
-      this.console.error(
-        "Download failed with error:",
-        JSON.stringify(errorDetails, null, 2)
-      );
+      doRequest(downloadUrl);
+    });
 
-      throw new Error(`Failed to download update: ${error.message || error}`);
+    const stats = fs.statSync(downloadPath);
+    if (stats.size === 0) {
+      fs.unlinkSync(downloadPath);
+      throw new Error("Downloaded file is empty");
     }
+
+    return { success: true, downloadPath };
   }
 
   async installUpdate() {

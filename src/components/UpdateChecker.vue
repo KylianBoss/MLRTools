@@ -33,7 +33,7 @@ const updateAvailable = ref(false);
 const updating = ref(false);
 const isDevelopment = ref(import.meta.env.DEV);
 
-const checkForUpdates = async () => {
+const checkForUpdates = async (autoInstall = false) => {
   try {
     // Ne pas vérifier les mises à jour en mode développement
     if (isDevelopment.value) {
@@ -49,6 +49,10 @@ const checkForUpdates = async () => {
     currentVersion.value = result.currentVersion;
     latestVersion.value = result.latestVersion;
     updateAvailable.value = result.updateAvailable;
+
+    if (result.updateAvailable && autoInstall) {
+      handleUpdate(true);
+    }
   } catch (error) {
     console.error("Error checking for updates:", error);
   }
@@ -60,7 +64,7 @@ watch(updateAvailable, (newVal) => {
   }
 });
 
-const handleUpdate = async () => {
+const handleUpdate = async (silent = false) => {
   // Ne pas permettre les mises à jour en mode développement
   if (isDevelopment.value) {
     console.log("Updates disabled in development mode");
@@ -116,25 +120,22 @@ const handleUpdate = async () => {
     // Download the update
     await window.electron.downloadUpdate();
 
-    // Update if is a bot
-    if (App.isBot) {
+    // Bot ou démarrage silencieux : installer et redémarrer automatiquement
+    if (App.isBot || silent) {
       await window.electron.installUpdate();
       window.electron.restartApp();
       return;
     }
 
-    // Confirm with user before installing
+    // App déjà en cours d'utilisation : demander confirmation
     $q.dialog({
-      title: "Install Update",
+      title: "Mise à jour disponible",
       message:
-        "The update has been downloaded. Would you like to install it now? The application will restart.",
-      ok: "Install",
-      cancel: "Later",
+        "La mise à jour a été téléchargée. Voulez-vous l'installer maintenant ? L'application va redémarrer.",
+      ok: "Installer",
+      cancel: "Plus tard",
     }).onOk(async () => {
-      // Install the update
       await window.electron.installUpdate();
-
-      // Restart the app
       window.electron.restartApp();
     });
   } catch (error) {
@@ -174,8 +175,9 @@ const setupUpdateListeners = () => {
 onMounted(() => {
   setupUpdateListeners();
   // Delay initial check to ensure handlers are registered
+  // autoInstall=true : si une update est dispo au démarrage, l'installer silencieusement
   setTimeout(() => {
-    checkForUpdates();
+    checkForUpdates(true);
   }, 1000);
 });
 
