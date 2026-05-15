@@ -322,16 +322,32 @@ function initDB(config) {
           allowNull: false,
           comment: "Mot-clé à chercher dans alarmText (insensible à la casse)",
         },
+        alarmCodePattern: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: "Pattern wildcard sur alarmCode, ex: '14xx', '1[4-5]xx' (x = chiffre)",
+        },
+        dataSourceFilter: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: "Filtre optionnel sur une dataSource précise, ex: 'X001'",
+        },
+        action: {
+          type: DataTypes.ENUM("group", "treat"),
+          allowNull: false,
+          defaultValue: "group",
+          comment: "'group' = grouper les alarmes, 'treat' = marquer comme traitées sans grouper",
+        },
         comment: {
           type: DataTypes.STRING,
-          allowNull: false,
-          comment: "Commentaire automatiquement appliqué aux alarmes du groupe",
+          allowNull: true,
+          comment: "Commentaire automatiquement appliqué aux alarmes (optionnel pour action=treat)",
         },
         groupBy: {
           type: DataTypes.ENUM("location", "zone"),
-          allowNull: false,
+          allowNull: true,
           defaultValue: "location",
-          comment: "'location' = dataSource+alarmArea, 'zone' = toute la liste de dataSources",
+          comment: "'location' = dataSource+alarmArea, 'zone' = toute la liste de dataSources (utilisé si action=group)",
         },
         zone: {
           type: DataTypes.JSON,

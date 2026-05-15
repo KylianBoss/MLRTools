@@ -47,9 +47,24 @@ export const autoGroupAlarms = async (targetDate, db) => {
   const proposals = [];
   const usedDbIds = new Set();
 
+  const normalizeRegex = (pattern) => pattern.replace(/\\d/g, "[0-9]");
+
+  const matchesRule = (alarm, rule) => {
+    if (rule.keyword && !alarm.alarmText.toLowerCase().includes(rule.keyword.toLowerCase())) return false;
+    if (rule.alarmCodePattern) {
+      try {
+        if (!new RegExp(normalizeRegex(rule.alarmCodePattern), "i").test(alarm.alarmArea)) return false;
+      } catch {
+        return false;
+      }
+    }
+    if (rule.dataSourceFilter && alarm.dataSource !== rule.dataSourceFilter) return false;
+    return true;
+  };
+
   const resolveComment = (cluster) => {
     for (const rule of rules) {
-      if (cluster.some((a) => a.alarmText.toLowerCase().includes(rule.keyword.toLowerCase()))) {
+      if (cluster.some((a) => matchesRule(a, rule))) {
         return rule.comment;
       }
     }
@@ -81,24 +96,64 @@ export const autoGroupAlarms = async (targetDate, db) => {
     return clusters;
   };
 
-  // Règles zone d'abord
+  // Règles "treat" d'abord
   for (const rule of rules) {
-    if (rule.groupBy !== "zone" || !rule.zone) continue;
+    if (rule.action !== "treat") continue;
 
-    const zoneAlarms = candidates.filter(
-      (a) =>
-        a.alarmText.toLowerCase().includes(rule.keyword.toLowerCase()) &&
-        rule.zone.includes(a.dataSource) &&
-        !usedDbIds.has(a.dbId)
+    const matchingAlarms = candidates.filter(
+      (a) => matchesRule(a, rule) && !usedDbIds.has(a.dbId)
     );
 
-    for (const cluster of buildClusters(zoneAlarms)) {
+    if (matchingAlarms.length === 0) continue;
+
+    matchingAlarms.forEach((a) => usedDbIds.add(a.dbId));
+    proposals.push({ type: "treat", alarms: matchingAlarms, comment: rule.comment });
+  }
+
+  // Règles "group" zone
+  for (const rule of rules) {
+    if (rule.action !== "group" || rule.groupBy !== "zone" || !rule.zone) continue;
+
+    // Toutes les alarmes des zones listées (pas encore utilisées)
+    const allZoneAlarms = candidates.filter(
+      (a) => rule.zone.includes(a.dataSource) && !usedDbIds.has(a.dbId)
+    );
+
+    for (const cluster of buildClusters(allZoneAlarms)) {
+      // N'activer le groupe que si au moins une alarme du cluster déclenche la règle
+      if (!cluster.some((a) => matchesRule(a, rule))) continue;
+
       cluster.forEach((a) => usedDbIds.add(a.dbId));
-      proposals.push({ alarms: cluster, comment: rule.comment });
+      proposals.push({ type: "group", alarms: cluster, comment: rule.comment });
     }
   }
 
-  // Règles location (par dataSource + alarmArea)
+  // Règles "group" location actives (avec critères)
+  for (const rule of rules) {
+    if (rule.action !== "group" || rule.groupBy !== "location") continue;
+    if (!rule.keyword && !rule.alarmCodePattern && !rule.dataSourceFilter) continue;
+
+    const ruleAlarms = candidates.filter(
+      (a) => !usedDbIds.has(a.dbId) && (rule.dataSourceFilter ? a.dataSource === rule.dataSourceFilter : true)
+    );
+
+    const byLoc = {};
+    ruleAlarms.forEach((a) => {
+      const key = `${a.dataSource}.${a.alarmArea}`;
+      if (!byLoc[key]) byLoc[key] = [];
+      byLoc[key].push(a);
+    });
+
+    for (const locationAlarms of Object.values(byLoc)) {
+      for (const cluster of buildClusters(locationAlarms)) {
+        if (!cluster.some((a) => matchesRule(a, rule))) continue;
+        cluster.forEach((a) => usedDbIds.add(a.dbId));
+        proposals.push({ type: "group", alarms: cluster, comment: rule.comment });
+      }
+    }
+  }
+
+  // Fallback : groupement temporel par emplacement
   const remaining = candidates.filter((a) => !usedDbIds.has(a.dbId));
   const byLocation = {};
   remaining.forEach((a) => {
@@ -109,41 +164,40 @@ export const autoGroupAlarms = async (targetDate, db) => {
 
   for (const locationAlarms of Object.values(byLocation)) {
     for (const cluster of buildClusters(locationAlarms)) {
-      proposals.push({ alarms: cluster, comment: resolveComment(cluster) });
+      proposals.push({ type: "group", alarms: cluster, comment: resolveComment(cluster) });
     }
   }
 
-  // 4. Créer les groupes en DB
+  // 4. Appliquer les proposals en DB
   let created = 0;
   let failed = 0;
 
   for (const proposal of proposals) {
     const dbIds = proposal.alarms.map((a) => a.dbId);
     try {
-      // Créer le groupe
-      const maxGroup = await db.models.Datalog.max("x_group");
-      const groupId = (maxGroup || 0) + 1;
+      if (proposal.type === "treat") {
+        if (proposal.comment) {
+          for (const dbId of dbIds) {
+            await db.models.Datalog.update({ x_comment: proposal.comment }, { where: { dbId } });
+          }
+        }
+        await db.models.Datalog.update({ x_treated: true }, { where: { dbId: dbIds } });
+        created++;
+      } else {
+        // type === "group"
+        const maxGroup = await db.models.Datalog.max("x_group");
+        const groupId = (maxGroup || 0) + 1;
 
-      await db.models.Datalog.update(
-        { x_group: groupId },
-        { where: { dbId: dbIds } }
-      );
+        await db.models.Datalog.update({ x_group: groupId }, { where: { dbId: dbIds } });
 
-      // Appliquer le commentaire sur la première alarme du groupe
-      if (proposal.comment) {
-        await db.models.Datalog.update(
-          { x_comment: proposal.comment },
-          { where: { dbId: dbIds[0] } }
-        );
+        const effectiveComment = proposal.comment || proposal.alarms[0]?.alarmText || null;
+        if (effectiveComment) {
+          await db.models.Datalog.update({ x_comment: effectiveComment }, { where: { dbId: dbIds[0] } });
+        }
+
+        await db.models.Datalog.update({ x_state: "unplanned", x_treated: true }, { where: { dbId: dbIds } });
+        created++;
       }
-
-      // Marquer comme non planifié + traité
-      await db.models.Datalog.update(
-        { x_state: "unplanned", x_treated: true },
-        { where: { dbId: dbIds } }
-      );
-
-      created++;
     } catch {
       failed++;
     }

@@ -1012,21 +1012,65 @@ router.get(
 );
 
 router.post(
+  "/auto-group-rules/test-regex",
+  requirePermission("canManageAutoGroupRules"),
+  async (req, res) => {
+    try {
+      const db = getDB();
+      const { alarmCodePattern, keyword, dataSourceFilter } = req.body;
+
+      if (!alarmCodePattern && !keyword && !dataSourceFilter) {
+        return res.status(400).json({ error: "Au moins un critère est requis" });
+      }
+
+      const normalizeRegex = (pattern) => pattern.replace(/\\d/g, "[0-9]");
+
+      if (alarmCodePattern) {
+        try { new RegExp(normalizeRegex(alarmCodePattern)); } catch {
+          return res.status(400).json({ error: "Regex invalide" });
+        }
+      }
+
+      const where = {};
+      if (keyword) where.alarmText = { [Op.like]: `%${keyword}%` };
+      if (dataSourceFilter) where.dataSource = dataSourceFilter;
+      if (alarmCodePattern) where.alarmArea = { [Op.regexp]: normalizeRegex(alarmCodePattern) };
+
+      const matches = await db.models.Alarms.findAll({
+        where,
+        order: [["alarmCode", "ASC"]],
+      });
+
+      res.json(matches);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
+router.post(
   "/auto-group-rules",
   requirePermission("canManageAutoGroupRules"),
   async (req, res) => {
     try {
       const db = getDB();
-      const { name, keyword, comment, groupBy, zone } = req.body;
-      if (!name || !keyword || !comment || !groupBy) {
-        return res.status(400).json({ error: "name, keyword, comment et groupBy sont requis" });
+      const { name, keyword, comment, action, groupBy, zone, alarmCodePattern, dataSourceFilter } = req.body;
+      if (!name) {
+        return res.status(400).json({ error: "Le nom est requis" });
       }
+      if (!keyword && !alarmCodePattern && !dataSourceFilter) {
+        return res.status(400).json({ error: "Au moins un critère de filtre est requis (keyword, alarmCodePattern ou dataSourceFilter)" });
+      }
+      const resolvedAction = action || "group";
       const rule = await db.models.AutoGroupRules.create({
         name,
         keyword,
-        comment,
-        groupBy,
-        zone: zone || null,
+        alarmCodePattern: alarmCodePattern ? alarmCodePattern.replace(/\\d/g, "[0-9]") : null,
+        dataSourceFilter: dataSourceFilter || null,
+        action: resolvedAction,
+        comment: comment || null,
+        groupBy: resolvedAction === "group" ? (groupBy || "location") : null,
+        zone: resolvedAction === "group" && groupBy === "zone" ? (zone || null) : null,
         updatedBy: req.userId,
       });
       res.status(201).json(rule);
@@ -1044,8 +1088,20 @@ router.put(
       const db = getDB();
       const rule = await db.models.AutoGroupRules.findByPk(req.params.id);
       if (!rule) return res.status(404).json({ error: "Règle introuvable" });
-      const { name, keyword, comment, groupBy, zone, enabled } = req.body;
-      await rule.update({ name, keyword, comment, groupBy, zone: zone || null, enabled, updatedBy: req.userId });
+      const { name, keyword, comment, action, groupBy, zone, alarmCodePattern, dataSourceFilter, enabled } = req.body;
+      const resolvedAction = action || rule.action || "group";
+      await rule.update({
+        name,
+        keyword,
+        alarmCodePattern: alarmCodePattern ? alarmCodePattern.replace(/\\d/g, "[0-9]") : null,
+        dataSourceFilter: dataSourceFilter || null,
+        action: resolvedAction,
+        comment: comment || null,
+        groupBy: resolvedAction === "group" ? (groupBy || "location") : null,
+        zone: resolvedAction === "group" && groupBy === "zone" ? (zone || null) : null,
+        enabled,
+        updatedBy: req.userId,
+      });
       res.json(rule);
     } catch (e) {
       res.status(500).json({ error: e.message });

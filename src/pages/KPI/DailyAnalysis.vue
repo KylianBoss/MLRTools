@@ -99,7 +99,7 @@
       <div class="col-auto">
         <q-btn
           color="secondary"
-          label="Grouper auto"
+          label="Traitement auto"
           icon="auto_awesome"
           :disable="!App.userHasAccess('canGroupAlarms')"
           @click="openAutoGroupDialog"
@@ -112,7 +112,7 @@
           icon="rule"
           @click="rulesDialog = true"
         >
-          <q-tooltip>Gérer les règles de groupement</q-tooltip>
+          <q-tooltip>Gérer les règles de traitement automatique</q-tooltip>
         </q-btn>
       </div>
       <div class="col-auto">
@@ -689,7 +689,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <!-- Auto-Group Dialog -->
+    <!-- Auto Treatment Dialog -->
     <q-dialog
       v-model="autoGroupDialog"
       persistent
@@ -699,10 +699,17 @@
       <q-card style="min-width: 700px; max-width: 900px">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">
-            Groupement automatique
+            Traitement automatique
             <q-badge color="primary" class="q-ml-sm">
               {{ currentAutoGroupIndex + 1 }} /
               {{ autoGroupProposals.length }}
+            </q-badge>
+            <q-badge
+              v-if="currentAutoGroup"
+              :color="currentAutoGroup.type === 'treat' ? 'positive' : currentAutoGroup.fromRule ? 'deep-purple' : 'blue-grey'"
+              class="q-ml-xs"
+            >
+              {{ currentAutoGroup.type === "treat" ? "Règle — Traiter" : currentAutoGroup.fromRule ? "Règle — Grouper" : "Temporel" }}
             </q-badge>
           </div>
           <q-space />
@@ -712,22 +719,21 @@
         <!-- Chargement "Valider tout" -->
         <q-card-section v-if="autoGroupValidatingAll" class="column items-center q-py-xl">
           <q-spinner-dots color="deep-purple" size="60px" />
-          <div class="text-subtitle1 q-mt-md text-grey-7">Création des groupes en cours...</div>
+          <div class="text-subtitle1 q-mt-md text-grey-7">Traitement en cours...</div>
         </q-card-section>
 
-        <q-card-section v-else-if="currentAutoGroup">
+        <!-- Proposition de type "traiter" -->
+        <q-card-section v-else-if="currentAutoGroup && currentAutoGroup.type === 'treat'">
           <div class="q-mb-md">
             <div class="text-subtitle1 text-weight-bold">
-              <q-icon name="location_on" class="q-mr-xs" />
-              {{ currentAutoGroup.location }}
+              <q-icon name="check_circle" color="positive" class="q-mr-xs" />
+              {{ currentAutoGroup.ruleName }}
             </div>
             <div class="text-caption text-grey-7">
-              {{ currentAutoGroup.alarms.length }} alarmes détectées dans un
-              intervalle de 5 minutes
+              {{ currentAutoGroup.alarms.length }} alarme(s) à marquer comme traitée(s)
             </div>
           </div>
 
-          <!-- Alarm List with Checkboxes -->
           <q-list bordered separator>
             <q-item
               v-for="alarm in currentAutoGroup.alarms"
@@ -755,7 +761,61 @@
             </q-item>
           </q-list>
 
-          <!-- Comment -->
+          <div class="q-mt-md">
+            <q-input
+              v-model="autoGroupComment"
+              label="Commentaire (optionnel)"
+              outlined
+              type="textarea"
+              rows="2"
+            />
+          </div>
+        </q-card-section>
+
+        <!-- Proposition de type "grouper" -->
+        <q-card-section v-else-if="currentAutoGroup && currentAutoGroup.type === 'group'">
+          <div class="q-mb-md">
+            <div class="text-subtitle1 text-weight-bold">
+              <q-icon
+                :name="currentAutoGroup.fromRule ? 'rule' : 'schedule'"
+                :color="currentAutoGroup.fromRule ? 'deep-purple' : 'blue-grey'"
+                class="q-mr-xs"
+              />
+              {{ currentAutoGroup.location }}
+            </div>
+            <div class="text-caption text-grey-7">
+              {{ currentAutoGroup.alarms.length }} alarmes —
+              {{ currentAutoGroup.fromRule ? "déclenchées par une règle" : "détectées par proximité temporelle (5 min)" }}
+            </div>
+          </div>
+
+          <q-list bordered separator>
+            <q-item
+              v-for="alarm in currentAutoGroup.alarms"
+              :key="alarm.dbId"
+              clickable
+              @click="toggleAutoGroupAlarm(alarm.dbId)"
+            >
+              <q-item-section side>
+                <q-checkbox
+                  :model-value="selectedAutoGroupAlarms.includes(alarm.dbId)"
+                  @update:model-value="toggleAutoGroupAlarm(alarm.dbId)"
+                />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>
+                  {{ alarm.alarmCode }} - {{ alarm.alarmText }}
+                </q-item-label>
+                <q-item-label caption>
+                  <q-icon name="schedule" size="xs" />
+                  {{ formatDate(alarm.timeOfOccurence) }} →
+                  {{ formatDate(alarm.timeOfAcknowledge) }}
+                  | Durée: {{ formatDuration(alarm.duration) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+
           <div class="q-mt-md">
             <q-input
               v-model="autoGroupComment"
@@ -767,7 +827,6 @@
             />
           </div>
 
-          <!-- Planned Toggle -->
           <div class="q-mt-md">
             <q-toggle
               v-model="autoGroupIsPlanned"
@@ -796,6 +855,16 @@
             v-if="autoGroupProposals.length > 1"
           />
           <q-btn
+            v-if="currentAutoGroup && currentAutoGroup.type === 'treat'"
+            label="Valider"
+            color="positive"
+            icon="check"
+            @click="validateAutoGroup"
+            :loading="autoGroupLoading"
+            :disable="selectedAutoGroupAlarms.length === 0"
+          />
+          <q-btn
+            v-else
             label="Valider"
             color="positive"
             icon="check"
@@ -809,9 +878,9 @@
 
     <!-- Rules Dialog -->
     <q-dialog v-model="rulesDialog" persistent transition-show="scale" transition-hide="scale">
-      <q-card style="min-width: 750px; max-width: 950px">
+      <q-card style="min-width: 800px; max-width: 1000px">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Règles de groupement automatique</div>
+          <div class="text-h6">Règles de traitement automatique</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
@@ -835,11 +904,40 @@
               />
             </template>
 
+            <template v-slot:body-cell-alarmCodePattern="props">
+              <q-td :props="props">
+                <q-badge v-if="props.row.alarmCodePattern" color="orange-8">
+                  {{ props.row.alarmCodePattern }}
+                </q-badge>
+                <span v-else class="text-grey-5">—</span>
+              </q-td>
+            </template>
+
+            <template v-slot:body-cell-dataSourceFilter="props">
+              <q-td :props="props">
+                <q-badge v-if="props.row.dataSourceFilter" color="teal">
+                  {{ props.row.dataSourceFilter }}
+                </q-badge>
+                <span v-else class="text-grey-5">—</span>
+              </q-td>
+            </template>
+
+            <template v-slot:body-cell-action="props">
+              <q-td :props="props">
+                <q-badge :color="props.row.action === 'treat' ? 'positive' : 'primary'">
+                  {{ props.row.action === "treat" ? "Traiter" : "Grouper" }}
+                </q-badge>
+              </q-td>
+            </template>
+
             <template v-slot:body-cell-groupBy="props">
               <q-td :props="props">
-                <q-badge :color="props.row.groupBy === 'zone' ? 'deep-purple' : 'blue-grey'">
-                  {{ props.row.groupBy === "zone" ? "Zone" : "Emplacement" }}
-                </q-badge>
+                <span v-if="props.row.action !== 'treat'">
+                  <q-badge :color="props.row.groupBy === 'zone' ? 'deep-purple' : 'blue-grey'">
+                    {{ props.row.groupBy === "zone" ? "Zone" : "Emplacement" }}
+                  </q-badge>
+                </span>
+                <span v-else class="text-grey-5">—</span>
               </q-td>
             </template>
 
@@ -865,8 +963,15 @@
 
             <template v-slot:body-cell-actions="props">
               <q-td :props="props">
-                <q-btn flat round dense icon="edit" size="sm" color="grey-7" @click="openRuleForm(props.row)" />
-                <q-btn flat round dense icon="delete" size="sm" color="negative" @click="deleteRule(props.row)" />
+                <q-btn flat round dense icon="edit" size="sm" color="grey-7" @click="openRuleForm(props.row)">
+                  <q-tooltip>Modifier</q-tooltip>
+                </q-btn>
+                <q-btn flat round dense icon="content_copy" size="sm" color="grey-7" @click="copyRule(props.row)">
+                  <q-tooltip>Dupliquer</q-tooltip>
+                </q-btn>
+                <q-btn flat round dense icon="delete" size="sm" color="negative" @click="deleteRule(props.row)">
+                  <q-tooltip>Supprimer</q-tooltip>
+                </q-btn>
               </q-td>
             </template>
           </q-table>
@@ -883,30 +988,86 @@
 
         <q-card-section class="q-gutter-sm">
           <q-input v-model="ruleForm.name" label="Nom" outlined dense />
-          <q-input v-model="ruleForm.keyword" label="Mot-clé (dans alarmText)" outlined dense hint="Insensible à la casse" />
-          <q-input v-model="ruleForm.comment" label="Commentaire appliqué" outlined dense />
+          <q-input v-model="ruleForm.keyword" label="Mot-clé dans alarmText (optionnel)" outlined dense hint="Insensible à la casse" />
+          <q-input v-model="ruleForm.alarmCodePattern" label="Regex alarmArea (optionnel)" outlined dense hint="ex: 14[0-9][0-9], 2000|14[0-9][0-9] — \d est converti automatiquement en [0-9]" :rules="[v => !v || isValidRegex(v) || 'Regex invalide']" />
+          <q-input v-model="ruleForm.dataSourceFilter" label="Source de données (optionnel)" outlined dense hint="ex: X001 — laisser vide pour toutes les sources" />
           <q-select
-            v-model="ruleForm.groupBy"
-            :options="[{ label: 'Emplacement (dataSource + alarmArea)', value: 'location' }, { label: 'Zone (liste de dataSources)', value: 'zone' }]"
-            label="Groupement"
+            v-model="ruleForm.action"
+            :options="[{ label: 'Grouper les alarmes', value: 'group' }, { label: 'Marquer comme traité', value: 'treat' }]"
+            label="Action"
             outlined
             dense
             emit-value
             map-options
           />
-          <q-input
-            v-if="ruleForm.groupBy === 'zone'"
-            v-model="ruleFormZoneText"
-            label="dataSources (séparées par des virgules)"
-            outlined
-            dense
-            hint="Ex: F004, F005, F006"
-          />
+          <q-input v-model="ruleForm.comment" label="Commentaire appliqué" outlined dense :hint="ruleForm.action === 'treat' ? 'Optionnel' : 'Obligatoire'" />
+          <template v-if="ruleForm.action === 'group'">
+            <q-select
+              v-model="ruleForm.groupBy"
+              :options="[{ label: 'Emplacement (dataSource + alarmArea)', value: 'location' }, { label: 'Zone (liste de dataSources)', value: 'zone' }]"
+              label="Groupement par"
+              outlined
+              dense
+              emit-value
+              map-options
+            />
+            <q-input
+              v-if="ruleForm.groupBy === 'zone'"
+              v-model="ruleFormZoneText"
+              label="dataSources (séparées par des virgules)"
+              outlined
+              dense
+              hint="Ex: F004, F005, F006"
+            />
+          </template>
         </q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat label="Annuler" color="grey-7" v-close-popup />
+          <q-btn flat label="Tester" icon="science" color="primary" @click="testRuleRegex" :loading="testRegexLoading" :disable="!ruleForm.alarmCodePattern && !ruleForm.keyword && !ruleForm.dataSourceFilter" />
           <q-btn label="Enregistrer" color="primary" @click="saveRule" :loading="ruleFormLoading" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Test Regex Dialog -->
+    <q-dialog v-model="testRegexDialog">
+      <q-card style="min-width: 600px; max-width: 800px">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">
+            Résultats du test
+            <q-badge color="primary" class="q-ml-sm">{{ testRegexResults.length }}</q-badge>
+          </div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section>
+          <div class="text-caption text-grey-7 q-mb-sm">
+            Alarmes de la table Alarms correspondant aux critères actuels
+          </div>
+          <div v-if="testRegexResults.length === 0" class="text-center q-pa-lg">
+            <q-icon name="search_off" size="48px" color="grey-5" />
+            <div class="text-grey-7 q-mt-sm">Aucune alarme trouvée</div>
+          </div>
+          <q-list v-else bordered separator dense style="max-height: 400px; overflow-y: auto">
+            <q-item v-for="alarm in testRegexResults" :key="alarm.alarmId">
+              <q-item-section>
+                <q-item-label>
+                  <q-badge color="orange-8" class="q-mr-sm">{{ alarm.alarmCode }}</q-badge>
+                  {{ alarm.alarmText }}
+                </q-item-label>
+                <q-item-label caption>
+                  {{ alarm.dataSource }} — {{ alarm.alarmArea }}
+                  <q-badge v-if="alarm.type" :color="alarm.type === 'primary' ? 'red' : 'blue-grey'" class="q-ml-sm" dense>{{ alarm.type }}</q-badge>
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Fermer" color="primary" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -1709,13 +1870,19 @@ const moveToNextIntervention = () => {
 const rulesDialog = ref(false);
 const ruleFormDialog = ref(false);
 const ruleFormLoading = ref(false);
+const testRegexLoading = ref(false);
+const testRegexDialog = ref(false);
+const testRegexResults = ref([]);
 const editingRule = ref(null);
-const ruleForm = ref({ name: "", keyword: "", comment: "", groupBy: "location" });
+const ruleForm = ref({ name: "", keyword: "", alarmCodePattern: "", dataSourceFilter: "", comment: "", action: "group", groupBy: "location" });
 const ruleFormZoneText = ref("");
 
 const rulesColumns = [
   { name: "name", label: "Nom", field: "name", align: "left", sortable: true },
   { name: "keyword", label: "Mot-clé", field: "keyword", align: "left" },
+  { name: "alarmCodePattern", label: "Area pattern", field: "alarmCodePattern", align: "center" },
+  { name: "dataSourceFilter", label: "Source", field: "dataSourceFilter", align: "center" },
+  { name: "action", label: "Action", field: "action", align: "center" },
   { name: "comment", label: "Commentaire", field: "comment", align: "left" },
   { name: "groupBy", label: "Groupement", field: "groupBy", align: "center" },
   { name: "zone", label: "Zone (dataSources)", field: "zone", align: "left" },
@@ -1723,31 +1890,85 @@ const rulesColumns = [
   { name: "actions", label: "", field: "actions", align: "right" },
 ];
 
+const copyRule = (rule) => {
+  editingRule.value = null;
+  ruleForm.value = {
+    name: `${rule.name} (copie)`,
+    keyword: rule.keyword,
+    alarmCodePattern: rule.alarmCodePattern || "",
+    dataSourceFilter: rule.dataSourceFilter || "",
+    comment: rule.comment || "",
+    action: rule.action || "group",
+    groupBy: rule.groupBy || "location",
+  };
+  ruleFormZoneText.value = rule.zone ? rule.zone.join(", ") : "";
+  ruleFormDialog.value = true;
+};
+
 const openRuleForm = (rule = null) => {
   editingRule.value = rule;
   if (rule) {
-    ruleForm.value = { name: rule.name, keyword: rule.keyword, comment: rule.comment, groupBy: rule.groupBy };
+    ruleForm.value = { name: rule.name, keyword: rule.keyword, alarmCodePattern: rule.alarmCodePattern || "", dataSourceFilter: rule.dataSourceFilter || "", comment: rule.comment, action: rule.action || "group", groupBy: rule.groupBy || "location" };
     ruleFormZoneText.value = rule.zone ? rule.zone.join(", ") : "";
   } else {
-    ruleForm.value = { name: "", keyword: "", comment: "", groupBy: "location" };
+    ruleForm.value = { name: "", keyword: "", alarmCodePattern: "", dataSourceFilter: "", comment: "", action: "group", groupBy: "location" };
     ruleFormZoneText.value = "";
   }
   ruleFormDialog.value = true;
 };
 
+const isValidRegex = (pattern) => {
+  try { new RegExp(pattern); return true; } catch { return false; }
+};
+
+const testRuleRegex = async () => {
+  if (ruleForm.value.alarmCodePattern && !isValidRegex(ruleForm.value.alarmCodePattern)) {
+    $q.notify({ type: "warning", message: "Regex invalide" });
+    return;
+  }
+  try {
+    testRegexLoading.value = true;
+    const response = await api.post("/alarms/auto-group-rules/test-regex", {
+      alarmCodePattern: ruleForm.value.alarmCodePattern || null,
+      keyword: ruleForm.value.keyword || null,
+      dataSourceFilter: ruleForm.value.dataSourceFilter || null,
+    });
+    testRegexResults.value = response.data;
+    testRegexDialog.value = true;
+  } catch (e) {
+    $q.notify({ type: "negative", message: "Erreur lors du test", caption: e.message });
+  } finally {
+    testRegexLoading.value = false;
+  }
+};
+
 const saveRule = async () => {
-  if (!ruleForm.value.name || !ruleForm.value.keyword || !ruleForm.value.comment) {
-    $q.notify({ type: "warning", message: "Tous les champs sont requis" });
+  if (!ruleForm.value.name) {
+    $q.notify({ type: "warning", message: "Le nom est requis" });
+    return;
+  }
+  if (!ruleForm.value.keyword && !ruleForm.value.alarmCodePattern && !ruleForm.value.dataSourceFilter) {
+    $q.notify({ type: "warning", message: "Au moins un critère de filtre est requis (mot-clé, regex ou source)" });
+    return;
+  }
+  if (ruleForm.value.alarmCodePattern && !isValidRegex(ruleForm.value.alarmCodePattern)) {
+    $q.notify({ type: "warning", message: "La regex alarmArea est invalide" });
     return;
   }
   try {
     ruleFormLoading.value = true;
     const zone =
-      ruleForm.value.groupBy === "zone"
+      ruleForm.value.action === "group" && ruleForm.value.groupBy === "zone"
         ? ruleFormZoneText.value.split(",").map((s) => s.trim()).filter(Boolean)
         : null;
 
-    const payload = { ...ruleForm.value, zone };
+    const payload = {
+      ...ruleForm.value,
+      zone,
+      alarmCodePattern: ruleForm.value.alarmCodePattern
+        ? ruleForm.value.alarmCodePattern.replace(/\\d/g, "[0-9]")
+        : null,
+    };
 
     if (editingRule.value?.id) {
       await api.put(`/alarms/auto-group-rules/${editingRule.value.id}`, payload);
@@ -1805,9 +2026,24 @@ const loadAutoGroupRules = async () => {
   }
 };
 
+const normalizeRegex = (pattern) => pattern.replace(/\\d/g, "[0-9]");
+
+const matchesRule = (alarm, rule) => {
+  if (rule.keyword && !alarm.alarmText.toLowerCase().includes(rule.keyword.toLowerCase())) return false;
+  if (rule.alarmCodePattern) {
+    try {
+      if (!new RegExp(normalizeRegex(rule.alarmCodePattern), "i").test(alarm.alarmArea)) return false;
+    } catch {
+      return false;
+    }
+  }
+  if (rule.dataSourceFilter && alarm.dataSource !== rule.dataSourceFilter) return false;
+  return true;
+};
+
 const resolveAutoGroupComment = (cluster) => {
   for (const rule of autoGroupRules.value) {
-    if (cluster.some((a) => a.alarmText.toLowerCase().includes(rule.keyword.toLowerCase()))) {
+    if (cluster.some((a) => matchesRule(a, rule))) {
       return rule.comment;
     }
   }
@@ -1843,26 +2079,47 @@ const buildClusters = (alarmList) => {
 };
 
 const computeAutoGroups = () => {
-  // 1. Filtrer les alarmes non groupées et non traitées
   const candidates = alarms.value.filter((a) => !a.x_group && !a.x_treated);
 
   const proposals = [];
   const usedDbIds = new Set();
 
-  // --- Règles avec groupBy: "zone" ---
+  // --- Règles "treat" : alarmes individuelles à marquer comme traitées ---
   for (const rule of autoGroupRules.value) {
-    if (rule.groupBy !== "zone" || !rule.zone) continue;
+    if (!rule.enabled || rule.action !== "treat") continue;
 
-    const zoneAlarms = candidates.filter(
-      (a) =>
-        a.alarmText.toLowerCase().includes(rule.keyword.toLowerCase()) &&
-        rule.zone.includes(a.dataSource) &&
-        !usedDbIds.has(a.dbId)
+    const matchingAlarms = candidates.filter(
+      (a) => matchesRule(a, rule) && !usedDbIds.has(a.dbId)
     );
 
-    for (const cluster of buildClusters(zoneAlarms)) {
+    if (matchingAlarms.length === 0) continue;
+
+    matchingAlarms.forEach((a) => usedDbIds.add(a.dbId));
+    proposals.push({
+      type: "treat",
+      ruleName: rule.name,
+      alarms: matchingAlarms,
+      comment: rule.comment || "",
+    });
+  }
+
+  // --- Règles "group" avec groupBy: "zone" ---
+  for (const rule of autoGroupRules.value) {
+    if (!rule.enabled || rule.action !== "group" || rule.groupBy !== "zone" || !rule.zone) continue;
+
+    // Toutes les alarmes des zones listées (pas encore utilisées)
+    const allZoneAlarms = candidates.filter(
+      (a) => rule.zone.includes(a.dataSource) && !usedDbIds.has(a.dbId)
+    );
+
+    for (const cluster of buildClusters(allZoneAlarms)) {
+      // N'activer le groupe que si au moins une alarme du cluster déclenche la règle
+      if (!cluster.some((a) => matchesRule(a, rule))) continue;
+
       cluster.forEach((a) => usedDbIds.add(a.dbId));
       proposals.push({
+        type: "group",
+        fromRule: true,
         location: rule.name,
         alarms: cluster,
         comment: rule.comment,
@@ -1870,7 +2127,38 @@ const computeAutoGroups = () => {
     }
   }
 
-  // --- Règles par défaut (groupBy: "location") ---
+  // --- Règles "group" location actives (avec critères) ---
+  for (const rule of autoGroupRules.value) {
+    if (!rule.enabled || rule.action !== "group" || rule.groupBy !== "location") continue;
+    if (!rule.keyword && !rule.alarmCodePattern && !rule.dataSourceFilter) continue;
+
+    const ruleAlarms = candidates.filter(
+      (a) => !usedDbIds.has(a.dbId) && (rule.dataSourceFilter ? a.dataSource === rule.dataSourceFilter : true)
+    );
+
+    const byLocation = {};
+    ruleAlarms.forEach((a) => {
+      const key = `${a.dataSource}.${a.alarmArea}`;
+      if (!byLocation[key]) byLocation[key] = [];
+      byLocation[key].push(a);
+    });
+
+    for (const locationAlarms of Object.values(byLocation)) {
+      for (const cluster of buildClusters(locationAlarms)) {
+        if (!cluster.some((a) => matchesRule(a, rule))) continue;
+        cluster.forEach((a) => usedDbIds.add(a.dbId));
+        proposals.push({
+          type: "group",
+          fromRule: true,
+          location: rule.name,
+          alarms: cluster,
+          comment: rule.comment,
+        });
+      }
+    }
+  }
+
+  // --- Fallback : groupement temporel par emplacement ---
   const remainingCandidates = candidates.filter((a) => !usedDbIds.has(a.dbId));
 
   const byLocation = {};
@@ -1883,6 +2171,7 @@ const computeAutoGroups = () => {
   Object.entries(byLocation).forEach(([location, locationAlarms]) => {
     for (const cluster of buildClusters(locationAlarms)) {
       proposals.push({
+        type: "group",
         location,
         alarms: cluster,
         comment: resolveAutoGroupComment(cluster),
@@ -1899,9 +2188,9 @@ const openAutoGroupDialog = () => {
   if (proposals.length === 0) {
     $q.notify({
       type: "info",
-      message: "Aucun groupe automatique trouvé",
+      message: "Aucune proposition de traitement automatique",
       caption:
-        "Aucune alarme non traitée sur le même emplacement dans un intervalle de 5 minutes",
+        "Aucune alarme ne correspond aux règles actives, et aucun groupe temporel détecté",
     });
     return;
   }
@@ -1926,70 +2215,90 @@ const toggleAutoGroupAlarm = (dbId) => {
 };
 
 const validateAutoGroup = async () => {
+  const proposal = currentAutoGroup.value;
+  if (!proposal) return;
+
+  if (proposal.type === "treat") {
+    if (selectedAutoGroupAlarms.value.length === 0) {
+      $q.notify({ type: "warning", message: "Veuillez sélectionner au moins une alarme" });
+      return;
+    }
+    try {
+      autoGroupLoading.value = true;
+
+      if (autoGroupComment.value.trim()) {
+        for (const dbId of selectedAutoGroupAlarms.value) {
+          await api.patch("/alarms/update-comment", { dbId, comment: autoGroupComment.value });
+        }
+      }
+
+      await api.patch("/alarms/mark-treated", { dbIds: selectedAutoGroupAlarms.value });
+
+      selectedAutoGroupAlarms.value.forEach((dbId) => {
+        const alarm = alarms.value.find((a) => a.dbId === dbId);
+        if (alarm) {
+          alarm.x_treated = true;
+          if (autoGroupComment.value.trim()) alarm.x_comment = autoGroupComment.value;
+        }
+      });
+
+      $q.notify({ type: "positive", message: `${selectedAutoGroupAlarms.value.length} alarme(s) marquée(s) comme traitée(s)` });
+      moveToNextAutoGroup();
+    } catch (error) {
+      console.error("Error marking as treated:", error);
+      $q.notify({ type: "negative", message: "Erreur lors du marquage comme traitées", caption: error.message });
+    } finally {
+      autoGroupLoading.value = false;
+      autoGroupValidatingAll.value = false;
+    }
+    return;
+  }
+
+  // type === "group"
   if (selectedAutoGroupAlarms.value.length < 2) {
-    $q.notify({
-      type: "warning",
-      message: "Veuillez sélectionner au moins 2 alarmes pour créer un groupe",
-    });
+    $q.notify({ type: "warning", message: "Veuillez sélectionner au moins 2 alarmes pour créer un groupe" });
     return;
   }
 
   try {
     autoGroupLoading.value = true;
 
-    // 1. Créer le groupe
-    const response = await api.post("/alarms/group-alarms", {
-      dbIds: selectedAutoGroupAlarms.value,
-    });
-
+    const response = await api.post("/alarms/group-alarms", { dbIds: selectedAutoGroupAlarms.value });
     const groupId = response.data.groupId;
 
-    // 2. Mettre à jour le commentaire si renseigné
-    if (autoGroupComment.value.trim()) {
+    const firstAlarm = alarms.value.find((a) => a.dbId === selectedAutoGroupAlarms.value[0]);
+    const effectiveComment = autoGroupComment.value.trim() || firstAlarm?.alarmText || "";
+
+    if (effectiveComment) {
       await api.patch("/alarms/update-comment", {
         dbId: selectedAutoGroupAlarms.value[0],
-        comment: autoGroupComment.value,
+        comment: effectiveComment,
       });
     }
 
-    // 3. Mettre à jour l'état planifié/non planifié
     await api.patch("/alarms/update-state", {
       dbId: selectedAutoGroupAlarms.value[0],
       state: autoGroupIsPlanned.value ? "planned" : "unplanned",
       updateGroup: true,
     });
 
-    // 4. Marquer comme traitées
-    await api.patch("/alarms/mark-treated", {
-      dbIds: selectedAutoGroupAlarms.value,
-    });
+    await api.patch("/alarms/mark-treated", { dbIds: selectedAutoGroupAlarms.value });
 
-    // 5. Mettre à jour l'UI
     selectedAutoGroupAlarms.value.forEach((dbId) => {
       const alarm = alarms.value.find((a) => a.dbId === dbId);
       if (alarm) {
         alarm.x_group = groupId;
         alarm.x_treated = true;
         alarm.x_state = autoGroupIsPlanned.value ? "planned" : "unplanned";
-        if (autoGroupComment.value.trim()) {
-          alarm.x_comment = autoGroupComment.value;
-        }
+        if (effectiveComment) alarm.x_comment = effectiveComment;
       }
     });
 
-    $q.notify({
-      type: "positive",
-      message: `Groupe créé avec ${selectedAutoGroupAlarms.value.length} alarmes`,
-    });
-
+    $q.notify({ type: "positive", message: `Groupe créé avec ${selectedAutoGroupAlarms.value.length} alarmes` });
     moveToNextAutoGroup();
   } catch (error) {
     console.error("Error creating auto-group:", error);
-    $q.notify({
-      type: "negative",
-      message: "Erreur lors de la création du groupe",
-      caption: error.message,
-    });
+    $q.notify({ type: "negative", message: "Erreur lors de la création du groupe", caption: error.message });
   } finally {
     autoGroupLoading.value = false;
     autoGroupValidatingAll.value = false;
@@ -2002,7 +2311,8 @@ const skipAutoGroup = () => {
 
 const validateAllAutoGroups = async () => {
   const remaining = autoGroupProposals.value.slice(currentAutoGroupIndex.value);
-  let created = 0;
+  let groupsCreated = 0;
+  let treated = 0;
   let failed = 0;
 
   try {
@@ -2011,38 +2321,51 @@ const validateAllAutoGroups = async () => {
 
     for (const proposal of remaining) {
       const dbIds = proposal.alarms.map((a) => a.dbId);
-      if (dbIds.length < 2) continue;
 
       try {
-        const response = await api.post("/alarms/group-alarms", { dbIds });
-        const groupId = response.data.groupId;
-
-        if (proposal.comment) {
-          await api.patch("/alarms/update-comment", {
-            dbId: dbIds[0],
-            comment: proposal.comment,
-          });
-        }
-
-        await api.patch("/alarms/update-state", {
-          dbId: dbIds[0],
-          state: "unplanned",
-          updateGroup: true,
-        });
-
-        await api.patch("/alarms/mark-treated", { dbIds });
-
-        dbIds.forEach((dbId) => {
-          const alarm = alarms.value.find((a) => a.dbId === dbId);
-          if (alarm) {
-            alarm.x_group = groupId;
-            alarm.x_treated = true;
-            alarm.x_state = "unplanned";
-            if (proposal.comment) alarm.x_comment = proposal.comment;
+        if (proposal.type === "treat") {
+          if (proposal.comment) {
+            for (const dbId of dbIds) {
+              await api.patch("/alarms/update-comment", { dbId, comment: proposal.comment });
+            }
           }
-        });
+          await api.patch("/alarms/mark-treated", { dbIds });
+          dbIds.forEach((dbId) => {
+            const alarm = alarms.value.find((a) => a.dbId === dbId);
+            if (alarm) {
+              alarm.x_treated = true;
+              if (proposal.comment) alarm.x_comment = proposal.comment;
+            }
+          });
+          treated += dbIds.length;
+        } else {
+          // type === "group"
+          if (dbIds.length < 2) continue;
 
-        created++;
+          const response = await api.post("/alarms/group-alarms", { dbIds });
+          const groupId = response.data.groupId;
+
+          const firstAlarm = alarms.value.find((a) => a.dbId === dbIds[0]);
+          const effectiveComment = proposal.comment || firstAlarm?.alarmText || "";
+
+          if (effectiveComment) {
+            await api.patch("/alarms/update-comment", { dbId: dbIds[0], comment: effectiveComment });
+          }
+
+          await api.patch("/alarms/update-state", { dbId: dbIds[0], state: "unplanned", updateGroup: true });
+          await api.patch("/alarms/mark-treated", { dbIds });
+
+          dbIds.forEach((dbId) => {
+            const alarm = alarms.value.find((a) => a.dbId === dbId);
+            if (alarm) {
+              alarm.x_group = groupId;
+              alarm.x_treated = true;
+              alarm.x_state = "unplanned";
+              if (effectiveComment) alarm.x_comment = effectiveComment;
+            }
+          });
+          groupsCreated++;
+        }
       } catch {
         failed++;
       }
@@ -2053,11 +2376,13 @@ const validateAllAutoGroups = async () => {
     autoGroupProposals.value = [];
     currentAutoGroupIndex.value = 0;
 
+    const parts = [];
+    if (groupsCreated > 0) parts.push(`${groupsCreated} groupe(s) créé(s)`);
+    if (treated > 0) parts.push(`${treated} alarme(s) traitée(s)`);
+
     $q.notify({
       type: failed === 0 ? "positive" : "warning",
-      message: `${created} groupe(s) créé(s)${
-        failed > 0 ? `, ${failed} échec(s)` : ""
-      }`,
+      message: parts.join(", ") + (failed > 0 ? `, ${failed} échec(s)` : ""),
     });
   } finally {
     autoGroupLoading.value = false;
