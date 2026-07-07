@@ -45,9 +45,37 @@ export const sendAlarmReport = async (retryCount = 0, date = null) => {
   );
 
   try {
+    const Op = db.Sequelize.Op;
+
+    // Vérifier qu'il existe au moins une alarme la veille dans le Datalog
+    const alarmCount = await db.models.Datalog.count({
+      where: {
+        timeOfOccurence: {
+          [Op.between]: [
+            targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+            targetDate.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+          ],
+        },
+      },
+    });
+
+    if (alarmCount === 0) {
+      const noDataMsg = "Aucune alarme de la veille trouvée";
+      console.log(`[SendAlarmReport] ${noDataMsg}`);
+      await updateJob(
+        {
+          lastRun: new Date(),
+          actualState: "idle",
+          lastLog: noDataMsg,
+          endAt: new Date(),
+        },
+        jobName
+      );
+      return;
+    }
+
     const minDurationSetting = await db.models.Settings.findByPk("MIN_ALARM_DURATION");
     const minDuration = minDurationSetting ? parseInt(minDurationSetting.value) || 0 : 0;
-    const Op = db.Sequelize.Op;
 
     // Récupérer les alarmId de type "primary" ou non classifié (null)
     const primaryAlarmIds = await db.models.Alarms.findAll({

@@ -59,6 +59,33 @@ export const autoGroupAlarmsJob = async (retryCount = 0) => {
     jobName
   );
 
+  // Vérifier qu'il existe au moins une alarme la veille dans le Datalog
+  const alarmCount = await db.models.Datalog.count({
+    where: {
+      timeOfOccurence: {
+        [db.Sequelize.Op.between]: [
+          targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+          targetDate.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        ],
+      },
+    },
+  });
+
+  if (alarmCount === 0) {
+    const noDataMsg = "Aucune alarme de la veille trouvée";
+    console.log(`[AutoGroupAlarms] ${noDataMsg}`);
+    await updateJob(
+      {
+        lastRun: new Date(),
+        actualState: "idle",
+        lastLog: noDataMsg,
+        endAt: new Date(),
+      },
+      jobName
+    );
+    return;
+  }
+
   try {
     const { created, failed } = await autoGroupAlarms(targetDate, db);
 

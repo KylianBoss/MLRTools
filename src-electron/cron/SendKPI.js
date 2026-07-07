@@ -79,6 +79,34 @@ export const sendKPI = async (options = {}) => {
   );
 
   try {
+    // Vérifier qu'il existe au moins une alarme la veille dans le Datalog
+    const yesterday = dayjs().subtract(1, "day");
+    const alarmCount = await db.models.Datalog.count({
+      where: {
+        timeOfOccurence: {
+          [db.Sequelize.Op.between]: [
+            yesterday.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+            yesterday.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+          ],
+        },
+      },
+    });
+
+    if (alarmCount === 0) {
+      const noDataMsg = "Aucune alarme de la veille trouvée";
+      console.log(noDataMsg);
+      await updateJob(
+        {
+          lastRun: new Date(),
+          actualState: "idle",
+          lastLog: noDataMsg,
+          endAt: new Date(),
+        },
+        jobName
+      );
+      return { success: true, skipped: true };
+    }
+
     // Vérifier si un PDF existe déjà pour cette date
     const existingPDF = getExistingPDFPath();
     let pdfPath;
