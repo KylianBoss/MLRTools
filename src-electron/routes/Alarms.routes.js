@@ -4,12 +4,57 @@ import { Op, QueryTypes, Sequelize } from "sequelize";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import "dayjs/locale/fr.js";
+import csv from "csv-parser";
+import { Readable } from "stream";
 import { requireAnyPermission, requirePermission } from "../middlewares/permissions.js";
 
 dayjs.extend(customParseFormat);
 dayjs.locale("fr");
 
 const router = Router();
+
+// --- Suivi en direct de l'import manuel d'alarmes (SSE) ---
+// Un client ouvre d'abord le flux SSE avec un importId, puis lance le POST
+// d'import en référençant ce même importId. Les logs sont poussés au fil de l'eau.
+const importStreams = new Map();
+
+function pushImportLog(importId, level, message) {
+  const client = importStreams.get(importId);
+  const entry = { level, message, timestamp: new Date().toISOString() };
+  console.log(`[import-alarms:${importId}] ${message}`);
+  if (client) {
+    client.write(`data: ${JSON.stringify(entry)}\n\n`);
+  }
+}
+
+function endImportStream(importId) {
+  const client = importStreams.get(importId);
+  if (client) {
+    client.end();
+    importStreams.delete(importId);
+  }
+}
+
+router.get("/import-alarms/stream/:importId", (req, res) => {
+  const { importId } = req.params;
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  res.write(
+    `data: ${JSON.stringify({
+      level: "info",
+      message: "Connexion établie, en attente de l'import...",
+      timestamp: new Date().toISOString(),
+    })}\n\n`
+  );
+  importStreams.set(importId, res);
+
+  req.on("close", () => {
+    importStreams.delete(importId);
+  });
+});
 
 router.post("/", async (req, res) => {
   const db = getDB();
@@ -53,11 +98,15 @@ router.post("/", async (req, res) => {
 });
 router.post("/import-alarms", async (req, res) => {
   const db = getDB();
-  const { data } = req.body;
+  const { data, importId } = req.body;
   if (!data) {
     res.status(400).json({ error: "No data provided" });
     return;
   }
+
+  const log = (message) => importId && pushImportLog(importId, "info", message);
+  const logError = (message) => importId && pushImportLog(importId, "error", message);
+  const logSuccess = (message) => importId && pushImportLog(importId, "success", message);
 
   const response = {
     recieved: 0,
@@ -66,76 +115,140 @@ router.post("/import-alarms", async (req, res) => {
   };
 
   try {
-    // data is a long CSV string and i want to have it as an array of objects
-    const lines = data.split("\n");
-    const headers = lines[0]
-      .split(";")
-      .map((h) => h.replaceAll('"', "").trim())
-      .filter((h) => h.length > 0);
-    const alarms = lines.slice(1).map((line) => {
-      const values = line.split(";").map((v) => v.replaceAll('"', "").trim());
-      const alarm = {};
-      headers.forEach((header, index) => {
-        alarm[header] = values[index];
-      });
-      return alarm;
+    log("Lecture du fichier CSV...");
+    // Même logique de parsing que le cron d'extraction SAV (extractSAV) :
+    // lecture par position de colonne via csv-parser, séparateur ";".
+    // Le split maison précédent cassait dès qu'un champ contenait un ";"
+    // ou un retour chariot, et le mapping par nom d'en-tête ne correspondait
+    // plus aux en-têtes réels de l'export -> toutes les lignes étaient rejetées.
+    const rows = [];
+    await new Promise((resolve, reject) => {
+      Readable.from([data])
+        .pipe(csv({ separator: ";", headers: false }))
+        .on("data", (row) => rows.push(Object.values(row)))
+        .on("end", resolve)
+        .on("error", reject);
     });
-    console.log(`Importing ${alarms.length} alarms`);
-    response.recieved = alarms.length;
+    // La première ligne du fichier est l'en-tête, on l'ignore
+    const lines = rows.slice(1);
+    log(`Fichier lu : ${lines.length} lignes de données détectées.`);
+    response.recieved = lines.length;
 
-    const formattedAlarms = alarms.map((alarm) => ({
-      dbId: alarm["Database ID"] ? parseInt(alarm["Database ID"], 10) : null,
-      timeOfOccurence: alarm["Time of occurrence"]
-        ? dayjs(
-            alarm["Time of occurrence"],
-            "D MMM YYYY à HH:mm:ss",
-            "fr"
-          ).toDate()
-        : null,
-      timeOfAcknowledge: alarm["Acknowledge instant"]
-        ? dayjs(
-            alarm["Acknowledge instant"],
-            "D MMM YYYY à HH:mm:ss",
-            "fr"
-          ).toDate()
-        : null,
-      duration: Math.abs(
-        dayjs(alarm["Time of occurrence"], "D MMM YYYY à HH:mm:ss", "fr").diff(
-          dayjs(alarm["Acknowledge instant"], "D MMM YYYY à HH:mm:ss", "fr"),
-          "second"
-        )
-      ),
-      dataSource: alarm["Data source"] || null,
-      alarmArea: alarm["Alarm area"] || null,
-      alarmCode: alarm["Alarm code"] || null,
-      alarmText: alarm["Alarm text"] || null,
-      severity: alarm["Severity"] || null,
-      classification: alarm["Classification"] || null,
-      assignedUser: alarm["Assigned user"] || null,
-      alarmId: `${alarm["Data source"]}.${alarm["Alarm area"]}.${alarm["Alarm code"]}`,
-    }));
+    log("Analyse et conversion des lignes...");
+    const formattedAlarms = lines.map((line) => {
+      const dbId = line[0];
+      const startDate = dayjs(line[1], "D MMM YYYY à HH:mm:ss", "fr").format(
+        "YYYY-MM-DD HH:mm:ss"
+      );
+      const endDate = dayjs(line[2], "D MMM YYYY à HH:mm:ss", "fr").format(
+        "YYYY-MM-DD HH:mm:ss"
+      );
+      const dataSource = line[5];
+      const dataSourceName = line[6];
+      const lacName = line[7];
+      const lac = line[8];
+      const alarmArea = line[9];
+      const layoutPosition = line[10];
+      const alarmCode = line[11];
+      const alarmText = line[12];
+      const severity = line[13];
+      const classification = line[14];
+      const assignedUser = line[16];
+      const alarmId = `${dataSource || ""}.${alarmArea || ""}.${
+        alarmCode || ""
+      }`.toUpperCase();
 
-    const parsedAlarms = formattedAlarms.filter((fa) => {
-      if (typeof fa.dbId !== typeof 1) return false; // Don't put in DB the alarms without DBID
-      if (fa.alarmCode === "M6009.0306") return false; // Don't put in DB the warning from the shuttle
-      if (fa.alarmCode === "M6130.0201") return false; // Don't put in DB the warning from the shuttle
-      if (fa.alarmCode === "M6130.0203") return false; // Don't put in DB the warning from the shuttle
-      if (fa.alarmCode === "M6130.0202") return false; // Don't put in DB the warning from the shuttle
-      if (!fa.timeOfAcknowledge) return false; // Don't put in DB the alarms without acknowledge time
-      if (JSON.stringify(fa).includes("undefined")) return false; // Don't put in DB the alarms with undefined values
-      if (JSON.stringify(fa).includes("NaN")) return false; // Don't put in DB the alarms with NaN values
-      return true;
+      return {
+        dbId,
+        timeOfOccurence: startDate,
+        timeOfAcknowledge: endDate,
+        duration:
+          dayjs(startDate).isValid() && dayjs(endDate).isValid()
+            ? dayjs(endDate).diff(dayjs(startDate), "seconds")
+            : null,
+        dataSource,
+        dataSourceName,
+        lacName,
+        lac,
+        alarmArea,
+        layoutPosition,
+        alarmCode,
+        alarmText,
+        severity,
+        classification,
+        assignedUser,
+        alarmId,
+        _startDateValid: dayjs(startDate).isValid(),
+        _endDateValid: dayjs(endDate).isValid(),
+      };
     });
-    console.log(`Parsed ${parsedAlarms.length} alarms (after filtering)`);
+
+    const IGNORED_ALARM_CODES = [
+      "M6009.0306",
+      "M6130.0201",
+      "M6130.0203",
+      "M6130.0202",
+    ];
+    let rejectedNoDbId = 0;
+    let rejectedNoAlarmCode = 0;
+    let rejectedShuttleWarning = 0;
+    let rejectedInvalidDate = 0;
+    let rejectedMissingRequired = 0;
+
+    const parsedAlarms = formattedAlarms
+      .filter((fa) => {
+        if (!fa.dbId || fa.dbId.trim() === "") {
+          rejectedNoDbId++;
+          return false;
+        }
+        if (!fa.alarmCode || fa.alarmCode.trim() === "") {
+          rejectedNoAlarmCode++;
+          return false;
+        }
+        if (IGNORED_ALARM_CODES.includes(fa.alarmCode)) {
+          rejectedShuttleWarning++;
+          return false;
+        }
+        if (!fa._startDateValid || !fa._endDateValid) {
+          rejectedInvalidDate++;
+          return false;
+        }
+        if (!fa.dataSource || !fa.alarmText) {
+          rejectedMissingRequired++;
+          return false;
+        }
+        return true;
+      })
+      .map(({ _startDateValid, _endDateValid, ...fa }) => fa);
+
+    if (rejectedNoDbId) log(`${rejectedNoDbId} ligne(s) ignorée(s) : Database ID manquant.`);
+    if (rejectedNoAlarmCode) log(`${rejectedNoAlarmCode} ligne(s) ignorée(s) : code d'alarme manquant.`);
+    if (rejectedShuttleWarning) log(`${rejectedShuttleWarning} ligne(s) ignorée(s) : avertissements navette exclus.`);
+    if (rejectedInvalidDate) log(`${rejectedInvalidDate} ligne(s) ignorée(s) : date d'occurrence ou d'acquittement invalide.`);
+    if (rejectedMissingRequired) log(`${rejectedMissingRequired} ligne(s) ignorée(s) : source ou texte d'alarme manquant.`);
+
+    log(`${parsedAlarms.length} alarme(s) valide(s) après filtrage.`);
     response.parsed = parsedAlarms.length;
 
+    if (parsedAlarms.length === 0) {
+      logError("Aucune alarme valide à importer. Vérifiez le format du fichier.");
+      res.status(400).json({ ...response, error: "Aucune alarme valide à importer" });
+      endImportStream(importId);
+      return;
+    }
+
+    log("Insertion dans la base de données...");
     const bulk = await db.models.Datalog.bulkCreate(parsedAlarms, {
       updateOnDuplicate: [
         "timeOfOccurence",
         "timeOfAcknowledge",
         "duration",
         "dataSource",
+        "dataSourceName",
+        "lacName",
+        "lac",
         "alarmArea",
+        "layoutPosition",
         "alarmCode",
         "alarmText",
         "severity",
@@ -145,25 +258,7 @@ router.post("/import-alarms", async (req, res) => {
       ],
       validate: true,
     });
-    // const bulk = [];
-    // const createdAlarms = [];
-    // let progress = 0;
-    // let lastProgress = 0;
-    // for (const alarm of parsedAlarms) {
-    //   try {
-    //     const [record, created] = await db.models.Datalog.upsert(alarm);
-    //     bulk.push(record);
-    //     if (created) createdAlarms.push(record);
-    //   } catch (error) {
-    //     console.error("Error inserting alarm:", error, alarm);
-    //   }
-    //   progress = Math.round((bulk.length / parsedAlarms.length) * 100);
-    //   if (progress != lastProgress) {
-    //     lastProgress = progress;
-    //     console.log(`${progress}% done`);
-    //   }
-    // }
-    console.log(`Inserted/Updated ${bulk.length} alarms`);
+    log(`${bulk.length} alarme(s) insérée(s)/mise(s) à jour dans Datalog.`);
     response.inserted = bulk.length;
 
     // Keep only unique alarms from the parsed alarms
@@ -172,6 +267,7 @@ router.post("/import-alarms", async (req, res) => {
         index === self.findIndex((a) => a.alarmId === alarm.alarmId)
     );
 
+    log(`Mise à jour du référentiel Alarms (${uniqueAlarms.length} code(s) unique(s))...`);
     for (const alarm of uniqueAlarms) {
       await db.models.Alarms.upsert({
         alarmId: alarm.alarmId,
@@ -182,11 +278,14 @@ router.post("/import-alarms", async (req, res) => {
       });
     }
 
-    console.log(`Alarm import completed`);
+    logSuccess(`Importation terminée : ${response.inserted}/${response.recieved} alarmes insérées.`);
     res.status(201).json(response);
+    endImportStream(importId);
   } catch (error) {
     console.error("Error importing alarms:", error);
+    logError(`Erreur durant l'importation : ${error.message}`);
     res.status(500).json({ error: error.message });
+    endImportStream(importId);
   }
 });
 
