@@ -70,14 +70,6 @@
           {{ line.message }}
         </div>
       </q-card-section>
-      <q-card-section v-if="!importing" class="q-pt-none">
-        <q-btn
-          flat
-          color="primary"
-          label="Nouvel import"
-          @click="resetImport"
-        />
-      </q-card-section>
     </q-card>
   </q-page>
 </template>
@@ -119,12 +111,6 @@ const appendLog = (level, message) => {
       logContainer.value.scrollTop = logContainer.value.scrollHeight;
     }
   });
-};
-
-const resetImport = () => {
-  logLines.value = [];
-  lastStatus.value = null;
-  selectedFilePath.value = null;
 };
 
 const importFile = async () => {
