@@ -77,18 +77,20 @@ export const sendAlarmReport = async (retryCount = 0, date = null) => {
     const minDurationSetting = await db.models.Settings.findByPk("MIN_ALARM_DURATION");
     const minDuration = minDurationSetting ? parseInt(minDurationSetting.value) || 0 : 0;
 
-    // Récupérer les alarmId de type "primary" ou non classifié (null)
-    const primaryAlarmIds = await db.models.Alarms.findAll({
+    // Récupérer séparément les alarmId de type "primary" et non classifiés (null)
+    const alarmTypes = await db.models.Alarms.findAll({
       where: {
         [Op.or]: [{ type: "primary" }, { type: null }],
       },
-      attributes: ["alarmId"],
-    }).then((rows) => rows.map((a) => a.alarmId));
+      attributes: ["alarmId", "type"],
+    });
+    const primaryAlarmIds = alarmTypes.filter((a) => a.type === "primary").map((a) => a.alarmId);
+    const unclassifiedAlarmIds = alarmTypes.filter((a) => a.type === null).map((a) => a.alarmId);
 
-    // Toutes les alarmes primary du jour (en tenant compte des groupes)
-    const allPrimaryAlarms = await db.models.Datalog.findAll({
+    // Toutes les alarmes primary + non classées du jour
+    const allAlarms = await db.models.Datalog.findAll({
       where: {
-        alarmId: { [Op.in]: primaryAlarmIds },
+        alarmId: { [Op.in]: [...primaryAlarmIds, ...unclassifiedAlarmIds] },
         duration: { [Op.gte]: minDuration },
         timeOfOccurence: {
           [Op.between]: [
@@ -97,30 +99,31 @@ export const sendAlarmReport = async (retryCount = 0, date = null) => {
           ],
         },
       },
-      attributes: ["dbId", "x_group", "assignedUser", "timeOfOccurence", "timeOfAssignment"],
+      attributes: ["dbId", "alarmId", "x_group", "assignedUser", "timeOfOccurence", "timeOfAssignment"],
     });
 
-    // Compter les alarmes "primary" en tenant compte des groupes
-    // (une alarme groupée = 1 seule alarme comptée, représentée par le groupe)
-    const countedGroups = new Set();
-    let totalPrimaryCount = 0;
+    // Ne garder qu'une seule occurrence par groupe (une alarme groupée = 1 incident)
+    // pour tous les comptages qui suivent (total, assignation, stats par utilisateur)
+    const seenGroups = new Set();
+    const dedupedAlarms = allAlarms.filter((alarm) => {
+      if (alarm.x_group === null) return true;
+      if (seenGroups.has(alarm.x_group)) return false;
+      seenGroups.add(alarm.x_group);
+      return true;
+    });
 
-    for (const alarm of allPrimaryAlarms) {
-      if (alarm.x_group !== null) {
-        if (!countedGroups.has(alarm.x_group)) {
-          countedGroups.add(alarm.x_group);
-          totalPrimaryCount++;
-        }
-      } else {
-        totalPrimaryCount++;
-      }
-    }
+    const totalPrimaryCount = dedupedAlarms.filter((a) =>
+      primaryAlarmIds.includes(a.alarmId)
+    ).length;
+    const totalUnclassifiedCount = dedupedAlarms.filter((a) =>
+      unclassifiedAlarmIds.includes(a.alarmId)
+    ).length;
 
     // Alarmes assignées (assignedUser non null)
-    const assignedAlarms = allPrimaryAlarms.filter((a) => a.assignedUser !== null);
+    const assignedAlarms = dedupedAlarms.filter((a) => a.assignedUser !== null);
     const totalAssignedCount = assignedAlarms.length;
 
-    // Stats par utilisateur : nombre d'alarmes et temps moyen de prise en charge
+    // Stats par utilisateur : nombre d'alarmes (dédupliquées par groupe) et temps moyen de prise en charge
     const userStatsMap = new Map();
 
     for (const alarm of assignedAlarms) {
@@ -152,24 +155,33 @@ export const sendAlarmReport = async (retryCount = 0, date = null) => {
           stats.validResponseTimes > 0
             ? Math.round(stats.totalResponseTime / stats.validResponseTimes / 60000)
             : null,
+        hasMissingAssignmentTime: stats.validResponseTimes < stats.count,
       }))
       .sort((a, b) => b.count - a.count);
+
+    const totalRelevantCount = totalPrimaryCount + totalUnclassifiedCount;
+    const assignedPercentage =
+      totalRelevantCount > 0
+        ? Math.round((totalAssignedCount / totalRelevantCount) * 100)
+        : null;
 
     const reportData = {
       date: targetDateLabel,
       totalPrimary: totalPrimaryCount,
+      totalUnclassified: totalUnclassifiedCount,
       totalAssigned: totalAssignedCount,
+      assignedPercentage,
       userStats,
     };
 
     console.log(
       `[SendAlarmReport] Stats for ${targetDateLabel}: ` +
-        `total=${totalPrimaryCount}, assigned=${totalAssignedCount}, users=${userStats.length}`
+        `primary=${totalPrimaryCount}, unclassified=${totalUnclassifiedCount}, assigned=${totalAssignedCount}, users=${userStats.length}`
     );
 
     await sendReportByEmail(reportData);
 
-    const logMessage = `Rapport alarmes envoyé pour le ${targetDateLabel} — ${totalPrimaryCount} alarme(s) primaire(s), ${totalAssignedCount} assignée(s).`;
+    const logMessage = `Rapport alarmes envoyé pour le ${targetDateLabel} — ${totalPrimaryCount} alarme(s) primaire(s), ${totalUnclassifiedCount} non classée(s), ${totalAssignedCount} assignée(s).`;
 
     await updateJob(
       {
@@ -225,14 +237,16 @@ function formatDuration(minutes) {
 }
 
 function buildEmailText(data) {
-  const { date, totalPrimary, totalAssigned, userStats } = data;
+  const { date, totalPrimary, totalUnclassified, totalAssigned, assignedPercentage, userStats } = data;
+
+  const percentageLabel = assignedPercentage !== null ? `${assignedPercentage}%` : "N/A";
 
   const userLines =
     userStats.length > 0
       ? userStats
           .map(
             (u) =>
-              `  - ${u.username} : ${u.count} alarme(s), temps moyen de prise en charge : ${formatDuration(u.avgResponseMinutes)}`
+              `  - ${u.username} : ${u.count} alarme(s), temps moyen de prise en charge : ${formatDuration(u.avgResponseMinutes)}${u.hasMissingAssignmentTime ? " (partiel, heure d'assignation manquante sur certaines alarmes)" : ""}`
           )
           .join("\n")
       : "  Aucune alarme assignée.";
@@ -240,8 +254,10 @@ function buildEmailText(data) {
   return `Rapport quotidien des alarmes — ${date}
 ${"=".repeat(50)}
 
-Alarmes primaires (J-1) : ${totalPrimary}
-Alarmes assignées       : ${totalAssigned}
+Alarmes primaires (J-1)     : ${totalPrimary}
+Alarmes non classées (J-1)  : ${totalUnclassified}
+Alarmes assignées           : ${totalAssigned}
+Pourcentage assigné         : ${percentageLabel}
 
 Détail par technicien :
 ${userLines}
@@ -253,7 +269,17 @@ This is an automatically generated email, please do not reply.`;
 }
 
 function buildEmailHtml(data) {
-  const { date, totalPrimary, totalAssigned, userStats } = data;
+  const { date, totalPrimary, totalUnclassified, totalAssigned, assignedPercentage, userStats } = data;
+
+  const percentageLabel = assignedPercentage !== null ? `${assignedPercentage}%` : "N/A";
+  const percentageColor =
+    assignedPercentage === null
+      ? "#9ca3af"
+      : assignedPercentage < 33
+        ? "#dc2626"
+        : assignedPercentage < 66
+          ? "#d97706"
+          : "#16a34a";
 
   const userRows =
     userStats.length > 0
@@ -263,7 +289,7 @@ function buildEmailHtml(data) {
         <tr>
           <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;">${u.username}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${u.count}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${formatDuration(u.avgResponseMinutes)}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${formatDuration(u.avgResponseMinutes)}${u.hasMissingAssignmentTime ? ' <span style="color:#9ca3af;font-size:11px;">(partiel)</span>' : ""}</td>
         </tr>`
           )
           .join("")
@@ -281,17 +307,32 @@ function buildEmailHtml(data) {
     <div style="padding:24px 32px;">
       <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
         <tr>
-          <td style="padding:12px;background:#f3f4f6;border-radius:6px;text-align:center;width:50%;">
-            <div style="font-size:32px;font-weight:bold;color:#1e3a5f;">${totalPrimary}</div>
+          <td style="padding:12px;background:#f3f4f6;border-radius:6px;text-align:center;width:33%;">
+            <div style="font-size:28px;font-weight:bold;color:#1e3a5f;">${totalPrimary}</div>
             <div style="font-size:13px;color:#6b7280;margin-top:4px;">Alarmes primaires</div>
           </td>
-          <td style="width:16px;"></td>
-          <td style="padding:12px;background:#f3f4f6;border-radius:6px;text-align:center;width:50%;">
-            <div style="font-size:32px;font-weight:bold;color:#1e3a5f;">${totalAssigned}</div>
+          <td style="width:12px;"></td>
+          <td style="padding:12px;background:#f3f4f6;border-radius:6px;text-align:center;width:33%;">
+            <div style="font-size:28px;font-weight:bold;color:#1e3a5f;">${totalUnclassified}</div>
+            <div style="font-size:13px;color:#6b7280;margin-top:4px;">Alarmes non classées</div>
+          </td>
+          <td style="width:12px;"></td>
+          <td style="padding:12px;background:#f3f4f6;border-radius:6px;text-align:center;width:33%;">
+            <div style="font-size:28px;font-weight:bold;color:#1e3a5f;">${totalAssigned}</div>
             <div style="font-size:13px;color:#6b7280;margin-top:4px;">Alarmes assignées</div>
           </td>
         </tr>
       </table>
+
+      <div style="margin-bottom:24px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:#6b7280;margin-bottom:6px;">
+          <span>Pourcentage d'alarmes assignées</span>
+          <span style="font-weight:bold;color:${percentageColor};">${percentageLabel}</span>
+        </div>
+        <div style="background:#e5e7eb;border-radius:999px;height:10px;overflow:hidden;">
+          <div style="background:${percentageColor};height:100%;width:${assignedPercentage !== null ? assignedPercentage : 0}%;"></div>
+        </div>
+      </div>
 
       <h2 style="font-size:15px;color:#374151;margin:0 0 12px;">Détail par personne</h2>
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
