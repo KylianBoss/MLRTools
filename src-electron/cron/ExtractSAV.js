@@ -127,7 +127,7 @@ export const extractSAV = async (date = null, retryCount = 0) => {
         "D MMM YYYY à HH:mm:ss",
         "fr"
       ).format("YYYY-MM-DD HH:mm:ss");
-      const assignedUser = line[16];
+      const assignedUser = line[16] && line[16].trim() !== "" ? line[16] : null;
       const timeOfAssignment = dayjs(
         line[17],
         "D MMM YYYY à HH:mm:ss",

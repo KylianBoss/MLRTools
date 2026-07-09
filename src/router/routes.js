@@ -219,6 +219,11 @@ const routes = [
             component: () => import("src/pages/admin/CronJobsManager.vue"),
           },
           {
+            path: "alarm-report-preview",
+            name: "admin-alarm-report-preview",
+            component: () => import("src/pages/admin/AlarmReportPreview.vue"),
+          },
+          {
             path: "settings",
             name: "admin-settings",
             component: () => import("src/pages/admin/SettingsPage.vue"),

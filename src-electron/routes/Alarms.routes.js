@@ -7,6 +7,7 @@ import "dayjs/locale/fr.js";
 import csv from "csv-parser";
 import { Readable } from "stream";
 import { requireAnyPermission, requirePermission } from "../middlewares/permissions.js";
+import { computeAlarmReportData } from "../cron/SendAlarmReport.js";
 
 dayjs.extend(customParseFormat);
 dayjs.locale("fr");
@@ -153,7 +154,22 @@ router.post("/import-alarms", async (req, res) => {
       const alarmText = line[12];
       const severity = line[13];
       const classification = line[14];
-      const assignedUser = line[16];
+      const timeOfClassification = dayjs(
+        line[15],
+        "D MMM YYYY à HH:mm:ss",
+        "fr"
+      ).format("YYYY-MM-DD HH:mm:ss");
+      const assignedUser = line[16] && line[16].trim() !== "" ? line[16] : null;
+      const timeOfAssignment = dayjs(
+        line[17],
+        "D MMM YYYY à HH:mm:ss",
+        "fr"
+      ).format("YYYY-MM-DD HH:mm:ss");
+      const timeOfTreatement = dayjs(
+        line[18],
+        "D MMM YYYY à HH:mm:ss",
+        "fr"
+      ).format("YYYY-MM-DD HH:mm:ss");
       const alarmId = `${dataSource || ""}.${alarmArea || ""}.${
         alarmCode || ""
       }`.toUpperCase();
@@ -176,7 +192,16 @@ router.post("/import-alarms", async (req, res) => {
         alarmText,
         severity,
         classification,
+        timeOfClassification: dayjs(timeOfClassification).isValid()
+          ? timeOfClassification
+          : null,
         assignedUser,
+        timeOfAssignment: dayjs(timeOfAssignment).isValid()
+          ? timeOfAssignment
+          : null,
+        timeOfTreatement: dayjs(timeOfTreatement).isValid()
+          ? timeOfTreatement
+          : null,
         alarmId,
         _startDateValid: dayjs(startDate).isValid(),
         _endDateValid: dayjs(endDate).isValid(),
@@ -253,7 +278,10 @@ router.post("/import-alarms", async (req, res) => {
         "alarmText",
         "severity",
         "classification",
+        "timeOfClassification",
         "assignedUser",
+        "timeOfAssignment",
+        "timeOfTreatement",
         "alarmId",
       ],
       validate: true,
@@ -1256,6 +1284,25 @@ router.get("/daily-done-status", async (req, res) => {
       date: setting?.value || null,
     });
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Prévisualisation en direct des statistiques du rapport quotidien d'alarmes
+// (mêmes calculs que le cron sendAlarmReport, sans envoi d'email)
+router.get("/alarm-report-preview", async (req, res) => {
+  try {
+    const targetDate = req.query.date ? dayjs(req.query.date) : dayjs().subtract(1, "day");
+    const reportData = await computeAlarmReportData(targetDate);
+
+    if (reportData === null) {
+      res.json({ date: targetDate.format("DD.MM.YYYY"), empty: true });
+      return;
+    }
+
+    res.json({ ...reportData, empty: false });
+  } catch (e) {
+    console.error("Error building alarm report preview:", e);
     res.status(500).json({ error: e.message });
   }
 });

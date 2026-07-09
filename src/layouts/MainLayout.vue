@@ -230,6 +230,12 @@
               label="Cron Jobs"
             />
             <drawer-item
+              to="admin-alarm-report-preview"
+              autorisation="*"
+              icon="mdi-email-alert-outline"
+              label="Aperçu rapport alarmes"
+            />
+            <drawer-item
               to="admin-bots"
               autorisation="canAccessAdminBots"
               icon="mdi-robot-outline"

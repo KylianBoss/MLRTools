@@ -9,6 +9,142 @@ const jobName = "sendAlarmReport";
 const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 const MAX_RETRY = 3;
 
+// Calcule les statistiques du rapport pour une date donnée.
+// Unique source de vérité : utilisée par le cron ET par la prévisualisation
+// admin (Alarms.routes.js /alarm-report-preview), pour garantir qu'elles
+// affichent toujours exactement les mêmes chiffres.
+// Retourne null si aucune alarme n'existe pour cette date.
+export const computeAlarmReportData = async (targetDate) => {
+  const db = getDB();
+  const Op = db.Sequelize.Op;
+  const targetDateLabel = targetDate.format("DD.MM.YYYY");
+
+  // Vérifier qu'il existe au moins une alarme la veille dans le Datalog
+  const alarmCount = await db.models.Datalog.count({
+    where: {
+      timeOfOccurence: {
+        [Op.between]: [
+          targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+          targetDate.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        ],
+      },
+    },
+  });
+
+  if (alarmCount === 0) {
+    return null;
+  }
+
+  const minDurationSetting = await db.models.Settings.findByPk("MIN_ALARM_DURATION");
+  const minDuration = minDurationSetting ? parseInt(minDurationSetting.value) || 0 : 0;
+
+  // Récupérer séparément les alarmId de type "primary" et non classifiés (null)
+  const alarmTypes = await db.models.Alarms.findAll({
+    where: {
+      [Op.or]: [{ type: "primary" }, { type: null }],
+    },
+    attributes: ["alarmId", "type"],
+  });
+  const primaryAlarmIds = alarmTypes.filter((a) => a.type === "primary").map((a) => a.alarmId);
+  const unclassifiedAlarmIds = alarmTypes.filter((a) => a.type === null).map((a) => a.alarmId);
+
+  // Toutes les alarmes primary + non classées du jour
+  const allAlarms = await db.models.Datalog.findAll({
+    where: {
+      alarmId: { [Op.in]: [...primaryAlarmIds, ...unclassifiedAlarmIds] },
+      duration: { [Op.gte]: minDuration },
+      timeOfOccurence: {
+        [Op.between]: [
+          targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+          targetDate.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+        ],
+      },
+    },
+    attributes: ["dbId", "alarmId", "x_group", "assignedUser", "timeOfOccurence", "timeOfAssignment"],
+  });
+
+  // Ne garder qu'une seule occurrence par groupe (une alarme groupée = 1 incident)
+  // pour tous les comptages qui suivent (total, assignation, stats par utilisateur)
+  const seenGroups = new Set();
+  const dedupedAlarms = allAlarms.filter((alarm) => {
+    if (alarm.x_group === null) return true;
+    if (seenGroups.has(alarm.x_group)) return false;
+    seenGroups.add(alarm.x_group);
+    return true;
+  });
+
+  const totalPrimaryCount = dedupedAlarms.filter((a) =>
+    primaryAlarmIds.includes(a.alarmId)
+  ).length;
+  const totalUnclassifiedCount = dedupedAlarms.filter((a) =>
+    unclassifiedAlarmIds.includes(a.alarmId)
+  ).length;
+
+  // Alarmes assignées (assignedUser non null et non vide/blanc)
+  // Le champ SAV peut contenir une chaîne vide ou des espaces plutôt que null
+  // quand personne n'est assigné : on les traite comme "non assignées".
+  const assignedAlarms = dedupedAlarms.filter(
+    (a) => a.assignedUser !== null && a.assignedUser.trim() !== ""
+  );
+  const totalAssignedCount = assignedAlarms.length;
+
+  // Stats par utilisateur : nombre d'alarmes (dédupliquées par groupe) et temps moyen de prise en charge
+  const userStatsMap = new Map();
+
+  for (const alarm of assignedAlarms) {
+    const user = alarm.assignedUser;
+    if (!userStatsMap.has(user)) {
+      userStatsMap.set(user, { count: 0, totalResponseTime: 0, validResponseTimes: 0 });
+    }
+
+    const stats = userStatsMap.get(user);
+    stats.count++;
+
+    if (alarm.timeOfAssignment && alarm.timeOfOccurence) {
+      const responseMs =
+        new Date(alarm.timeOfAssignment).getTime() -
+        new Date(alarm.timeOfOccurence).getTime();
+      if (responseMs >= 0) {
+        stats.totalResponseTime += responseMs;
+        stats.validResponseTimes++;
+      }
+    }
+  }
+
+  // Formater les stats utilisateurs, triées par nombre d'alarmes décroissant
+  const userStats = Array.from(userStatsMap.entries())
+    .map(([username, stats]) => ({
+      username,
+      count: stats.count,
+      avgResponseMinutes:
+        stats.validResponseTimes > 0
+          ? Math.round(stats.totalResponseTime / stats.validResponseTimes / 60000)
+          : null,
+      hasMissingAssignmentTime: stats.validResponseTimes < stats.count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const totalRelevantCount = totalPrimaryCount + totalUnclassifiedCount;
+  const assignedPercentage =
+    totalRelevantCount > 0
+      ? Math.round((totalAssignedCount / totalRelevantCount) * 100)
+      : null;
+
+  console.log(
+    `[SendAlarmReport] Stats for ${targetDateLabel}: ` +
+      `primary=${totalPrimaryCount}, unclassified=${totalUnclassifiedCount}, assigned=${totalAssignedCount}, users=${userStats.length}`
+  );
+
+  return {
+    date: targetDateLabel,
+    totalPrimary: totalPrimaryCount,
+    totalUnclassified: totalUnclassifiedCount,
+    totalAssigned: totalAssignedCount,
+    assignedPercentage,
+    userStats,
+  };
+};
+
 export const sendAlarmReport = async (retryCount = 0, date = null) => {
   const db = getDB();
 
@@ -28,7 +164,6 @@ export const sendAlarmReport = async (retryCount = 0, date = null) => {
 
   const targetDate = date ? dayjs(date) : dayjs().subtract(1, "day");
   const targetDateLabel = targetDate.format("DD.MM.YYYY");
-  const targetDateISO = targetDate.format("YYYY-MM-DD");
 
   console.log(`[SendAlarmReport] Starting for ${targetDateLabel}...`);
 
@@ -45,21 +180,9 @@ export const sendAlarmReport = async (retryCount = 0, date = null) => {
   );
 
   try {
-    const Op = db.Sequelize.Op;
+    const reportData = await computeAlarmReportData(targetDate);
 
-    // Vérifier qu'il existe au moins une alarme la veille dans le Datalog
-    const alarmCount = await db.models.Datalog.count({
-      where: {
-        timeOfOccurence: {
-          [Op.between]: [
-            targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
-            targetDate.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
-          ],
-        },
-      },
-    });
-
-    if (alarmCount === 0) {
+    if (reportData === null) {
       const noDataMsg = "Aucune alarme de la veille trouvée";
       console.log(`[SendAlarmReport] ${noDataMsg}`);
       await updateJob(
@@ -74,114 +197,9 @@ export const sendAlarmReport = async (retryCount = 0, date = null) => {
       return;
     }
 
-    const minDurationSetting = await db.models.Settings.findByPk("MIN_ALARM_DURATION");
-    const minDuration = minDurationSetting ? parseInt(minDurationSetting.value) || 0 : 0;
-
-    // Récupérer séparément les alarmId de type "primary" et non classifiés (null)
-    const alarmTypes = await db.models.Alarms.findAll({
-      where: {
-        [Op.or]: [{ type: "primary" }, { type: null }],
-      },
-      attributes: ["alarmId", "type"],
-    });
-    const primaryAlarmIds = alarmTypes.filter((a) => a.type === "primary").map((a) => a.alarmId);
-    const unclassifiedAlarmIds = alarmTypes.filter((a) => a.type === null).map((a) => a.alarmId);
-
-    // Toutes les alarmes primary + non classées du jour
-    const allAlarms = await db.models.Datalog.findAll({
-      where: {
-        alarmId: { [Op.in]: [...primaryAlarmIds, ...unclassifiedAlarmIds] },
-        duration: { [Op.gte]: minDuration },
-        timeOfOccurence: {
-          [Op.between]: [
-            targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
-            targetDate.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
-          ],
-        },
-      },
-      attributes: ["dbId", "alarmId", "x_group", "assignedUser", "timeOfOccurence", "timeOfAssignment"],
-    });
-
-    // Ne garder qu'une seule occurrence par groupe (une alarme groupée = 1 incident)
-    // pour tous les comptages qui suivent (total, assignation, stats par utilisateur)
-    const seenGroups = new Set();
-    const dedupedAlarms = allAlarms.filter((alarm) => {
-      if (alarm.x_group === null) return true;
-      if (seenGroups.has(alarm.x_group)) return false;
-      seenGroups.add(alarm.x_group);
-      return true;
-    });
-
-    const totalPrimaryCount = dedupedAlarms.filter((a) =>
-      primaryAlarmIds.includes(a.alarmId)
-    ).length;
-    const totalUnclassifiedCount = dedupedAlarms.filter((a) =>
-      unclassifiedAlarmIds.includes(a.alarmId)
-    ).length;
-
-    // Alarmes assignées (assignedUser non null)
-    const assignedAlarms = dedupedAlarms.filter((a) => a.assignedUser !== null);
-    const totalAssignedCount = assignedAlarms.length;
-
-    // Stats par utilisateur : nombre d'alarmes (dédupliquées par groupe) et temps moyen de prise en charge
-    const userStatsMap = new Map();
-
-    for (const alarm of assignedAlarms) {
-      const user = alarm.assignedUser;
-      if (!userStatsMap.has(user)) {
-        userStatsMap.set(user, { count: 0, totalResponseTime: 0, validResponseTimes: 0 });
-      }
-
-      const stats = userStatsMap.get(user);
-      stats.count++;
-
-      if (alarm.timeOfAssignment && alarm.timeOfOccurence) {
-        const responseMs =
-          new Date(alarm.timeOfAssignment).getTime() -
-          new Date(alarm.timeOfOccurence).getTime();
-        if (responseMs >= 0) {
-          stats.totalResponseTime += responseMs;
-          stats.validResponseTimes++;
-        }
-      }
-    }
-
-    // Formater les stats utilisateurs, triées par nombre d'alarmes décroissant
-    const userStats = Array.from(userStatsMap.entries())
-      .map(([username, stats]) => ({
-        username,
-        count: stats.count,
-        avgResponseMinutes:
-          stats.validResponseTimes > 0
-            ? Math.round(stats.totalResponseTime / stats.validResponseTimes / 60000)
-            : null,
-        hasMissingAssignmentTime: stats.validResponseTimes < stats.count,
-      }))
-      .sort((a, b) => b.count - a.count);
-
-    const totalRelevantCount = totalPrimaryCount + totalUnclassifiedCount;
-    const assignedPercentage =
-      totalRelevantCount > 0
-        ? Math.round((totalAssignedCount / totalRelevantCount) * 100)
-        : null;
-
-    const reportData = {
-      date: targetDateLabel,
-      totalPrimary: totalPrimaryCount,
-      totalUnclassified: totalUnclassifiedCount,
-      totalAssigned: totalAssignedCount,
-      assignedPercentage,
-      userStats,
-    };
-
-    console.log(
-      `[SendAlarmReport] Stats for ${targetDateLabel}: ` +
-        `primary=${totalPrimaryCount}, unclassified=${totalUnclassifiedCount}, assigned=${totalAssignedCount}, users=${userStats.length}`
-    );
-
     await sendReportByEmail(reportData);
 
-    const logMessage = `Rapport alarmes envoyé pour le ${targetDateLabel} — ${totalPrimaryCount} alarme(s) primaire(s), ${totalUnclassifiedCount} non classée(s), ${totalAssignedCount} assignée(s).`;
+    const logMessage = `Rapport alarmes envoyé pour le ${targetDateLabel} — ${reportData.totalPrimary} alarme(s) primaire(s), ${reportData.totalUnclassified} non classée(s), ${reportData.totalAssigned} assignée(s).`;
 
     await updateJob(
       {
