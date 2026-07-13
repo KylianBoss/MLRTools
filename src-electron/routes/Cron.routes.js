@@ -441,6 +441,59 @@ router.get("/queue/:id", async (req, res) => {
   }
 });
 
+// Réinitialiser un job de la queue (le remet en statut "pending")
+router.post("/queue/:id/reset", async (req, res) => {
+  const db = getDB();
+  const { id } = req.params;
+
+  try {
+    const queuedJob = await db.models.JobQueue.findByPk(id);
+
+    if (!queuedJob) {
+      res.status(404).json({ error: "Queued job not found" });
+      return;
+    }
+
+    await queuedJob.update({
+      status: "pending",
+      startedAt: null,
+      completedAt: null,
+      error: null,
+    });
+
+    console.log(`Job reset to pending: ${queuedJob.jobName} (ID: ${queuedJob.id})`);
+
+    res.json(queuedJob);
+  } catch (error) {
+    console.error("Error resetting queued job:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Supprimer un job de la queue
+router.delete("/queue/:id", async (req, res) => {
+  const db = getDB();
+  const { id } = req.params;
+
+  try {
+    const queuedJob = await db.models.JobQueue.findByPk(id);
+
+    if (!queuedJob) {
+      res.status(404).json({ error: "Queued job not found" });
+      return;
+    }
+
+    await queuedJob.destroy();
+
+    console.log(`Job deleted: ${queuedJob.jobName} (ID: ${id})`);
+
+    res.json({ message: "Job deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting queued job:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Obtenir tous les jobs en attente dans la queue
 router.get("/queue", async (req, res) => {
   const db = getDB();

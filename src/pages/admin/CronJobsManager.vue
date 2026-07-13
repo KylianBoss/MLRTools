@@ -208,16 +208,30 @@
                     </q-item-label>
                   </q-item-section>
                   <q-item-section side>
-                    <q-btn
-                      flat
-                      dense
-                      round
-                      icon="refresh"
-                      size="sm"
-                      @click="refreshJobStatus(job.id)"
-                    >
-                      <q-tooltip>Rafraîchir le statut</q-tooltip>
-                    </q-btn>
+                    <div class="row q-gutter-xs">
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        icon="restart_alt"
+                        size="sm"
+                        color="primary"
+                        @click="resetJob(job.id)"
+                      >
+                        <q-tooltip>Réinitialiser (statut "En attente")</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        icon="delete"
+                        size="sm"
+                        color="negative"
+                        @click="deleteJob(job.id)"
+                      >
+                        <q-tooltip>Supprimer</q-tooltip>
+                      </q-btn>
+                    </div>
                   </q-item-section>
                 </q-item>
 
@@ -403,9 +417,9 @@ const generateAndDownloadKPI = async () => {
   }
 };
 
-const refreshJobStatus = async (queueId) => {
+const resetJob = async (queueId) => {
   try {
-    const response = await api.get(`/cron/queue/${queueId}`);
+    const response = await api.post(`/cron/queue/${queueId}/reset`);
 
     const index = jobHistory.value.findIndex((j) => j.id === queueId);
     if (index !== -1) {
@@ -413,15 +427,42 @@ const refreshJobStatus = async (queueId) => {
     }
 
     $q.notify({
-      type: "info",
-      message: "Statut mis à jour",
+      type: "positive",
+      message: "Job réinitialisé",
     });
   } catch (error) {
     $q.notify({
       type: "negative",
-      message: "Erreur lors de la récupération du statut",
+      message: "Erreur lors de la réinitialisation du job",
+      caption: error.response?.data?.error || error.message,
     });
   }
+};
+
+const deleteJob = (queueId) => {
+  $q.dialog({
+    title: "Confirmer la suppression",
+    message: "Voulez-vous vraiment supprimer cette demande de l'historique ?",
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      await api.delete(`/cron/queue/${queueId}`);
+
+      jobHistory.value = jobHistory.value.filter((j) => j.id !== queueId);
+
+      $q.notify({
+        type: "positive",
+        message: "Job supprimé",
+      });
+    } catch (error) {
+      $q.notify({
+        type: "negative",
+        message: "Erreur lors de la suppression du job",
+        caption: error.response?.data?.error || error.message,
+      });
+    }
+  });
 };
 
 const loadJobHistory = async () => {
