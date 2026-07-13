@@ -454,6 +454,13 @@ router.post("/queue/:id/reset", async (req, res) => {
       return;
     }
 
+    if (queuedJob.status === "completed" || queuedJob.status === "failed") {
+      res.status(400).json({
+        error: "Cannot reset a job that is completed or failed",
+      });
+      return;
+    }
+
     await queuedJob.update({
       status: "pending",
       startedAt: null,
@@ -480,6 +487,13 @@ router.delete("/queue/:id", async (req, res) => {
 
     if (!queuedJob) {
       res.status(404).json({ error: "Queued job not found" });
+      return;
+    }
+
+    if (queuedJob.status === "completed" || queuedJob.status === "failed") {
+      res.status(400).json({
+        error: "Cannot delete a job that is completed or failed",
+      });
       return;
     }
 

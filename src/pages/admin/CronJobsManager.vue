@@ -207,7 +207,10 @@
                       Args: {{ JSON.stringify(job.args) }}
                     </q-item-label>
                   </q-item-section>
-                  <q-item-section side>
+                  <q-item-section
+                    v-if="job.status === 'pending' || job.status === 'running'"
+                    side
+                  >
                     <div class="row q-gutter-xs">
                       <q-btn
                         flat
