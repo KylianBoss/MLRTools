@@ -494,6 +494,105 @@ export async function generateKPIPDF() {
       }
       // END CUSTOM CHART
 
+      // START CASE CRASHES
+      console.log("Generating case crashes summary...");
+      await updateJob(
+        {
+          lastLog: "Generating case crashes summary...",
+        },
+        jobName
+      );
+
+      const CASE_CRASHES_ZONES = [
+        "F013",
+        "X001",
+        "X002",
+        "X003",
+        "X101",
+        "X102",
+        "X103",
+        "X104",
+      ];
+
+      const caseCrashesReportDaysSetting = await db.models.Settings.getValue(
+        "CASE_CRASHES_REPORT_DAYS"
+      );
+      const caseCrashesReportDays =
+        parseInt(caseCrashesReportDaysSetting, 10) || 30;
+
+      const caseCrashesSince = dayjs()
+        .subtract(caseCrashesReportDays, "day")
+        .format("YYYY-MM-DD");
+
+      const caseCrashes = await db.models.CaseCrash.findAll({
+        where: {
+          crashDate: {
+            [db.Sequelize.Op.gte]: caseCrashesSince,
+          },
+        },
+        attributes: ["crashDate", "zone"],
+        order: [["crashDate", "DESC"]],
+        raw: true,
+      });
+
+      const caseCrashesRowsByDate = new Map();
+      for (const crash of caseCrashes) {
+        const date = dayjs(crash.crashDate).format("YYYY-MM-DD");
+        if (!caseCrashesRowsByDate.has(date)) {
+          const emptyRow = { date };
+          CASE_CRASHES_ZONES.forEach((zone) => (emptyRow[zone] = 0));
+          caseCrashesRowsByDate.set(date, emptyRow);
+        }
+        caseCrashesRowsByDate.get(date)[crash.zone] += 1;
+      }
+      const caseCrashesRows = [...caseCrashesRowsByDate.values()].sort(
+        (a, b) => b.date.localeCompare(a.date)
+      );
+
+      doc.addPage();
+
+      doc
+        .fontSize(20)
+        .fillColor("#000")
+        .text("Chutes de tours de caisses", {
+          align: "center",
+        });
+      doc.moveDown();
+      doc
+        .fontSize(12)
+        .fillColor("#666")
+        .text(
+          `Derniers ${caseCrashesReportDays} jours - ${caseCrashes.length} chute(s)`,
+          {
+            align: "center",
+          }
+        );
+      doc.moveDown(2);
+
+      if (caseCrashesRows.length > 0) {
+        generateCaseCrashesTable(
+          doc,
+          caseCrashesRows,
+          CASE_CRASHES_ZONES,
+          30,
+          doc.y,
+          pageWidth
+        );
+      } else {
+        doc
+          .fontSize(11)
+          .fillColor("#666")
+          .text(
+            `Aucune chute de tour de caisses enregistrée sur les derniers ${caseCrashesReportDays} jours.`,
+            {
+              align: "center",
+            }
+          );
+      }
+
+      console.log("Case crashes summary added to PDF.");
+      // END CASE CRASHES
+
       // START PLANNED INTERVENTIONS
       console.log("Generating planned interventions summary...");
       await updateJob(
@@ -1758,6 +1857,117 @@ function generateTable(
 
     startY += rowHeight;
   });
+}
+
+/**
+ * Dessine le tableau croisé des chutes de tours de caisses (dates x zones),
+ * avec une ligne de total par zone, dans le même style visuel que generateTable().
+ */
+function generateCaseCrashesTable(
+  doc,
+  rows,
+  zones,
+  startX = 30,
+  startY = null,
+  tableWidth = null
+) {
+  if (startY === null) startY = doc.y;
+  if (tableWidth === null) tableWidth = doc.page.width - 60;
+
+  const fontSize = 7;
+  const rowHeight = 13;
+  const headerHeight = 20;
+
+  const dateColumnWidth = Math.min(60, tableWidth * 0.2);
+  const zoneColumnWidth = Math.max(
+    20,
+    (tableWidth - dateColumnWidth) / zones.length
+  );
+
+  const totals = {};
+  zones.forEach((zone) => {
+    totals[zone] = rows.reduce((sum, row) => sum + (row[zone] || 0), 0);
+  });
+
+  const drawHeaderRow = (label, getValue, isBold, y) => {
+    doc.font(isBold ? "Helvetica-Bold" : "Helvetica").fontSize(fontSize);
+    let currentX = startX;
+
+    doc
+      .rect(currentX, y, dateColumnWidth, headerHeight)
+      .fillAndStroke("#f1f3f5", "#000");
+    doc.fillColor("#000").text(label, currentX + 5, y + 6, {
+      width: dateColumnWidth - 10,
+      align: "left",
+    });
+    currentX += dateColumnWidth;
+
+    zones.forEach((zone) => {
+      doc
+        .rect(currentX, y, zoneColumnWidth, headerHeight)
+        .fillAndStroke("#f1f3f5", "#000");
+      doc.fillColor("#000").text(getValue(zone), currentX + 2, y + 6, {
+        width: zoneColumnWidth - 4,
+        align: "center",
+      });
+      currentX += zoneColumnWidth;
+    });
+
+    return y + headerHeight;
+  };
+
+  // En-tête (noms de zones) puis ligne de total en haut
+  startY = drawHeaderRow("Date", (zone) => zone, true, startY);
+  startY = drawHeaderRow("Total", (zone) => totals[zone], true, startY);
+
+  // Lignes de données
+  doc.font("Helvetica").fontSize(fontSize);
+  rows.forEach((row) => {
+    if (startY > doc.page.height - 60) {
+      doc.addPage();
+      startY = 50;
+    }
+
+    let currentX = startX;
+
+    doc.rect(currentX, startY, dateColumnWidth, rowHeight).stroke("#000");
+    doc
+      .fillColor("#000")
+      .text(dayjs(row.date).format("DD/MM/YYYY"), currentX + 5, startY + 4, {
+        width: dateColumnWidth - 10,
+        align: "left",
+      });
+    currentX += dateColumnWidth;
+
+    zones.forEach((zone) => {
+      const value = row[zone] || 0;
+      const bgColor = value > 0 ? "#ffd43b" : "#e9ecef";
+
+      doc
+        .rect(currentX, startY, zoneColumnWidth, rowHeight)
+        .fillAndStroke(bgColor, "#000");
+
+      if (value > 0) {
+        doc.fillColor("#000").text(value.toString(), currentX + 2, startY + 4, {
+          width: zoneColumnWidth - 4,
+          align: "center",
+        });
+      }
+
+      currentX += zoneColumnWidth;
+    });
+
+    startY += rowHeight;
+
+    // Vérifier si on doit ajouter une nouvelle page pour la prochaine ligne
+    if (startY > doc.page.height - 60) {
+      doc.addPage();
+      startY = 50;
+    }
+  });
+
+  // Ligne de total en bas
+  startY = drawHeaderRow("Total", (zone) => totals[zone], true, startY);
 }
 
 /**

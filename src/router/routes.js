@@ -77,6 +77,11 @@ const routes = [
             name: "tgw-report-zones",
             component: () => import("src/pages/alarms/TGWReportZones.vue"),
           },
+          {
+            path: "case-crashes",
+            name: "case-crashes",
+            component: () => import("src/pages/alarms/CaseCrashes.vue"),
+          },
         ],
       },
       // === AI CHAT === //

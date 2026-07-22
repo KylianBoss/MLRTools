@@ -143,6 +143,12 @@
               icon="mdi-format-list-bulleted-type"
               label="Liste des alarmes"
             />
+            <drawer-item
+              to="case-crashes"
+              autorisation="canAccessCaseCrashes"
+              icon="mdi-package-variant-closed-remove"
+              label="Chutes de tours de caisses"
+            />
           </q-expansion-item>
           <!-- TGW -->
           <q-expansion-item

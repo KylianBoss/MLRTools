@@ -336,6 +336,11 @@ const access = [
     label: "Peut classer les alarmes",
     value: "canClassifyAlarms",
   },
+  {
+    section: "alarmes",
+    label: "Chutes de tours de caisses",
+    value: "canAccessCaseCrashes",
+  },
   // TGW accesses
   {
     section: "tgw",

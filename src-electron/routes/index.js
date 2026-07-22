@@ -15,6 +15,7 @@ import NotificationsRouter from "./Notifications.routes.js";
 import AuthRouter from "./Auth.routes.js";
 import InterventionsRouter from "./Interventions.routes.js";
 import SettingsRouter from "./Settings.routes.js";
+import CaseCrashesRouter from "./CaseCrashes.routes.js";
 
 const router = Router();
 
@@ -33,5 +34,6 @@ router.use("/notifications", NotificationsRouter);
 router.use("/auth", AuthRouter);
 router.use("/interventions", InterventionsRouter);
 router.use("/settings", SettingsRouter);
+router.use("/case-crashes", CaseCrashesRouter);
 
 export default router;

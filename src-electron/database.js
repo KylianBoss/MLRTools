@@ -963,6 +963,85 @@ function initDB(config) {
       }
     );
 
+    // Chutes de tours de caisses (saisie manuelle)
+    const CaseCrash = sequelize.define(
+      "CaseCrash",
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        crashDate: {
+          type: DataTypes.DATEONLY,
+          allowNull: false,
+          comment: "Date de la chute de la tour de caisses",
+        },
+        zone: {
+          type: DataTypes.ENUM(
+            "F013",
+            "X001",
+            "X002",
+            "X003",
+            "X101",
+            "X102",
+            "X103",
+            "X104"
+          ),
+          allowNull: false,
+          comment: "Zone où la chute a eu lieu",
+        },
+        createdBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          comment: "User ID de la personne qui a créé l'entrée",
+          references: {
+            model: "Users",
+            key: "id",
+          },
+        },
+      },
+      {
+        timestamps: true,
+        indexes: [
+          {
+            fields: ["crashDate"],
+          },
+          {
+            fields: ["zone"],
+          },
+        ],
+      }
+    );
+
+    // Types de caisses présents dans une chute (relation many-to-many)
+    const CaseCrashType = sequelize.define(
+      "CaseCrashType",
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        caseCrashId: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: "CaseCrashes",
+            key: "id",
+          },
+        },
+        caseType: {
+          type: DataTypes.ENUM("A", "B", "C", "E", "H", "U"),
+          allowNull: false,
+          comment: "Type de caisse présent dans la tour",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
     const cache_ErrorsByThousand = sequelize.define(
       "cache_ErrorsByThousand",
       {
@@ -1338,6 +1417,22 @@ function initDB(config) {
     Intervention.belongsTo(Users, {
       foreignKey: "validatedBy",
       as: "validator",
+    });
+
+    // Association CaseCrash -> CaseCrashType (types de caisses de la chute)
+    CaseCrash.hasMany(CaseCrashType, {
+      foreignKey: "caseCrashId",
+      as: "caseTypes",
+      onDelete: "CASCADE",
+    });
+    CaseCrashType.belongsTo(CaseCrash, {
+      foreignKey: "caseCrashId",
+    });
+
+    // Association CaseCrash -> Users (creator)
+    CaseCrash.belongsTo(Users, {
+      foreignKey: "createdBy",
+      as: "creator",
     });
 
     // Alarms.hasOne(alarmZoneTGWReport, {
