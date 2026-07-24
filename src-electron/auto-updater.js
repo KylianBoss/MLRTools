@@ -324,8 +324,23 @@ export class AutoUpdater {
 
         echo.
         echo Step 1: Closing current application...
-        taskkill /F /IM "${appName}" /T
-        timeout /t 2 /nobreak >nul
+        taskkill /F /IM "${appName}" /T >nul 2>&1
+
+        echo Waiting for the application to fully exit...
+        set /a WAIT_COUNT=0
+        :WAIT_EXIT
+        tasklist /FI "IMAGENAME eq ${appName}" 2>nul | find /I "${appName}" >nul
+        if %ERRORLEVEL% EQU 0 (
+          set /a WAIT_COUNT+=1
+          if %WAIT_COUNT% GEQ 30 (
+            echo WARNING: Application still running after 15 seconds, continuing anyway.
+            goto WAIT_DONE
+          )
+          timeout /t 1 /nobreak >nul
+          goto WAIT_EXIT
+        )
+        :WAIT_DONE
+        echo Application closed.
 
         echo.
         echo Step 2: Cleaning extract directory...
@@ -342,6 +357,11 @@ export class AutoUpdater {
           tempExtractPath,
           "MLR Tools-win32-x64"
         )}" "${appPath}" /E /I /Y
+        if %ERRORLEVEL% NEQ 0 (
+          echo ERROR: Copy failed with code %ERRORLEVEL%.
+          pause
+          exit /b 1
+        )
 
         echo.
         echo Step 5: Cleanup...
