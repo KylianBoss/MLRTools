@@ -1,10 +1,15 @@
 import { Router } from "express";
 import { getDB, isDBInitialized } from "../database.js";
 import dayjs from "dayjs";
+import { getTunnelStatus } from "../cloudflareTunnel.js";
 
 const INACTIVE_BOT_THRESHOLD = 5; // minutes
 
 const router = Router();
+
+router.get("/tunnel-status", (req, res) => {
+  res.json(getTunnelStatus());
+});
 
 router.post("/active", async (req, res) => {
   if (!isDBInitialized()) {

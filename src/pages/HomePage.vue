@@ -18,6 +18,36 @@
             </div>
           </div>
         </q-card-section>
+        <q-card-section>
+          <div class="row items-start q-gutter-md">
+            <div class="q-pa-sm rounded-borders">
+              <q-icon
+                :name="tunnelStatusMeta.icon"
+                size="md"
+                :color="tunnelStatusMeta.color"
+              />
+            </div>
+            <div class="col">
+              <h5 class="q-mt-none q-mb-sm">Tunnel Cloudflare</h5>
+              <p class="text-dark q-mb-xs">
+                <q-chip
+                  :color="tunnelStatusMeta.color"
+                  text-color="white"
+                  dense
+                >
+                  {{ tunnelStatusMeta.label }}
+                </q-chip>
+              </p>
+              <p v-if="tunnelStatus.state === 'error'" class="text-negative q-mb-none">
+                {{ tunnelStatus.error }}
+              </p>
+              <p class="text-grey-8 text-caption q-mb-none">
+                Dernière mise à jour :
+                {{ new Date(tunnelStatus.updatedAt).toLocaleString() }}
+              </p>
+            </div>
+          </div>
+        </q-card-section>
         <q-card-section v-if="App.cronJobsInitialized">
           <div class="row items-start q-gutter-md">
             <div class="q-pa-sm rounded-borders">
@@ -140,7 +170,7 @@
 <script setup>
 import { useAppStore } from "stores/app";
 import { api } from "boot/axios";
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { EventSource } from "eventsource";
 import { useRouter } from "vue-router";
 import WarehouseAnimation from "components/WarehouseAnimation.vue";
@@ -149,6 +179,37 @@ const App = useAppStore();
 const router = useRouter();
 
 const cronJobs = ref([]);
+const tunnelStatus = ref({
+  state: "stopped",
+  connection: null,
+  error: null,
+  updatedAt: new Date(),
+});
+
+const TUNNEL_STATUS_META = {
+  connected: { label: "Connecté", color: "green-6", icon: "mdi-check-network" },
+  starting: { label: "Démarrage...", color: "orange-6", icon: "mdi-loading" },
+  error: { label: "Erreur", color: "red-6", icon: "mdi-network-off" },
+  not_configured: {
+    label: "Non configuré",
+    color: "grey-6",
+    icon: "mdi-network-off-outline",
+  },
+  stopped: { label: "Arrêté", color: "grey-6", icon: "mdi-network-off-outline" },
+};
+
+const tunnelStatusMeta = computed(
+  () => TUNNEL_STATUS_META[tunnelStatus.value.state] || TUNNEL_STATUS_META.stopped
+);
+
+const fetchTunnelStatus = async () => {
+  try {
+    const response = await api.get("/bot/tunnel-status");
+    tunnelStatus.value = response.data;
+  } catch (error) {
+    console.error("Error fetching tunnel status:", error);
+  }
+};
 
 // Fetch status from an SSE endpoint
 const fetchCronStatus = async () => {
@@ -203,6 +264,7 @@ onMounted(async () => {
       cronJobs.value = response.data;
       fetchCronStatus();
       await api.post("/bot/active", { userId: App.userId });
+      await fetchTunnelStatus();
       setInterval(async () => {
         await api.post("/bot/active", { userId: App.userId });
         await api.get("/bot/needs-restart/" + App.userId).then(async (res) => {
@@ -212,6 +274,7 @@ onMounted(async () => {
           });
         });
       }, 60000); // every minute
+      setInterval(fetchTunnelStatus, 15000); // every 15 seconds
     }
     window.electron.onRouter((data) => {
       if (data && data.path) {
