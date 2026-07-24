@@ -1,6 +1,18 @@
-import { bin, install, Tunnel } from "cloudflared";
+import { bin as packagedBin, install, use, Tunnel } from "cloudflared";
 import fs from "fs";
+import path from "path";
 import { getDB } from "./database.js";
+
+// electron-packager keeps the app source inside an .asar archive, which can't
+// execute binaries directly - cloudflared.exe must be unpacked (see quasar.config.js
+// asar.unpack) and resolved from app.asar.unpacked instead of app.asar.
+const bin = packagedBin.includes(`${path.sep}app.asar${path.sep}`)
+  ? packagedBin.replace(
+      `${path.sep}app.asar${path.sep}`,
+      `${path.sep}app.asar.unpacked${path.sep}`
+    )
+  : packagedBin;
+use(bin);
 
 let tunnel = null;
 let status = {

@@ -183,7 +183,7 @@ export default configure(function (/* ctx */) {
         platform: "win32",
         arch: "x64",
         asar: {
-          unpack: "**/electron-preload.js", // This tells packager to keep preload script outside asar
+          unpack: "**/{electron-preload.js,cloudflared/bin/cloudflared.exe}", // Keep preload script and cloudflared binary outside asar (executables can't run from inside asar)
         },
         executableName: "MLR Tools",
         icon: "src-electron/icons/icon.ico",
