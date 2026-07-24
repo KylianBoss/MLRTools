@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, Notification, dialog } from "electron";
 import path from "path";
 import { startServer, closeServer } from "./server";
+import { stopTunnel } from "./cloudflareTunnel.js";
 import os from "os";
 import fs from "fs";
 import { AutoUpdater } from "./auto-updater.js";
@@ -153,6 +154,7 @@ app.on("will-quit", async () => {
   if (eventSource) {
     eventSource.close();
   }
+  stopTunnel();
   if (httpServer) {
     console.log("Stopping HTTP server...");
     await closeServer(httpServer)

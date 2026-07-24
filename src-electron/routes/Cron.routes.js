@@ -11,6 +11,7 @@ import { sendKPI } from "../cron/SendKPI.js";
 import { cleanDB } from "../cron/CleanDB.js";
 import { autoGroupAlarmsJob } from "../cron/AutoGroupAlarms.js";
 import { sendAlarmReport } from "../cron/SendAlarmReport.js";
+import { startTunnel } from "../cloudflareTunnel.js";
 
 dayjs.extend(utc);
 
@@ -252,6 +253,10 @@ router.post("/initialize", async (req, res) => {
       res.status(403).json({ error: "User not authorized" });
       return;
     }
+
+    startTunnel().catch((error) => {
+      console.error("Error while starting Cloudflare tunnel:", error);
+    });
 
     console.log("Initializing cron jobs for user:", user);
 

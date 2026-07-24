@@ -65,185 +65,199 @@
       </q-card-section>
     </q-card>
 
-    <!-- Pivot Table -->
-    <q-card flat bordered class="q-mb-sm">
-      <q-card-section class="q-pa-sm">
-        <div class="row items-center q-mb-sm">
-          <div class="col">
-            <div class="text-subtitle2">Nombre de chutes par zone et par jour</div>
-          </div>
-          <div class="col-auto">
-            <q-btn
-              flat
-              round
-              dense
-              icon="refresh"
-              color="primary"
-              @click="loadAll"
-              :loading="loading"
-            >
-              <q-tooltip>Actualiser</q-tooltip>
-            </q-btn>
-          </div>
-        </div>
+    <!-- Pivot / List Tabs -->
+    <q-card flat bordered>
+      <q-tabs
+        v-model="activeTab"
+        dense
+        align="left"
+        active-color="primary"
+        indicator-color="primary"
+      >
+        <q-tab name="pivot" label="Tableau croisé" />
+        <q-tab name="list" label="Détail des chutes" />
+      </q-tabs>
 
-        <div class="table-scroll">
-          <q-markup-table flat bordered dense separator="cell">
-            <thead>
-              <tr>
-                <th class="text-left date-header">
-                  <div class="row items-center no-wrap">
-                    <span>Date</span>
-                    <q-icon
-                      name="filter_alt"
-                      size="xs"
-                      class="q-ml-xs cursor-pointer"
-                      :color="dateFilterActive ? 'primary' : 'grey-6'"
-                    >
-                      <q-menu anchor="bottom left" self="top left">
-                        <div class="q-pa-sm date-filter-menu">
-                          <div class="row items-center justify-between q-mb-xs">
-                            <div class="text-caption text-grey-7">Filtrer par date</div>
-                            <q-btn
-                              flat
+      <q-separator />
+
+      <q-tab-panels v-model="activeTab" animated>
+        <!-- Pivot Table -->
+        <q-tab-panel name="pivot" class="q-pa-sm">
+          <div class="row items-center q-mb-sm">
+            <div class="col">
+              <div class="text-subtitle2">Nombre de chutes par zone et par jour</div>
+            </div>
+            <div class="col-auto">
+              <q-btn
+                flat
+                round
+                dense
+                icon="refresh"
+                color="primary"
+                @click="loadAll"
+                :loading="loading"
+              >
+                <q-tooltip>Actualiser</q-tooltip>
+              </q-btn>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <q-markup-table flat bordered dense separator="cell">
+              <thead>
+                <tr>
+                  <th class="text-left date-header">
+                    <div class="row items-center no-wrap">
+                      <span>Date</span>
+                      <q-icon
+                        name="filter_alt"
+                        size="xs"
+                        class="q-ml-xs cursor-pointer"
+                        :color="dateFilterActive ? 'primary' : 'grey-6'"
+                      >
+                        <q-menu anchor="bottom left" self="top left">
+                          <div class="q-pa-sm date-filter-menu">
+                            <div class="row items-center justify-between q-mb-xs">
+                              <div class="text-caption text-grey-7">Filtrer par date</div>
+                              <q-btn
+                                flat
+                                dense
+                                no-caps
+                                size="sm"
+                                label="Tout sélectionner"
+                                color="primary"
+                                @click="selectAllDates"
+                              />
+                            </div>
+                            <q-tree
+                              :nodes="dateFilterTree"
+                              node-key="key"
+                              tick-strategy="leaf"
+                              v-model:ticked="tickedDates"
                               dense
-                              no-caps
-                              size="sm"
-                              label="Tout sélectionner"
-                              color="primary"
-                              @click="selectAllDates"
+                              default-expand-all
                             />
                           </div>
-                          <q-tree
-                            :nodes="dateFilterTree"
-                            node-key="key"
-                            tick-strategy="leaf"
-                            v-model:ticked="tickedDates"
-                            dense
-                            default-expand-all
-                          />
-                        </div>
-                      </q-menu>
-                    </q-icon>
-                  </div>
-                </th>
-                <th v-for="zone in ZONES" :key="zone" class="text-center">
-                  {{ zone }}
-                </th>
-              </tr>
-              <tr class="total-row">
-                <th class="text-left">Total</th>
-                <th v-for="zone in ZONES" :key="zone" class="text-center">
-                  {{ columnTotals[zone] }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in filteredPivotRows" :key="row.date">
-                <td class="text-left text-weight-medium">
-                  {{ formatDate(row.date) }}
-                </td>
-                <td
-                  v-for="zone in ZONES"
-                  :key="zone"
-                  class="text-center"
-                  :class="row[zone] > 0 ? 'text-weight-bold text-negative' : 'text-grey-5'"
-                >
-                  {{ row[zone] || 0 }}
-                </td>
-              </tr>
-              <tr v-if="filteredPivotRows.length === 0">
-                <td :colspan="ZONES.length + 1" class="text-center text-grey-7">
-                  Aucune chute enregistrée
-                </td>
-              </tr>
-            </tbody>
-            <tfoot v-if="filteredPivotRows.length > 0">
-              <tr class="total-row">
-                <th class="text-left">Total</th>
-                <th v-for="zone in ZONES" :key="zone" class="text-center">
-                  {{ columnTotals[zone] }}
-                </th>
-              </tr>
-            </tfoot>
-          </q-markup-table>
-        </div>
-      </q-card-section>
-    </q-card>
-
-    <!-- Crashes List -->
-    <q-card flat bordered>
-      <q-card-section class="q-pa-sm">
-        <div class="row items-center q-mb-sm">
-          <div class="col">
-            <div class="text-subtitle2">
-              Détail des chutes
-              <q-badge color="primary" :label="filteredCrashes.length" />
-            </div>
+                        </q-menu>
+                      </q-icon>
+                    </div>
+                  </th>
+                  <th v-for="zone in ZONES" :key="zone" class="text-center">
+                    {{ zone }}
+                  </th>
+                </tr>
+                <tr class="total-row">
+                  <th class="text-left">Total</th>
+                  <th v-for="zone in ZONES" :key="zone" class="text-center">
+                    {{ columnTotals[zone] }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in filteredPivotRows" :key="row.date">
+                  <td class="text-left text-weight-medium">
+                    {{ formatDate(row.date) }}
+                  </td>
+                  <td
+                    v-for="zone in ZONES"
+                    :key="zone"
+                    class="text-center"
+                    :class="row[zone] > 0 ? 'text-weight-bold text-negative' : 'text-grey-5'"
+                  >
+                    {{ row[zone] || 0 }}
+                  </td>
+                </tr>
+                <tr v-if="filteredPivotRows.length === 0">
+                  <td :colspan="ZONES.length + 1" class="text-center text-grey-7">
+                    Aucune chute enregistrée
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot v-if="filteredPivotRows.length > 0">
+                <tr class="total-row">
+                  <th class="text-left">Total</th>
+                  <th v-for="zone in ZONES" :key="zone" class="text-center">
+                    {{ columnTotals[zone] }}
+                  </th>
+                </tr>
+              </tfoot>
+            </q-markup-table>
           </div>
-        </div>
+        </q-tab-panel>
 
-        <div v-if="filteredCrashes.length > 0" class="crash-rows">
-          <div
-            v-for="crash in filteredCrashes"
-            :key="crash.id"
-            class="crash-row row items-center q-py-sm q-px-sm"
-          >
-            <div class="col-2">
-              <div class="text-weight-medium">
-                {{ formatDate(crash.crashDate) }}
-              </div>
-            </div>
-            <div class="col-2">
-              <q-badge color="primary" :label="crash.zone" />
-            </div>
-            <div class="col-4">
-              <q-badge
-                v-for="caseType in crash.caseTypes"
-                :key="caseType"
-                color="grey-7"
-                :label="caseType"
-                class="q-mr-xs"
-              />
-            </div>
-            <div class="col-3 text-grey-7">
-              <q-icon name="person" size="xs" class="q-mr-xs" />
-              {{ crash.creatorFullname || crash.createdBy }}
-            </div>
-            <div class="col-1 text-right">
-              <div v-if="canModify(crash)" class="row q-gutter-xs justify-end crash-row-actions">
-                <q-btn
-                  flat
-                  dense
-                  size="sm"
-                  round
-                  icon="edit"
-                  color="primary"
-                  @click="editCrash(crash)"
-                >
-                  <q-tooltip>Modifier</q-tooltip>
-                </q-btn>
-                <q-btn
-                  flat
-                  dense
-                  size="sm"
-                  round
-                  icon="delete"
-                  color="negative"
-                  @click="deleteCrash(crash.id)"
-                >
-                  <q-tooltip>Supprimer</q-tooltip>
-                </q-btn>
+        <!-- Crashes List -->
+        <q-tab-panel name="list" class="q-pa-sm">
+          <div class="row items-center q-mb-sm">
+            <div class="col">
+              <div class="text-subtitle2">
+                Détail des chutes
+                <q-badge color="primary" :label="filteredCrashes.length" />
               </div>
             </div>
           </div>
-        </div>
 
-        <div v-else class="text-center text-grey-7 q-pa-md">
-          <q-icon name="event_busy" size="48px" />
-          <div class="q-mt-sm text-caption">Aucune chute enregistrée</div>
-        </div>
-      </q-card-section>
+          <div v-if="filteredCrashes.length > 0" class="crash-rows">
+            <div
+              v-for="crash in filteredCrashes"
+              :key="crash.id"
+              class="crash-row row items-center q-py-sm q-px-sm"
+            >
+              <div class="col-2">
+                <div class="text-weight-medium">
+                  {{ formatDate(crash.crashDate) }}
+                </div>
+              </div>
+              <div class="col-2">
+                <q-badge color="primary" :label="crash.zone" />
+              </div>
+              <div class="col-4">
+                <q-badge
+                  v-for="caseType in crash.caseTypes"
+                  :key="caseType"
+                  color="grey-7"
+                  :label="caseType"
+                  class="q-mr-xs"
+                />
+              </div>
+              <div class="col-3 text-grey-7">
+                <q-icon name="person" size="xs" class="q-mr-xs" />
+                {{ crash.creatorFullname || crash.createdBy }}
+              </div>
+              <div class="col-1 text-right">
+                <div v-if="canModify(crash)" class="row q-gutter-xs justify-end crash-row-actions">
+                  <q-btn
+                    flat
+                    dense
+                    size="sm"
+                    round
+                    icon="edit"
+                    color="primary"
+                    @click="editCrash(crash)"
+                  >
+                    <q-tooltip>Modifier</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    dense
+                    size="sm"
+                    round
+                    icon="delete"
+                    color="negative"
+                    @click="deleteCrash(crash.id)"
+                  >
+                    <q-tooltip>Supprimer</q-tooltip>
+                  </q-btn>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="text-center text-grey-7 q-pa-md">
+            <q-icon name="event_busy" size="48px" />
+            <div class="q-mt-sm text-caption">Aucune chute enregistrée</div>
+          </div>
+        </q-tab-panel>
+      </q-tab-panels>
     </q-card>
 
     <!-- Edit Dialog -->
@@ -319,6 +333,7 @@ const ZONES = [
 const CASE_TYPES = ["A", "B", "C", "E", "H", "U"];
 
 const loading = ref(false);
+const activeTab = ref("pivot");
 const crashes = ref([]);
 const pivotRows = ref([]);
 const tickedDates = ref([]);

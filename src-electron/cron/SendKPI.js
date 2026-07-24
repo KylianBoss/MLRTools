@@ -536,6 +536,12 @@ export async function generateKPIPDF() {
       });
 
       const caseCrashesRowsByDate = new Map();
+      for (let i = 0; i < caseCrashesReportDays; i++) {
+        const date = dayjs().subtract(i, "day").format("YYYY-MM-DD");
+        const emptyRow = { date };
+        CASE_CRASHES_ZONES.forEach((zone) => (emptyRow[zone] = 0));
+        caseCrashesRowsByDate.set(date, emptyRow);
+      }
       for (const crash of caseCrashes) {
         const date = dayjs(crash.crashDate).format("YYYY-MM-DD");
         if (!caseCrashesRowsByDate.has(date)) {
