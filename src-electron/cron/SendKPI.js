@@ -563,7 +563,7 @@ export async function generateKPIPDF() {
         .text("Chutes de tours de caisses", {
           align: "center",
         });
-      doc.moveDown();
+      doc.moveDown(0.3);
       doc
         .fontSize(12)
         .fillColor("#666")
@@ -573,7 +573,7 @@ export async function generateKPIPDF() {
             align: "center",
           }
         );
-      doc.moveDown(2);
+      doc.moveDown(0.8);
 
       if (caseCrashesRows.length > 0) {
         generateCaseCrashesTable(
@@ -1922,9 +1922,8 @@ function generateCaseCrashesTable(
     return y + headerHeight;
   };
 
-  // En-tête (noms de zones) puis ligne de total en haut
+  // En-tête (noms de zones)
   startY = drawHeaderRow("Date", (zone) => zone, true, startY);
-  startY = drawHeaderRow("Total", (zone) => totals[zone], true, startY);
 
   // Lignes de données
   doc.font("Helvetica").fontSize(fontSize);
