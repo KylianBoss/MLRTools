@@ -255,6 +255,7 @@ app.post("/production/data", async (req, res) => {
 app.get("/charts/messages-count/:startDate/:endDate", async (req, res) => {
   const { startDate, endDate } = req.params;
   try {
+    const db = getDB();
     // Get the number of messages per day between the start and end dates (inclusive) and separate WARNING and ERROR messages
     const result = await db.query(
       `
@@ -286,6 +287,7 @@ app.get("/charts/messages-count/:startDate/:endDate", async (req, res) => {
 app.get("/charts/messages-per-zone/:startDate/:endDate", async (req, res) => {
   const { startDate, endDate } = req.params;
   try {
+    const db = getDB();
     // Get the number of messages per zone between the start and end dates (inclusive)
     const result = await db.query(
       `
@@ -315,6 +317,7 @@ app.get("/charts/messages-per-zone/:startDate/:endDate", async (req, res) => {
 app.get("/charts/production/volume/:startDate/:endDate", async (req, res) => {
   const { startDate, endDate } = req.params;
   try {
+    const db = getDB();
     // Get the number of boxes treated per day between the start and end dates (inclusive)
     const result = await db.query(
       `
