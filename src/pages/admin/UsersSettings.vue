@@ -12,11 +12,15 @@
     >
       <template v-slot:body="props">
         <q-tr :props="props" :class="{ 'disabled-row': !props.row.autorised }">
-          <q-td>
-            {{ props.row.username }}
+          <q-td class="username-cell">
+            <span class="username-hidden">••••••••••</span>
+            <span class="username-real">{{ props.row.username }}</span>
           </q-td>
           <q-td>
             {{ props.row.fullname }}
+          </q-td>
+          <q-td key="initals" :props="props">
+            {{ props.row.initals }}
           </q-td>
           <q-td key="autorised" :props="props" class="text-center">
             <q-toggle
@@ -118,6 +122,17 @@
               :disable="!props.row.autorised || props.row.isBot"
             />
           </q-td>
+          <q-td key="edit" :props="props" class="text-center">
+            <q-btn
+              icon="edit"
+              flat
+              round
+              dense
+              color="primary"
+              class="edit-btn"
+              @click="openEditDialog(props.row)"
+            />
+          </q-td>
         </q-tr>
       </template>
       <!-- <template v-slot:body-cell-autorised="props">
@@ -205,6 +220,49 @@
         </td>
       </template> -->
     </q-table>
+
+    <q-dialog v-model="editDialog" persistent>
+      <q-card style="min-width: 400px">
+        <q-card-section>
+          <div class="text-h6">Modifier l'utilisateur</div>
+        </q-card-section>
+        <q-card-section class="q-gutter-md">
+          <q-input
+            v-model="editedUser.username"
+            label="Username"
+            dense
+            outlined
+          />
+          <q-input
+            v-model="editedUser.fullname"
+            label="Nom complet"
+            dense
+            outlined
+          />
+          <q-input
+            v-model="editedUser.initals"
+            label="Initiales"
+            dense
+            outlined
+          />
+          <q-input
+            v-model="editedUser.email"
+            label="Email"
+            dense
+            outlined
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Annuler" v-close-popup @click="closeEditDialog" />
+          <q-btn
+            flat
+            label="Enregistrer"
+            color="primary"
+            @click="saveEditDialog"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -226,6 +284,13 @@ const columns = [
     label: "NAME",
     align: "left",
     field: "fullname",
+    sortable: true,
+  },
+  {
+    name: "initals",
+    label: "INITIALES",
+    align: "left",
+    field: "initals",
     sortable: true,
   },
   {
@@ -275,6 +340,12 @@ const columns = [
     align: "center",
     field: "isTechnician",
     sortable: true,
+  },
+  {
+    name: "edit",
+    label: "",
+    align: "center",
+    field: "edit",
   },
 ];
 const access = [
@@ -469,6 +540,31 @@ const rowClass = (row) => {
   return !row.autorised ? "bg-grey" : "";
 };
 
+const editDialog = ref(false);
+const editedUser = ref({});
+
+const openEditDialog = (row) => {
+  editedUser.value = { ...row };
+  editDialog.value = true;
+};
+
+const closeEditDialog = () => {
+  editedUser.value = {};
+};
+
+const saveEditDialog = () => {
+  const row = App.users.find((u) => u.id === editedUser.value.id);
+  if (row) {
+    row.username = editedUser.value.username;
+    row.fullname = editedUser.value.fullname;
+    row.initals = editedUser.value.initals;
+    row.email = editedUser.value.email;
+    App.updateUser(row);
+  }
+  editDialog.value = false;
+  closeEditDialog();
+};
+
 onMounted(() => {
   App.getUsers();
 });
@@ -482,5 +578,25 @@ onMounted(() => {
 
 .disabled-row td {
   color: #999;
+}
+
+.edit-btn {
+  visibility: hidden;
+}
+
+tr:hover .edit-btn {
+  visibility: visible;
+}
+
+.username-cell .username-real {
+  display: none;
+}
+
+.username-cell:hover .username-hidden {
+  display: none;
+}
+
+.username-cell:hover .username-real {
+  display: inline;
 }
 </style>
