@@ -79,11 +79,14 @@ export const extractSAV = async (date = null, retryCount = 0) => {
       },
       jobName
     );
-    const data = [];
+    // Lecture par position de colonne (headers: false), comme pour l'import
+    // manuel dans Alarms.routes.js : le mapping par nom d'en-tête ne
+    // correspond pas de façon fiable aux en-têtes réels de l'export SAV.
+    const rows = [];
     await new Promise((resolve) => {
       fs.createReadStream(filePath, "utf8")
-        .pipe(csv({ separator: ";" }))
-        .on("data", (row) => data.push(Object.values(row)))
+        .pipe(csv({ separator: ";", headers: false }))
+        .on("data", (row) => rows.push(Object.values(row)))
         .on("end", async () => {
           console.log(`Downloaded file: ${fileName}`);
           await updateJob(
@@ -96,6 +99,8 @@ export const extractSAV = async (date = null, retryCount = 0) => {
           resolve();
         });
     });
+    // La première ligne du fichier est l'en-tête, on l'ignore
+    const data = rows.slice(1);
 
     const fd = data.map(async (line) => {
       console.log("Processing line:", line);
