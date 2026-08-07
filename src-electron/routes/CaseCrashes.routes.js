@@ -246,7 +246,7 @@ router.post("/bot", checkApiKey, async (req, res) => {
   }
 });
 
-// Update a case crash (only by creator)
+// Update a case crash (only by its creator, or an admin)
 router.patch(
   "/:id",
   requirePermission("canAccessCaseCrashes"),
@@ -280,10 +280,10 @@ router.patch(
         return res.status(404).json({ error: "Case crash not found" });
       }
 
-      if (crash.createdBy !== req.userId) {
+      if (crash.createdBy !== req.userId && !req.user.isAdmin) {
         return res
           .status(403)
-          .json({ error: "Only the creator can modify this entry" });
+          .json({ error: "Only the creator or an admin can modify this entry" });
       }
 
       const t = await db.transaction();
@@ -338,7 +338,7 @@ router.patch(
   }
 );
 
-// Delete a case crash (only by creator)
+// Delete a case crash (only by its creator, or an admin)
 router.delete(
   "/:id",
   requirePermission("canAccessCaseCrashes"),
@@ -353,10 +353,10 @@ router.delete(
         return res.status(404).json({ error: "Case crash not found" });
       }
 
-      if (crash.createdBy !== req.userId) {
+      if (crash.createdBy !== req.userId && !req.user.isAdmin) {
         return res
           .status(403)
-          .json({ error: "Only the creator can delete this entry" });
+          .json({ error: "Only the creator or an admin can delete this entry" });
       }
 
       await crash.destroy();

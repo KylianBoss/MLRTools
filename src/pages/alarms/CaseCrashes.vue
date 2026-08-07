@@ -473,7 +473,7 @@ const formatDate = (date) => {
 };
 
 const canModify = (crash) => {
-  return crash.createdBy === App.userId;
+  return crash.createdBy === App.userId || App.isAdmin;
 };
 
 const loadCrashes = async () => {
