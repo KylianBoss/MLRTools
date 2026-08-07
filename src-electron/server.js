@@ -261,8 +261,8 @@ app.get("/charts/messages-count/:startDate/:endDate", async (req, res) => {
       `
         SELECT
           DATE(timeOfOccurence) as date,
-          SUM(CASE WHEN severity = 'Warning' THEN 1 ELSE 0 END) as warning,
-          SUM(CASE WHEN severity = 'Error' THEN 1 ELSE 0 END) as error,
+          SUM(CASE WHEN LOWER(severity) = 'warning' THEN 1 ELSE 0 END) as warning,
+          SUM(CASE WHEN LOWER(severity) = 'error' THEN 1 ELSE 0 END) as error,
           COUNT(*) as total
         FROM
           Datalogs
@@ -293,7 +293,7 @@ app.get("/charts/messages-per-zone/:startDate/:endDate", async (req, res) => {
       `
         SELECT
           dataSource,
-          SUM(CASE WHEN severity = 'Error' THEN 1 ELSE 0 END) as count
+          SUM(CASE WHEN LOWER(severity) = 'error' THEN 1 ELSE 0 END) as count
         FROM
           DatalogsWithoutExcluded
         WHERE
