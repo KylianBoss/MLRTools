@@ -293,7 +293,7 @@ app.get("/charts/messages-per-zone/:startDate/:endDate", async (req, res) => {
       `
         SELECT
           dataSource,
-          SUM(CASE WHEN LOWER(severity) = 'error' THEN 1 ELSE 0 END) as count
+          COUNT(*) as count
         FROM
           DatalogsWithoutExcluded
         WHERE
