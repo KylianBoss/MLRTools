@@ -339,7 +339,7 @@ router.get("/", async (req, res) => {
         `;
       if (!!!filter.excluded) {
         query += `
-            AND alarmId NOT IN (SELECT alarmId FROM ExcludedAlarms)
+            AND alarmId IN (SELECT alarmId FROM Alarms WHERE type = 'primary' OR type IS NULL)
           `;
       }
       query += `
@@ -382,12 +382,9 @@ router.get("/", async (req, res) => {
     };
     if (!!!filter.excluded) {
       where.alarmId = {
-        [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
-      };
-    }
-    if (!!!filter.excludedCode) {
-      where.alarmCode = {
-        [Op.notIn]: db.literal(`(SELECT alarmCode FROM ExcludedAlarmCodes)`),
+        [Op.in]: db.literal(
+          `(SELECT alarmId FROM Alarms WHERE type = 'primary' OR type IS NULL)`
+        ),
       };
     }
     if (filter.like) {
@@ -451,12 +448,9 @@ router.get("/count", async (req, res) => {
     };
     if (!!!excluded) {
       where.alarmId = {
-        [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
-      };
-    }
-    if (!!!filter.excludedCode) {
-      where.alarmCode = {
-        [Op.notIn]: db.literal(`(SELECT alarmCode FROM ExcludedAlarmCodes)`),
+        [Op.in]: db.literal(
+          `(SELECT alarmId FROM Alarms WHERE type = 'primary' OR type IS NULL)`
+        ),
       };
     }
     if (like) {
@@ -603,10 +597,12 @@ router.get("/messages", async (req, res) => {
     };
     if (!!!includesExcluded) {
       where.alarmId = {
-        [Op.notIn]: db.literal(`(SELECT alarmId FROM ExcludedAlarms)`),
+        [Op.in]: db.literal(
+          `(SELECT alarmId FROM Alarms WHERE type = 'primary' OR type IS NULL)`
+        ),
       };
     }
-    const messages = await Datalog.findAll({
+    const messages = await db.models.Datalog.findAll({
       where,
     });
 
