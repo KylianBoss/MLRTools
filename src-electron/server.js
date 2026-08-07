@@ -261,8 +261,8 @@ app.get("/charts/messages-count/:startDate/:endDate", async (req, res) => {
       `
         SELECT
           DATE(timeOfOccurence) as date,
-          SUM(CASE WHEN LOWER(severity) = 'warning' THEN 1 ELSE 0 END) as warning,
-          SUM(CASE WHEN LOWER(severity) = 'error' THEN 1 ELSE 0 END) as error,
+          SUM(CASE WHEN LOWER(severity) IN ('warning', 'avertissement') THEN 1 ELSE 0 END) as warning,
+          SUM(CASE WHEN LOWER(severity) IN ('error', 'erreur') THEN 1 ELSE 0 END) as error,
           COUNT(*) as total
         FROM
           Datalogs
