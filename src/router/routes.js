@@ -39,7 +39,7 @@ const routes = [
           {
             path: "general",
             name: "general-charts",
-            component: () => import("src/pages/ChartsPage.vue"),
+            component: () => import("src/pages/charts/ChartsPage.vue"),
           },
           {
             path: "faillure",
