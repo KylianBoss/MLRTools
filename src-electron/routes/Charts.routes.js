@@ -1,7 +1,158 @@
 import { Router } from "express";
 import { getDB } from "../database.js";
+import dayjs from "dayjs";
 
 const router = Router();
+
+// --- Suivi en direct de la régénération du cache d'un graphique (SSE) ---
+// Un client ouvre d'abord le flux SSE avec un jobId, puis lance le POST
+// de régénération en référençant ce même jobId. La progression est
+// poussée jour par jour au fil de l'eau.
+const recalcStreams = new Map();
+
+function pushRecalcEvent(jobId, payload) {
+  const client = recalcStreams.get(jobId);
+  if (client) {
+    client.write(`data: ${JSON.stringify(payload)}\n\n`);
+  }
+}
+
+function endRecalcStream(jobId) {
+  const client = recalcStreams.get(jobId);
+  if (client) {
+    client.end();
+    recalcStreams.delete(jobId);
+  }
+}
+
+router.get("/custom-charts/:id/recalculate/stream/:jobId", (req, res) => {
+  const { jobId } = req.params;
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  res.write(
+    `data: ${JSON.stringify({
+      type: "connected",
+      message: "Connexion établie, en attente de la régénération...",
+    })}\n\n`
+  );
+  recalcStreams.set(jobId, res);
+
+  req.on("close", () => {
+    recalcStreams.delete(jobId);
+  });
+});
+
+router.post("/custom-charts/:id/recalculate", async (req, res) => {
+  const db = getDB();
+  const { id } = req.params;
+  const { jobId } = req.body;
+
+  try {
+    const chart = await db.models.CustomChart.findByPk(id);
+    if (!chart) {
+      res.status(404).json({ error: "Custom chart not found" });
+      return;
+    }
+
+    // Répond tout de suite : le suivi se fait via le flux SSE
+    res.json({ started: true });
+
+    const MIN_DATE = await db.models.Settings.getValue("MIN_DATE");
+    const MIN_ALARM_DURATION = await db.models.Settings.getValue(
+      "MIN_ALARM_DURATION"
+    );
+
+    const startDate = dayjs(MIN_DATE).startOf("day");
+    const endDate = dayjs().subtract(1, "day").startOf("day");
+    const totalDays = Math.max(endDate.diff(startDate, "day") + 1, 0);
+
+    pushRecalcEvent(jobId, {
+      type: "start",
+      totalDays,
+      chartId: Number(id),
+    });
+
+    // Vide entièrement le cache de ce graphique avant de tout recalculer
+    await db.models.cache_CustomCharts.destroy({ where: { chartId: id } });
+
+    const dayDurations = [];
+    let processedDays = 0;
+
+    for (
+      let current = startDate;
+      current.isBefore(endDate) || current.isSame(endDate, "day");
+      current = current.add(1, "day")
+    ) {
+      const dayStartedAt = Date.now();
+      const dateStr = current.format("YYYY-MM-DD");
+
+      try {
+        await db.query(
+          "CALL getCustomChartsData(:startDate, :endDate, :chartId, :minTime, NULL)",
+          {
+            replacements: {
+              startDate: dateStr,
+              endDate: dateStr,
+              chartId: id,
+              minTime: MIN_ALARM_DURATION,
+            },
+          }
+        );
+      } catch (dayError) {
+        console.error(
+          `Error recalculating chart ${id} for ${dateStr}:`,
+          dayError
+        );
+        pushRecalcEvent(jobId, {
+          type: "day-error",
+          date: dateStr,
+          error: dayError.message,
+        });
+      }
+
+      processedDays += 1;
+      dayDurations.push(Date.now() - dayStartedAt);
+      // Ne garde qu'une fenêtre glissante récente pour estimer le temps restant
+      if (dayDurations.length > 20) dayDurations.shift();
+
+      const avgMsPerDay =
+        dayDurations.reduce((sum, d) => sum + d, 0) / dayDurations.length;
+      const remainingDays = totalDays - processedDays;
+      const etaMs = Math.max(Math.round(avgMsPerDay * remainingDays), 0);
+
+      pushRecalcEvent(jobId, {
+        type: "progress",
+        date: dateStr,
+        processedDays,
+        totalDays,
+        percent:
+          totalDays > 0 ? Math.round((processedDays / totalDays) * 100) : 100,
+        etaMs,
+      });
+    }
+
+    chart.updatedAt = new Date();
+    await chart.save();
+
+    pushRecalcEvent(jobId, {
+      type: "done",
+      processedDays,
+      totalDays,
+      updatedAt: chart.updatedAt,
+    });
+    endRecalcStream(jobId);
+  } catch (error) {
+    console.error("Error recalculating custom chart:", error);
+    pushRecalcEvent(jobId, {
+      type: "error",
+      message: error.message,
+    });
+    endRecalcStream(jobId);
+  }
+});
 
 router.get("/custom-charts/", async (req, res) => {
   const db = getDB();

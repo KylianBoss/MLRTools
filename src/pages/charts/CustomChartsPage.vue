@@ -33,7 +33,7 @@
         <q-tr
           :props="props"
           v-else
-          :class="props.row.id === 0 ? 'bg-grey-2' : ''"
+          :class="[props.row.id === 0 ? 'bg-grey-2' : '', 'chart-row']"
         >
           <q-td>{{ props.row.chartName }}</q-td>
           <q-td>{{ props.row.createdByName }}</q-td>
@@ -48,6 +48,20 @@
             }}
           </q-td>
           <q-td class="text-center">
+            {{ formatDate(props.row.updatedAt) }}
+          </q-td>
+          <q-td class="text-center row-actions">
+            <q-btn
+              icon="mdi-refresh"
+              color="secondary"
+              dense
+              flat
+              @click="recalculateChart(props.row)"
+              :loading="recalculatingChartId === props.row.id"
+              :disable="App.userHasAccess('canUpdateCustomCharts') === false"
+            >
+              <q-tooltip>Régénérer les données du cache</q-tooltip>
+            </q-btn>
             <q-btn
               icon="mdi-pencil"
               color="primary"
@@ -68,12 +82,68 @@
         </q-tr>
       </template>
     </q-table>
+
+    <!-- Dialog de progression de la régénération du cache -->
+    <q-dialog v-model="recalcDialog" persistent>
+      <q-card style="min-width: 400px">
+        <q-card-section>
+          <div class="text-h6">Régénération des données</div>
+          <div class="text-caption text-grey-7">
+            {{ recalcChartName }}
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-linear-progress
+            size="20px"
+            :value="recalcPercent / 100"
+            color="primary"
+            stripe
+            rounded
+          >
+            <div class="absolute-full flex flex-center">
+              <q-badge color="white" text-color="primary" :label="`${recalcPercent}%`" />
+            </div>
+          </q-linear-progress>
+
+          <div class="row justify-between q-mt-sm text-caption text-grey-8">
+            <div>
+              {{ recalcProcessedDays }} / {{ recalcTotalDays }} jours traités
+            </div>
+            <div v-if="recalcEtaLabel">
+              Temps restant estimé : {{ recalcEtaLabel }}
+            </div>
+          </div>
+
+          <div v-if="recalcCurrentDate" class="text-caption text-grey-7 q-mt-xs">
+            Jour en cours : {{ recalcCurrentDate }}
+          </div>
+
+          <div v-if="recalcDone" class="text-positive text-center q-mt-md">
+            <q-icon name="mdi-check-circle" size="sm" /> Régénération terminée
+          </div>
+          <div v-if="recalcError" class="text-negative text-center q-mt-md">
+            <q-icon name="mdi-alert-circle" size="sm" /> {{ recalcError }}
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            label="Fermer"
+            color="primary"
+            :disable="!recalcDone && !recalcError"
+            @click="closeRecalcDialog"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
-import { useQuasar } from "quasar";
+import { useQuasar, date as qdate } from "quasar";
 import { useAppStore } from "src/stores/app";
 import { api } from "boot/axios";
 import { useChartDialog } from "src/plugins/useChartDialog";
@@ -118,12 +188,25 @@ const columns = [
     sortable: true,
   },
   {
+    name: "updatedAt",
+    align: "center",
+    label: "Dernière modification",
+    field: (row) => row.updatedAt,
+    format: (val) => formatDate(val),
+    sortable: true,
+  },
+  {
     name: "actions",
     align: "center",
     label: "Actions",
     field: "actions",
   },
 ];
+
+const formatDate = (val) => {
+  if (!val) return "N/A";
+  return qdate.formatDate(val, "DD/MM/YYYY HH:mm");
+};
 
 const createChart = async () => {
   if (App.userHasAccess("canCreateCustomCharts") === false) {
@@ -234,6 +317,128 @@ const deleteChart = async (chart) => {
     .onDismiss(() => false);
 };
 
+// --- Régénération des données du cache d'un graphique ---
+const recalculatingChartId = ref(null);
+const recalcDialog = ref(false);
+const recalcChartName = ref("");
+const recalcPercent = ref(0);
+const recalcProcessedDays = ref(0);
+const recalcTotalDays = ref(0);
+const recalcCurrentDate = ref("");
+const recalcEtaLabel = ref("");
+const recalcDone = ref(false);
+const recalcError = ref("");
+let recalcEventSource = null;
+
+const formatEta = (etaMs) => {
+  if (etaMs === null || etaMs === undefined) return "";
+  const totalSeconds = Math.round(etaMs / 1000);
+  if (totalSeconds <= 1) return "moins d'une seconde";
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds} s`;
+  return `${minutes} min ${seconds.toString().padStart(2, "0")} s`;
+};
+
+const closeRecalcDialog = () => {
+  recalcDialog.value = false;
+  if (recalcEventSource) {
+    recalcEventSource.close();
+    recalcEventSource = null;
+  }
+};
+
+const recalculateChart = async (chart) => {
+  if (App.userHasAccess("canUpdateCustomCharts") === false) {
+    $q.notify({
+      type: "negative",
+      message: "Vous n'avez pas la permission de régénérer ce graphique.",
+    });
+    return;
+  }
+
+  const confirm = await new Promise((resolve) => {
+    $q.dialog({
+      title: "Régénérer les données",
+      message: `Cela va supprimer puis recalculer tout l'historique du cache pour "${chart.chartName}". Cette opération peut prendre du temps. Continuer ?`,
+      cancel: true,
+      persistent: true,
+    })
+      .onOk(() => resolve(true))
+      .onCancel(() => resolve(false))
+      .onDismiss(() => resolve(false));
+  });
+  if (!confirm) return;
+
+  recalculatingChartId.value = chart.id;
+  recalcChartName.value = chart.chartName;
+  recalcPercent.value = 0;
+  recalcProcessedDays.value = 0;
+  recalcTotalDays.value = 0;
+  recalcCurrentDate.value = "";
+  recalcEtaLabel.value = "";
+  recalcDone.value = false;
+  recalcError.value = "";
+  recalcDialog.value = true;
+
+  const jobId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  // Ouvre le flux SSE avant de lancer le recalcul pour ne rater aucun évènement
+  recalcEventSource = new EventSource(
+    `${api.defaults.baseURL}/charts/custom-charts/${chart.id}/recalculate/stream/${jobId}`
+  );
+  recalcEventSource.onmessage = (event) => {
+    try {
+      const payload = JSON.parse(event.data);
+      if (payload.type === "start") {
+        recalcTotalDays.value = payload.totalDays;
+      } else if (payload.type === "progress") {
+        recalcProcessedDays.value = payload.processedDays;
+        recalcTotalDays.value = payload.totalDays;
+        recalcPercent.value = payload.percent;
+        recalcCurrentDate.value = payload.date;
+        recalcEtaLabel.value = formatEta(payload.etaMs);
+      } else if (payload.type === "done") {
+        recalcPercent.value = 100;
+        recalcProcessedDays.value = payload.processedDays;
+        recalcDone.value = true;
+        recalcEtaLabel.value = "";
+        recalculatingChartId.value = null;
+        const row = rows.value.find((r) => r.id === chart.id);
+        if (row && payload.updatedAt) row.updatedAt = payload.updatedAt;
+        if (recalcEventSource) {
+          recalcEventSource.close();
+          recalcEventSource = null;
+        }
+      } else if (payload.type === "error") {
+        recalcError.value = payload.message || "Erreur lors de la régénération.";
+        recalculatingChartId.value = null;
+        if (recalcEventSource) {
+          recalcEventSource.close();
+          recalcEventSource = null;
+        }
+      }
+      // "day-error" : on continue le flux, l'erreur du jour est loguée côté serveur
+    } catch {
+      // ignore ping/keepalive frames non-JSON
+    }
+  };
+  recalcEventSource.onerror = () => {
+    // La connexion se fermera naturellement quand le serveur clôturera le flux
+  };
+
+  try {
+    await api.post(`/charts/custom-charts/${chart.id}/recalculate`, { jobId });
+  } catch (error) {
+    recalcError.value = "Erreur lors du lancement de la régénération.";
+    recalculatingChartId.value = null;
+    if (recalcEventSource) {
+      recalcEventSource.close();
+      recalcEventSource = null;
+    }
+  }
+};
+
 const fetchCustomCharts = async () => {
   try {
     const response = await api.get("/charts/custom-charts");
@@ -256,3 +461,14 @@ onMounted(async () => {
   await fetchCustomCharts();
 });
 </script>
+
+<style scoped>
+.chart-row .row-actions {
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+.chart-row:hover .row-actions,
+.chart-row:focus-within .row-actions {
+  opacity: 1;
+}
+</style>

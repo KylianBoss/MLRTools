@@ -1259,10 +1259,17 @@ function initDB(config) {
           type: DataTypes.FLOAT,
           allowNull: true,
           comment: "Max Y value for the charts"
-        }
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          comment: "Last time the chart or its cached data was modified",
+        },
       },
       {
-        timestamps: false,
+        timestamps: true,
+        createdAt: false,
+        updatedAt: "updatedAt",
       }
     );
 
