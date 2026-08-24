@@ -3,6 +3,8 @@ import { getDB } from "../database.js";
 import dayjs from "dayjs";
 import { Op } from "sequelize";
 import { require2FA } from "./Auth.routes.js";
+import { exportDatabaseSQL } from "../backup.js";
+import path from "path";
 
 const router = Router();
 
@@ -50,6 +52,124 @@ router.post("/sync-models", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// --- Export complet de la base avec suivi de progression en direct (SSE) ---
+// Un client ouvre d'abord le flux SSE avec un exportId, puis lance le POST
+// qui déclenche l'export en tâche de fond (l'export peut prendre plusieurs
+// minutes sur une grosse base) ; une fois terminé, le fichier est récupéré
+// via /export/download/:exportId.
+const exportStreams = new Map();
+const exportResults = new Map(); // exportId -> { filePath, fileName } | { error }
+
+function pushExportProgress(exportId, event) {
+  const client = exportStreams.get(exportId);
+  if (client) {
+    client.write(`data: ${JSON.stringify(event)}\n\n`);
+  }
+}
+
+function endExportStream(exportId) {
+  const client = exportStreams.get(exportId);
+  if (client) {
+    client.end();
+    exportStreams.delete(exportId);
+  }
+}
+
+async function checkAdminAccess(db, username) {
+  if (!username) return { error: "No user provided", status: 400 };
+  const user = await db.models.Users.findOne({
+    where: { username },
+    include: { model: db.models.UserAccess, attributes: ["menuId"] },
+  });
+  if (!user) return { error: "User not found", status: 404 };
+  const hasAccess = user.UserAccesses.find((a) => a.menuId === "admin");
+  if (!hasAccess) return { error: "User not authorized", status: 403 };
+  return { user };
+}
+
+router.get("/export/stream/:exportId", (req, res) => {
+  const { exportId } = req.params;
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  res.write(
+    `data: ${JSON.stringify({
+      phase: "connected",
+      timestamp: new Date().toISOString(),
+    })}\n\n`
+  );
+  exportStreams.set(exportId, res);
+
+  req.on("close", () => {
+    exportStreams.delete(exportId);
+  });
+});
+
+router.post("/export", async (req, res) => {
+  const db = getDB();
+  const { user, exportId } = req.body;
+
+  const access = await checkAdminAccess(db, user);
+  if (access.error) {
+    res.status(access.status).json({ error: access.error });
+    return;
+  }
+  if (!exportId) {
+    res.status(400).json({ error: "No exportId provided" });
+    return;
+  }
+
+  // Répond immédiatement : le suivi se fait via le flux SSE déjà ouvert
+  res.sendStatus(202);
+
+  console.log(`Database export requested by ${user} (exportId=${exportId})`);
+  try {
+    const exportFile = await exportDatabaseSQL(db, (event) =>
+      pushExportProgress(exportId, event)
+    );
+    exportResults.set(exportId, {
+      filePath: exportFile,
+      fileName: path.basename(exportFile),
+    });
+  } catch (error) {
+    console.error("Error exporting database:", error);
+    exportResults.set(exportId, { error: error.message });
+    pushExportProgress(exportId, { phase: "error", error: error.message });
+  } finally {
+    endExportStream(exportId);
+  }
+});
+
+router.get("/export/download/:exportId", async (req, res) => {
+  const db = getDB();
+  const access = await checkAdminAccess(db, req.query.user);
+  if (access.error) {
+    res.status(access.status).json({ error: access.error });
+    return;
+  }
+
+  const result = exportResults.get(req.params.exportId);
+  if (!result) {
+    res.status(404).json({ error: "Export not found or not finished yet" });
+    return;
+  }
+  if (result.error) {
+    res.status(500).json({ error: result.error });
+    return;
+  }
+
+  res.download(result.filePath, result.fileName, (err) => {
+    if (err && !res.headersSent) {
+      console.error("Error sending export file:", err);
+      res.status(500).json({ error: "Error sending export file" });
+    }
+    // Le fichier reste dans storage/backups (utile en historique), pas de suppression ici
+    exportResults.delete(req.params.exportId);
+  });
+});
+
 router.post("/empty-day-resume", async (req, res) => {
   const db = getDB();
   const { user } = req.body;
