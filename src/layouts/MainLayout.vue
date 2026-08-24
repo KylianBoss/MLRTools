@@ -80,13 +80,6 @@
               label="Analyse quotidienne"
               v-if="App.userHasAccess('canAccessDailyAnalysis')"
             />
-            <drawer-item
-              to="intervention-journal"
-              autorisation="canAccessJournal"
-              icon="mdi-notebook-edit-outline"
-              label="Journal d'interventions"
-              v-if="App.userHasAccess('canAccessJournal')"
-            />
           </q-expansion-item>
           <!-- SEARCH -->
           <drawer-item
@@ -148,6 +141,53 @@
               autorisation="canAccessCaseCrashes"
               icon="mdi-package-variant-closed-remove"
               label="Chutes de tours de caisses"
+            />
+          </q-expansion-item>
+          <!-- MAINTENANCE -->
+          <q-expansion-item
+            expand-separator
+            icon="mdi-wrench-outline"
+            label="Maintenance"
+            v-model="drawers[5]"
+            v-if="
+              App.userHaveAccessToOneOf([
+                'canAccessJournal',
+                'canAccessStingrays',
+                'canAccessMaintenancePlan',
+                'canAccessMaintenanceReport',
+                'canStartMaintenance',
+              ])
+            "
+          >
+            <drawer-item
+              to="intervention-journal"
+              autorisation="canAccessJournal"
+              icon="mdi-notebook-edit-outline"
+              label="Journal d'interventions"
+            />
+            <drawer-item
+              to="stingrays-list"
+              autorisation="canAccessStingrays"
+              icon="mdi-robot-industrial-outline"
+              label="Stingrays"
+            />
+            <drawer-item
+              to="maintenance-plans"
+              autorisation="canAccessMaintenancePlan"
+              icon="mdi-clipboard-list-outline"
+              label="Plans de maintenance"
+            />
+            <drawer-item
+              to="maintenance-reports"
+              autorisation="canAccessMaintenanceReport"
+              icon="mdi-file-document-outline"
+              label="Rapports de maintenance"
+            />
+            <drawer-item
+              to="maintenances-scheduled"
+              autorisation="canStartMaintenance"
+              icon="mdi-calendar-clock-outline"
+              label="Maintenances planifiées"
             />
           </q-expansion-item>
           <!-- TGW -->

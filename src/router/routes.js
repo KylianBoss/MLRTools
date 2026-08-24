@@ -185,6 +185,29 @@ const routes = [
               },
             ],
           },
+          // === STINGRAYS === //
+          {
+            path: "stingrays",
+            children: [
+              {
+                path: "",
+                name: "stingrays-list",
+                component: () =>
+                  import("src/pages/maintenance/StingraysList.vue"),
+              },
+              {
+                path: ":stingrayId",
+                name: "stingray-details",
+                beforeEnter: (to, from, next) => {
+                  if (to.params.stingrayId) {
+                    return next();
+                  }
+                },
+                component: () =>
+                  import("src/pages/maintenance/StingrayDetails.vue"),
+              },
+            ],
+          },
         ],
       },
       // === ADMINISTRATION === //

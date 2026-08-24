@@ -444,6 +444,31 @@ const access = [
     value: "canUpdateProductionData",
   },
   // Maintenance accesses
+  // Note: les entrées "disabled" sont volontairement placées en dernier dans
+  // ce groupe. Le titre du groupe ne s'affiche que sur sa première entrée
+  // visible (voir logique de v-slot:option ci-dessus) : une entrée disabled
+  // et non sélectionnée est masquée, donc si elle est en tête, le titre du
+  // groupe entier disparaît pour les utilisateurs qui ne l'ont pas cochée.
+  {
+    section: "maintenance",
+    label: "Accès Stingrays",
+    value: "canAccessStingrays",
+  },
+  {
+    section: "maintenance",
+    label: "Peut gérer les stingrays (positions, interventions)",
+    value: "canManageStingrays",
+  },
+  {
+    section: "maintenance",
+    label: "Accès au journal d'interventions",
+    value: "canAccessJournal",
+  },
+  {
+    section: "maintenance",
+    label: "Peut valider des interventions",
+    value: "canValidateInterventions",
+  },
   {
     section: "maintenance",
     label: "Maintenance Plans",
@@ -512,16 +537,6 @@ const access = [
     section: "DDS",
     label: "Peut marquer comme planifié",
     value: "canMarkAsPlanned",
-  },
-  {
-    section: "Interventions",
-    label: "Accès au journal d'interventions",
-    value: "canAccessJournal",
-  },
-  {
-    section: "Interventions",
-    label: "Peut valider des interventions",
-    value: "canValidateInterventions",
   },
   // AI Chat
   {
