@@ -946,6 +946,26 @@ function initDB(config) {
             key: "id",
           },
         },
+        stingrayId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          comment: "Stingray concerné par cette intervention, si applicable",
+          references: {
+            model: "Stingrays",
+            key: "id",
+          },
+        },
+        newState: {
+          type: DataTypes.ENUM(
+            "in_service",
+            "maintenance",
+            "out_of_service",
+            "spare"
+          ),
+          allowNull: true,
+          comment:
+            "Nouvel état du stingray suite à cette intervention, si applicable",
+        },
       },
       {
         timestamps: true,
@@ -958,6 +978,166 @@ function initDB(config) {
           },
           {
             fields: ["createdBy"],
+          },
+          {
+            fields: ["stingrayId"],
+          },
+        ],
+      }
+    );
+
+    // ===== STINGRAYS (suivi du parc des 178 stingrays) =====
+
+    // Les 6 allées du shuttle (28 étages chacune)
+    const Aisle = sequelize.define(
+      "Aisle",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        name: {
+          type: DataTypes.STRING(20),
+          allowNull: false,
+          unique: true,
+          comment: "Nom de l'allée, ex: 'Allée 1'",
+        },
+        floorsCount: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          defaultValue: 28,
+          comment: "Nombre d'étages de l'allée",
+        },
+      },
+      { timestamps: false }
+    );
+
+    // Référentiel des stingrays + état courant dénormalisé
+    const Stingray = sequelize.define(
+      "Stingray",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        number: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          unique: true,
+          comment:
+            "Numéro physique du stingray, correspond au 'Shuttle N' du Datalog",
+        },
+        serialNumber: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+        state: {
+          type: DataTypes.ENUM(
+            "in_service",
+            "maintenance",
+            "out_of_service",
+            "spare"
+          ),
+          allowNull: false,
+          defaultValue: "spare",
+          comment: "État courant du stingray",
+        },
+        currentAisleId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          comment:
+            "Dénormalisé depuis la dernière position en allée, NULL si pas en allée",
+          references: {
+            model: "Aisles",
+            key: "id",
+          },
+        },
+        currentFloor: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          comment: "Étage courant (1-28), dénormalisé, NULL si pas en allée",
+        },
+        notes: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
+      },
+      {
+        timestamps: true,
+        indexes: [
+          {
+            fields: ["state"],
+          },
+        ],
+      }
+    );
+
+    // Historique append-only des positions d'un stingray
+    const StingrayPositionHistory = sequelize.define(
+      "StingrayPositionHistory",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        stingrayId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: "Stingrays",
+            key: "id",
+          },
+        },
+        aisleId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          comment: "NULL = atelier/stock/hors service (pas de position en allée)",
+          references: {
+            model: "Aisles",
+            key: "id",
+          },
+        },
+        floor: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          comment: "Étage (1-28), NULL si aisleId est NULL",
+        },
+        locationLabel: {
+          type: DataTypes.STRING(50),
+          allowNull: true,
+          comment:
+            "Libellé libre pour les positions hors-allée, ex: 'Atelier', 'Stock spare'",
+        },
+        movedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          comment: "Date d'entrée à cette position",
+        },
+        movedBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          references: {
+            model: "Users",
+            key: "id",
+          },
+        },
+        comment: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+      },
+      {
+        timestamps: true,
+        updatedAt: false,
+        indexes: [
+          {
+            fields: ["stingrayId", "movedAt"],
+          },
+          {
+            fields: ["aisleId", "floor"],
           },
         ],
       }
@@ -1440,6 +1620,43 @@ function initDB(config) {
     CaseCrash.belongsTo(Users, {
       foreignKey: "createdBy",
       as: "creator",
+    });
+
+    // ===== Associations STINGRAYS =====
+    Aisle.hasMany(StingrayPositionHistory, {
+      foreignKey: "aisleId",
+    });
+    StingrayPositionHistory.belongsTo(Aisle, {
+      foreignKey: "aisleId",
+      as: "aisle",
+    });
+
+    Stingray.hasMany(StingrayPositionHistory, {
+      foreignKey: "stingrayId",
+      as: "positionHistory",
+      onDelete: "CASCADE",
+    });
+    StingrayPositionHistory.belongsTo(Stingray, {
+      foreignKey: "stingrayId",
+    });
+
+    StingrayPositionHistory.belongsTo(Users, {
+      foreignKey: "movedBy",
+      as: "mover",
+    });
+
+    Stingray.belongsTo(Aisle, {
+      foreignKey: "currentAisleId",
+      as: "currentAisle",
+    });
+
+    Stingray.hasMany(Intervention, {
+      foreignKey: "stingrayId",
+      as: "interventions",
+    });
+    Intervention.belongsTo(Stingray, {
+      foreignKey: "stingrayId",
+      as: "stingray",
     });
 
     // Alarms.hasOne(alarmZoneTGWReport, {

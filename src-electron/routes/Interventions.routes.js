@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { requirePermission } from "../middlewares/permissions.js";
 import { Op } from "sequelize";
 import isBetween from "dayjs/plugin/isBetween.js";
+import { applyStingrayStateChange } from "../services/stingrayState.js";
 
 const router = Router();
 dayjs.extend(isBetween);
@@ -144,6 +145,8 @@ router.post(
       endTime,
       comment,
       isPlanned,
+      stingrayId,
+      newState,
     } = req.body;
 
     if (!plannedDate) {
@@ -161,7 +164,20 @@ router.post(
         isPlanned: isPlanned !== undefined ? isPlanned : false,
         createdBy: req.userId,
         status: "pending",
+        stingrayId: stingrayId || null,
+        newState: newState || null,
       });
+
+      // Si l'intervention est liée à un stingray et porte un changement
+      // d'état, répercute cet état (et la sortie d'allée éventuelle).
+      if (stingrayId && newState) {
+        await applyStingrayStateChange(db, {
+          stingrayId,
+          newState,
+          changedBy: req.userId,
+          at: plannedDate,
+        });
+      }
 
       res.status(201).json(intervention);
     } catch (error) {
