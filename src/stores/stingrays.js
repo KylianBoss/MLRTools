@@ -30,6 +30,14 @@ export const useStingraysStore = defineStore("stingrays", {
         throw new Error(errorMessage(error));
       }
     },
+    async fetchStingrayByNumber(number) {
+      try {
+        const response = await api.get(`/stingrays/by-number/${number}`);
+        return response.data;
+      } catch (error) {
+        throw new Error(errorMessage(error));
+      }
+    },
     async createStingray(payload) {
       try {
         const response = await api.post("/stingrays", payload);
@@ -46,11 +54,24 @@ export const useStingraysStore = defineStore("stingrays", {
         throw new Error(errorMessage(error));
       }
     },
-    async fetchAisles() {
+    async fetchAisles(excludeStingrayId = null) {
       try {
-        const response = await api.get("/stingrays/aisles");
+        const response = await api.get("/stingrays/aisles", {
+          params: excludeStingrayId ? { excludeStingrayId } : {},
+        });
         this.aisles = response.data;
         return this.aisles;
+      } catch (error) {
+        throw new Error(errorMessage(error));
+      }
+    },
+    async fetchOccupiedFloors(aisleId, excludeStingrayId = null) {
+      try {
+        const response = await api.get(
+          `/stingrays/aisles/${aisleId}/occupied-floors`,
+          { params: excludeStingrayId ? { excludeStingrayId } : {} }
+        );
+        return response.data;
       } catch (error) {
         throw new Error(errorMessage(error));
       }

@@ -13,7 +13,6 @@
           :pagination="{ rowsPerPage: 20 }"
           :filter="filter"
           :loading="loading"
-          @row-click="(evt, row) => goToDetails(row.id)"
           class="cursor-pointer"
         >
           <template v-slot:top>
@@ -48,24 +47,30 @@
               <q-tooltip>Actualiser</q-tooltip>
             </q-btn>
           </template>
-          <template v-slot:body-cell-state="props">
-            <q-td :props="props">
-              <q-badge :color="stateColor(props.row.state)">
-                {{ stateLabel(props.row.state) }}
-              </q-badge>
-            </q-td>
-          </template>
-          <template v-slot:body-cell-position="props">
-            <q-td :props="props">
-              {{ positionLabel(props.row) }}
-            </q-td>
-          </template>
-          <template v-slot:body-cell-alarmLevel="props">
-            <q-td :props="props">
-              <q-badge :color="alarmColor(props.row.alarmLevel)">
-                {{ alarmLabel(props.row.alarmLevel) }} ({{ props.row.alarmCount }})
-              </q-badge>
-            </q-td>
+          <template v-slot:body="props">
+            <q-tr
+              :props="props"
+              class="cursor-pointer"
+              :class="{ 'bg-red-1': hasMissingPosition(props.row) }"
+              @click="goToDetails(props.row.id)"
+            >
+              <q-td key="number" :props="props">
+                {{ props.row.number }}
+              </q-td>
+              <q-td key="state" :props="props">
+                <q-badge :color="stateColor(props.row.state)">
+                  {{ stateLabel(props.row.state) }}
+                </q-badge>
+              </q-td>
+              <q-td key="position" :props="props">
+                {{ positionLabel(props.row) }}
+              </q-td>
+              <q-td key="alarmLevel" :props="props">
+                <q-badge :color="alarmColor(props.row.alarmLevel)">
+                  {{ alarmLabel(props.row.alarmLevel) }} ({{ props.row.alarmCount }})
+                </q-badge>
+              </q-td>
+            </q-tr>
           </template>
         </q-table>
       </div>
@@ -96,12 +101,6 @@
             dense
             emit-value
             map-options
-          />
-          <q-input
-            v-model="createForm.serialNumber"
-            label="N° de série"
-            outlined
-            dense
           />
           <q-input
             v-model="createForm.notes"
@@ -147,7 +146,6 @@ const creating = ref(false);
 const createForm = ref({
   number: null,
   state: "in_service",
-  serialNumber: "",
   notes: "",
 });
 
@@ -171,12 +169,6 @@ const columns = [
     label: "Position",
     align: "left",
     field: (row) => row,
-  },
-  {
-    name: "serialNumber",
-    label: "N° de série",
-    align: "left",
-    field: "serialNumber",
   },
   {
     name: "alarmLevel",
@@ -219,6 +211,10 @@ const positionLabel = (row) => {
   return stateLabel(row.state);
 };
 
+// En service mais sans position en allée = état incohérent à signaler
+const hasMissingPosition = (row) =>
+  row.state === "in_service" && !(row.currentAisle && row.currentFloor);
+
 const goToDetails = (stingrayId) => {
   router.push({ name: "stingray-details", params: { stingrayId } });
 };
@@ -229,7 +225,6 @@ const submitCreateStingray = async () => {
     await stingraysStore.createStingray({
       number: createForm.value.number,
       state: createForm.value.state,
-      serialNumber: createForm.value.serialNumber || null,
       notes: createForm.value.notes || null,
     });
     $q.notify({
@@ -240,7 +235,6 @@ const submitCreateStingray = async () => {
     createForm.value = {
       number: null,
       state: "in_service",
-      serialNumber: "",
       notes: "",
     };
     await load();

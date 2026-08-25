@@ -1,12 +1,37 @@
 <template>
   <q-page padding>
-    <q-btn
-      icon="mdi-arrow-left"
-      label="Retour"
-      flat
-      dense
-      :to="{ name: 'stingrays-list' }"
-    />
+    <div class="row items-center q-gutter-sm">
+      <q-btn
+        icon="mdi-arrow-left"
+        label="Retour"
+        flat
+        dense
+        :to="{ name: 'stingrays-list' }"
+      />
+      <q-space />
+      <q-input
+        v-model="quickJumpNumber"
+        label="Voyage rapide (n° stingray)"
+        outlined
+        dense
+        type="number"
+        style="max-width: 220px"
+        :disable="loading"
+        @keyup.enter="goToQuickJump"
+      >
+        <template v-slot:append>
+          <q-btn
+            icon="mdi-arrow-right-circle"
+            flat
+            round
+            dense
+            @click="goToQuickJump"
+            :disable="!quickJumpNumber"
+            :loading="loading"
+          />
+        </template>
+      </q-input>
+    </div>
 
     <div v-if="stingray" class="row q-pt-md q-col-gutter-md">
       <!-- État & alarme -->
@@ -16,11 +41,14 @@
           <q-badge :color="stateColor(stingray.state)" class="q-mr-sm">
             {{ stateLabel(stingray.state) }}
           </q-badge>
-          <q-badge :color="alarmColor(stingray.alarmLevel)">
+          <q-badge :color="alarmColor(stingray.alarmLevel)" class="q-mr-sm">
             Alarme : {{ alarmLabel(stingray.alarmLevel) }}
             <span v-if="stingray.recentAlarms">
               ({{ stingray.recentAlarms.length }})
             </span>
+          </q-badge>
+          <q-badge v-if="hasMissingPosition(stingray)" color="negative">
+            Emplacement manquant
           </q-badge>
         </div>
       </div>
@@ -31,10 +59,6 @@
           <q-card-section>
             <div class="text-h6">Détails</div>
             <q-separator class="q-mb-sm" />
-            <div class="row q-mb-xs">
-              <div class="col-5 text-grey-7">Numéro de série :</div>
-              <div class="col">{{ stingray.serialNumber || "N/A" }}</div>
-            </div>
             <div class="row q-mb-xs">
               <div class="col-5 text-grey-7">Position actuelle :</div>
               <div class="col">{{ positionLabel(stingray) }}</div>
@@ -77,35 +101,25 @@
             <div class="row q-col-gutter-sm">
               <div class="col-6">
                 <q-select
-                  v-model="positionForm.aisleId"
-                  :options="aisleOptions"
-                  label="Allée"
+                  v-model="positionForm.location"
+                  :options="locationOptions"
+                  label="Emplacement"
                   outlined
                   dense
-                  clearable
                   emit-value
                   map-options
-                  hint="Vide = hors allée (atelier, stock...)"
                 />
               </div>
               <div class="col-6">
-                <q-input
-                  v-model.number="positionForm.floor"
+                <q-select
+                  v-model="positionForm.floor"
+                  :options="floorOptions"
                   label="Étage"
                   outlined
                   dense
-                  type="number"
-                  :disable="!positionForm.aisleId"
-                  :min="1"
-                  :max="selectedAisleFloors"
-                />
-              </div>
-              <div class="col-12" v-if="!positionForm.aisleId">
-                <q-input
-                  v-model="positionForm.locationLabel"
-                  label="Libellé (ex: Atelier, Stock spare)"
-                  outlined
-                  dense
+                  emit-value
+                  map-options
+                  :disable="!isAisleSelected"
                 />
               </div>
               <div class="col-12">
@@ -124,7 +138,10 @@
                   label="Enregistrer la position"
                   icon="add_location"
                   @click="addPosition"
-                  :disable="positionForm.aisleId && !positionForm.floor"
+                  :disable="
+                    !positionForm.location ||
+                    (isAisleSelected && !positionForm.floor)
+                  "
                 />
               </div>
             </div>
@@ -301,20 +318,43 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
-import { useQuasar } from "quasar";
+import { ref, computed, watch, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useQuasar, QSpinnerFacebook } from "quasar";
 import dayjs from "dayjs";
 import { api } from "boot/axios";
 import { useAppStore } from "stores/app";
 import { useStingraysStore } from "stores/stingrays";
 
 const route = useRoute();
+const router = useRouter();
 const $q = useQuasar();
 const App = useAppStore();
 const stingraysStore = useStingraysStore();
 
-const stingrayId = route.params.stingrayId;
+// Réactif (pas une simple constante) : le voyage rapide navigue vers une
+// nouvelle route avec un :stingrayId différent sans démonter le composant,
+// il faut donc recharger les données quand ce paramètre change (cf. watch
+// plus bas, juste après la déclaration de loadAll).
+const stingrayId = computed(() => route.params.stingrayId);
+
+const quickJumpNumber = ref(null);
+const goToQuickJump = async () => {
+  if (!quickJumpNumber.value) return;
+  try {
+    const target = await stingraysStore.fetchStingrayByNumber(
+      quickJumpNumber.value
+    );
+    quickJumpNumber.value = null;
+    router.push({ name: "stingray-details", params: { stingrayId: target.id } });
+  } catch (error) {
+    $q.notify({
+      type: "negative",
+      message: `Stingray n°${quickJumpNumber.value} introuvable`,
+      caption: error.message,
+    });
+  }
+};
 
 const stingray = ref(null);
 const positionHistory = ref([]);
@@ -351,13 +391,40 @@ const interventionTypeOptions = [
   { value: false, label: "Corrective / panne" },
 ];
 
-const aisleOptions = computed(() =>
-  aisles.value.map((a) => ({ value: a.id, label: a.name, floorsCount: a.floorsCount }))
+// Emplacements hors-allée fixes (pas de saisie libre)
+const SPECIAL_LOCATIONS = ["Maintenance stingray", "Stock", "TGW"];
+
+// Select unique : allées non pleines (value = "aisle:<id>") + emplacements
+// fixes (value = "label:<texte>"). Une allée dont tous les étages sont déjà
+// occupés est masquée (le stingray courant est exclu du décompte, cf. l'appel
+// à fetchAisles ci-dessous, pour qu'il puisse garder/re-choisir sa position).
+const locationOptions = computed(() => [
+  ...aisles.value
+    .filter((a) => (a.occupiedCount || 0) < a.floorsCount)
+    .map((a) => ({ value: `aisle:${a.id}`, label: a.name })),
+  ...SPECIAL_LOCATIONS.map((label) => ({ value: `label:${label}`, label })),
+]);
+
+const isAisleSelected = computed(() =>
+  positionForm.value.location?.startsWith("aisle:")
+);
+const selectedAisleId = computed(() =>
+  isAisleSelected.value
+    ? Number(positionForm.value.location.slice("aisle:".length))
+    : null
 );
 const selectedAisleFloors = computed(() => {
-  const aisle = aisles.value.find((a) => a.id === positionForm.value.aisleId);
+  const aisle = aisles.value.find((a) => a.id === selectedAisleId.value);
   return aisle?.floorsCount || 28;
 });
+// Étages déjà occupés par un autre stingray dans l'allée sélectionnée (le
+// stingray courant est exclu, pour qu'il puisse re-choisir sa propre position)
+const occupiedFloors = ref([]);
+const floorOptions = computed(() =>
+  Array.from({ length: selectedAisleFloors.value }, (_, i) => i + 1)
+    .filter((n) => !occupiedFloors.value.includes(n))
+    .map((n) => ({ value: n, label: String(n) }))
+);
 
 const positionLabel = (s) => {
   if (s.currentAisle && s.currentFloor) {
@@ -366,15 +433,45 @@ const positionLabel = (s) => {
   return stateLabel(s.state);
 };
 
+// En service mais sans position en allée = état incohérent à signaler
+const hasMissingPosition = (s) =>
+  s.state === "in_service" && !(s.currentAisle && s.currentFloor);
+
 const formatDate = (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "N/A");
 const formatDateTime = (date) =>
   date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "N/A";
 
 const positionForm = ref({
-  aisleId: null,
+  location: null,
   floor: null,
-  locationLabel: "",
   movedAt: dayjs().format("YYYY-MM-DDTHH:mm"),
+});
+
+// Réinitialise l'étage choisi si l'emplacement change (allée différente, ou
+// passage vers un emplacement hors-allée qui n'a pas d'étage)
+watch(
+  () => positionForm.value.location,
+  () => {
+    positionForm.value.floor = null;
+  }
+);
+
+// Recharge les étages déjà occupés quand l'allée sélectionnée change (le
+// stingray courant est exclu, pour qu'il puisse re-choisir sa propre position)
+watch(selectedAisleId, async (aisleId) => {
+  if (!aisleId) {
+    occupiedFloors.value = [];
+    return;
+  }
+  try {
+    occupiedFloors.value = await stingraysStore.fetchOccupiedFloors(
+      aisleId,
+      stingrayId.value
+    );
+  } catch (error) {
+    console.error("Error fetching occupied floors:", error);
+    occupiedFloors.value = [];
+  }
 });
 
 const interventionForm = ref({
@@ -388,25 +485,39 @@ const interventionForm = ref({
 });
 
 const loadStingray = async () => {
-  stingray.value = await stingraysStore.fetchStingray(stingrayId);
+  stingray.value = await stingraysStore.fetchStingray(stingrayId.value);
 };
 
 const loadPositionHistory = async () => {
-  positionHistory.value = await stingraysStore.fetchPositionHistory(stingrayId);
+  positionHistory.value = await stingraysStore.fetchPositionHistory(
+    stingrayId.value
+  );
 };
 
 const loadInterventions = async () => {
-  interventions.value = await stingraysStore.fetchInterventions(stingrayId);
+  interventions.value = await stingraysStore.fetchInterventions(
+    stingrayId.value
+  );
 };
 
 const loadAll = async () => {
   loading.value = true;
+  $q.loading.show({
+    spinner: QSpinnerFacebook,
+    spinnerColor: "primary",
+    spinnerSize: 160,
+    backgroundColor: "dark",
+    message: "Chargement du stingray...",
+    messageColor: "white",
+  });
   try {
     await Promise.all([
       loadStingray(),
       loadPositionHistory(),
       loadInterventions(),
-      stingraysStore.fetchAisles().then((data) => (aisles.value = data)),
+      stingraysStore
+        .fetchAisles(stingrayId.value)
+        .then((data) => (aisles.value = data)),
     ]);
   } catch (error) {
     console.error("Error loading stingray details:", error);
@@ -417,23 +528,23 @@ const loadAll = async () => {
     });
   } finally {
     loading.value = false;
+    $q.loading.hide();
   }
 };
 
 const addPosition = async () => {
   try {
-    await stingraysStore.addPosition(stingrayId, {
-      aisleId: positionForm.value.aisleId || null,
-      floor: positionForm.value.aisleId ? positionForm.value.floor : null,
-      locationLabel: positionForm.value.aisleId
+    await stingraysStore.addPosition(stingrayId.value, {
+      aisleId: isAisleSelected.value ? selectedAisleId.value : null,
+      floor: isAisleSelected.value ? positionForm.value.floor : null,
+      locationLabel: isAisleSelected.value
         ? null
-        : positionForm.value.locationLabel || null,
+        : positionForm.value.location?.slice("label:".length) || null,
       movedAt: positionForm.value.movedAt,
     });
     $q.notify({ type: "positive", message: "Position enregistrée" });
-    positionForm.value.aisleId = null;
+    positionForm.value.location = null;
     positionForm.value.floor = null;
-    positionForm.value.locationLabel = "";
     await Promise.all([loadStingray(), loadPositionHistory()]);
   } catch (error) {
     console.error("Error adding position:", error);
@@ -455,7 +566,7 @@ const addIntervention = async () => {
       endTime: interventionForm.value.endTime || null,
       comment: interventionForm.value.comment,
       isPlanned: interventionForm.value.isPlanned,
-      stingrayId,
+      stingrayId: stingrayId.value,
       newState: interventionForm.value.newState || null,
     });
     $q.notify({ type: "positive", message: "Intervention enregistrée" });
@@ -474,6 +585,17 @@ const addIntervention = async () => {
 };
 
 onMounted(loadAll);
+
+// Voyage rapide : navigue vers une nouvelle route sans démonter le composant,
+// il faut donc recharger explicitement les données à chaque changement d'id
+watch(stingrayId, () => {
+  positionForm.value.location = null;
+  positionForm.value.floor = null;
+  positionForm.value.movedAt = dayjs().format("YYYY-MM-DDTHH:mm");
+  occupiedFloors.value = [];
+  interventionForm.value.plannedDate = dayjs().format("YYYY-MM-DD");
+  loadAll();
+});
 </script>
 
 <style scoped></style>

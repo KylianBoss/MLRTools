@@ -1001,7 +1001,7 @@ function initDB(config) {
           type: DataTypes.STRING(20),
           allowNull: false,
           unique: true,
-          comment: "Nom de l'allée, ex: 'Allée 1'",
+          comment: "Nom de l'allée, ex: 'W001'",
         },
         floorsCount: {
           type: DataTypes.INTEGER.UNSIGNED,

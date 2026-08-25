@@ -147,17 +147,66 @@ router.get("/", requirePermission("canAccessStingrays"), async (req, res) => {
   }
 });
 
-// GET /stingrays/aisles - les 6 allées
+// GET /stingrays/aisles - les 6 allées, avec leur nombre d'étages occupés
 router.get(
   "/aisles",
   requirePermission("canAccessStingrays"),
   async (req, res) => {
     const db = getDB();
     try {
-      const aisles = await db.models.Aisle.findAll({ order: [["name", "ASC"]] });
-      res.json(aisles);
+      const where = { currentAisleId: { [Op.ne]: null } };
+      if (req.query.excludeStingrayId) {
+        where.id = { [Op.ne]: req.query.excludeStingrayId };
+      }
+
+      const [aisles, occupiedCounts] = await Promise.all([
+        db.models.Aisle.findAll({ order: [["name", "ASC"]] }),
+        db.models.Stingray.findAll({
+          where,
+          attributes: [
+            "currentAisleId",
+            [db.fn("COUNT", db.col("id")), "count"],
+          ],
+          group: ["currentAisleId"],
+          raw: true,
+        }),
+      ]);
+
+      const countByAisle = new Map(
+        occupiedCounts.map((r) => [r.currentAisleId, Number(r.count)])
+      );
+
+      res.json(
+        aisles.map((a) => ({
+          ...a.toJSON(),
+          occupiedCount: countByAisle.get(a.id) || 0,
+        }))
+      );
     } catch (error) {
       console.error("Error fetching aisles:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// GET /stingrays/aisles/:aisleId/occupied-floors - étages déjà occupés dans une allée
+router.get(
+  "/aisles/:aisleId/occupied-floors",
+  requirePermission("canAccessStingrays"),
+  async (req, res) => {
+    const db = getDB();
+    try {
+      const where = { currentAisleId: req.params.aisleId };
+      if (req.query.excludeStingrayId) {
+        where.id = { [Op.ne]: req.query.excludeStingrayId };
+      }
+      const occupied = await db.models.Stingray.findAll({
+        where,
+        attributes: ["currentFloor"],
+      });
+      res.json(occupied.map((s) => s.currentFloor).filter((f) => f !== null));
+    } catch (error) {
+      console.error("Error fetching occupied floors:", error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -219,6 +268,29 @@ router.patch(
 );
 
 // GET /stingrays/:id - détail d'un stingray + alarmes récentes
+// GET /stingrays/by-number/:number - lookup léger pour le voyage rapide
+// (déclarée avant /:id pour ne pas être capturée par cette route générique)
+router.get(
+  "/by-number/:number",
+  requirePermission("canAccessStingrays"),
+  async (req, res) => {
+    const db = getDB();
+    try {
+      const stingray = await db.models.Stingray.findOne({
+        where: { number: req.params.number },
+        attributes: ["id", "number"],
+      });
+      if (!stingray) {
+        return res.status(404).json({ error: "Stingray not found" });
+      }
+      res.json(stingray.toJSON());
+    } catch (error) {
+      console.error("Error fetching stingray by number:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
 router.get(
   "/:id",
   requirePermission("canAccessStingrays"),
