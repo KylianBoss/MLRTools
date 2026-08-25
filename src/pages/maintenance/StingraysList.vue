@@ -169,6 +169,8 @@ const columns = [
     label: "Position",
     align: "left",
     field: (row) => row,
+    sortable: true,
+    sort: (a, b, rowA, rowB) => positionCompare(rowA, rowB),
   },
   {
     name: "alarmLevel",
@@ -208,7 +210,31 @@ const positionLabel = (row) => {
   if (row.currentAisle && row.currentFloor) {
     return `${row.currentAisle.name} - Étage ${row.currentFloor}`;
   }
-  return stateLabel(row.state);
+  return row.currentLocationLabel || stateLabel(row.state);
+};
+
+// Ordre de tri de la colonne Position : allées d'abord (W001-Étage1 le plus
+// petit, W006-Étage28 le plus grand, triées par nom d'allée puis étage),
+// puis les emplacements spéciaux (Stock, Maintenance stingray, TGW...) triés
+// alphabétiquement entre eux, puis enfin les stingrays sans aucune position.
+const MAX_FLOORS_PER_AISLE = 28;
+const positionSortValue = (row) => {
+  if (row.currentAisle && row.currentFloor) {
+    const aisleRank = parseInt(row.currentAisle.name.replace(/\D/g, ""), 10) || 0;
+    return { tier: 0, rank: aisleRank * MAX_FLOORS_PER_AISLE + row.currentFloor, label: "" };
+  }
+  if (row.currentLocationLabel) {
+    return { tier: 1, rank: 0, label: row.currentLocationLabel };
+  }
+  return { tier: 2, rank: 0, label: "" };
+};
+const positionCompare = (rowA, rowB) => {
+  const a = positionSortValue(rowA);
+  const b = positionSortValue(rowB);
+  if (a.tier !== b.tier) return a.tier - b.tier;
+  if (a.tier === 0) return a.rank - b.rank;
+  if (a.tier === 1) return a.label.localeCompare(b.label);
+  return 0;
 };
 
 // En service mais sans position en allée = état incohérent à signaler

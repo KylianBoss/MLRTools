@@ -1059,6 +1059,12 @@ function initDB(config) {
           allowNull: true,
           comment: "Étage courant (1-28), dénormalisé, NULL si pas en allée",
         },
+        currentLocationLabel: {
+          type: DataTypes.STRING(50),
+          allowNull: true,
+          comment:
+            "Libellé de l'emplacement hors-allée courant (Maintenance stingray, Stock, TGW...), dénormalisé, NULL si en allée",
+        },
         notes: {
           type: DataTypes.TEXT,
           allowNull: true,

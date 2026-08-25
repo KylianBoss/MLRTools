@@ -430,7 +430,7 @@ const positionLabel = (s) => {
   if (s.currentAisle && s.currentFloor) {
     return `${s.currentAisle.name} - Étage ${s.currentFloor}`;
   }
-  return stateLabel(s.state);
+  return s.currentLocationLabel || stateLabel(s.state);
 };
 
 // En service mais sans position en allée = état incohérent à signaler

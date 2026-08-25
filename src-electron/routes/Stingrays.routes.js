@@ -477,11 +477,23 @@ router.post(
         comment: comment || null,
       });
 
+      // Une position en allée implique de fait que le stingray est en
+      // service ; les emplacements hors-allée fixes impliquent chacun un
+      // état précis (cf. StingrayDetails.vue, select "Emplacement").
+      const stateForLocationLabel = {
+        "Maintenance stingray": "maintenance",
+        Stock: "spare",
+        TGW: "out_of_service",
+      };
+      const state = aisleId
+        ? "in_service"
+        : stateForLocationLabel[locationLabel] || stingray.state;
+
       await stingray.update({
         currentAisleId: aisleId || null,
         currentFloor: aisleId ? floor : null,
-        // Une position en allée implique de fait que le stingray est en service
-        state: aisleId ? "in_service" : stingray.state,
+        currentLocationLabel: aisleId ? null : locationLabel || null,
+        state,
       });
 
       res.status(201).json(entry.toJSON());

@@ -32,12 +32,13 @@ export const applyStingrayStateChange = async (
   );
 
   if (leavesAisle && stingray.currentAisleId) {
+    // Libellés alignés avec le select "Emplacement" de StingrayDetails.vue
     const locationLabel =
       newState === "maintenance"
-        ? "Atelier"
+        ? "Maintenance stingray"
         : newState === "spare"
-        ? "Stock spare"
-        : "Hors service";
+        ? "Stock"
+        : "TGW";
 
     await db.models.StingrayPositionHistory.create({
       stingrayId: stingray.id,
@@ -48,7 +49,11 @@ export const applyStingrayStateChange = async (
       movedBy: changedBy,
     });
 
-    await stingray.update({ currentAisleId: null, currentFloor: null });
+    await stingray.update({
+      currentAisleId: null,
+      currentFloor: null,
+      currentLocationLabel: locationLabel,
+    });
   }
 
   return stingray;
