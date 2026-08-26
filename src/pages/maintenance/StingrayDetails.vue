@@ -34,23 +34,9 @@
     </div>
 
     <div v-if="stingray" class="row q-pt-md q-col-gutter-md">
-      <!-- État & alarme -->
+      <!-- Titre -->
       <div class="col-12">
-        <div class="row items-center q-mb-md">
-          <div class="text-h4 q-mr-md">Stingray {{ stingray.number }}</div>
-          <q-badge :color="stateColor(stingray.state)" class="q-mr-sm">
-            {{ stateLabel(stingray.state) }}
-          </q-badge>
-          <q-badge :color="alarmColor(stingray.alarmLevel)" class="q-mr-sm">
-            Alarme : {{ alarmLabel(stingray.alarmLevel) }}
-            <span v-if="stingray.recentAlarms">
-              ({{ stingray.recentAlarms.length }})
-            </span>
-          </q-badge>
-          <q-badge v-if="hasMissingPosition(stingray)" color="negative">
-            Emplacement manquant
-          </q-badge>
-        </div>
+        <div class="text-h4 q-mb-md">Stingray {{ stingray.number }}</div>
       </div>
 
       <!-- Détails + changer d'état -->
@@ -60,33 +46,37 @@
             <div class="text-h6">Détails</div>
             <q-separator class="q-mb-sm" />
             <div class="row q-mb-xs">
+              <div class="col-5 text-grey-7">État :</div>
+              <div class="col">
+                <q-badge :color="stateColor(stingray.state)">
+                  {{ stateLabel(stingray.state) }}
+                </q-badge>
+              </div>
+            </div>
+            <div class="row q-mb-xs">
+              <div class="col-5 text-grey-7">Alarme :</div>
+              <div class="col">
+                <q-badge :color="alarmColor(stingray.alarmLevel)">
+                  {{ alarmLabel(stingray.alarmLevel) }}
+                  <span v-if="stingray.recentAlarms">
+                    ({{ stingray.recentAlarms.length }})
+                  </span>
+                </q-badge>
+              </div>
+            </div>
+            <div class="row q-mb-xs" v-if="hasMissingPosition(stingray)">
+              <div class="col-5 text-grey-7">Emplacement :</div>
+              <div class="col">
+                <q-badge color="negative">Emplacement manquant</q-badge>
+              </div>
+            </div>
+            <div class="row q-mb-xs">
               <div class="col-5 text-grey-7">Position actuelle :</div>
               <div class="col">{{ positionLabel(stingray) }}</div>
             </div>
             <div class="row q-mb-xs" v-if="stingray.notes">
               <div class="col-5 text-grey-7">Notes :</div>
               <div class="col">{{ stingray.notes }}</div>
-            </div>
-          </q-card-section>
-        </q-card>
-
-        <!-- Alarmes récentes -->
-        <q-card flat bordered class="q-mt-md">
-          <q-card-section>
-            <div class="text-h6">Alarmes récentes (datalog)</div>
-            <q-separator class="q-mb-sm" />
-            <q-list v-if="stingray.recentAlarms?.length" separator dense>
-              <q-item v-for="alarm in stingray.recentAlarms" :key="alarm.dbId">
-                <q-item-section>
-                  <q-item-label>{{ alarm.alarmText }}</q-item-label>
-                  <q-item-label caption>
-                    {{ formatDateTime(alarm.timeOfOccurence) }} — Sévérité : {{ alarm.severity || "N/A" }}
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-            <div v-else class="text-caption text-grey-7">
-              Aucune alarme récente pour ce stingray.
             </div>
           </q-card-section>
         </q-card>
@@ -153,7 +143,7 @@
             <div class="text-h6">Historique des positions</div>
             <q-separator class="q-mb-sm" />
             <q-list v-if="positionHistory.length" separator dense>
-              <q-item v-for="entry in positionHistory" :key="entry.id">
+              <q-item v-for="entry in visiblePositionHistory" :key="entry.id">
                 <q-item-section>
                   <q-item-label>
                     {{ entry.aisle ? `${entry.aisle.name} - Étage ${entry.floor}` : (entry.locationLabel || "N/A") }}
@@ -168,6 +158,19 @@
             </q-list>
             <div v-else class="text-caption text-grey-7">
               Aucun historique de position.
+            </div>
+            <div
+              v-if="positionHistory.length > POSITION_HISTORY_PAGE_SIZE"
+              class="text-center q-mt-sm"
+            >
+              <q-btn
+                flat
+                dense
+                no-caps
+                color="primary"
+                :label="showAllPositionHistory ? 'Afficher moins' : 'Afficher plus'"
+                @click="showAllPositionHistory = !showAllPositionHistory"
+              />
             </div>
           </q-card-section>
         </q-card>
@@ -308,6 +311,29 @@
           </q-card-section>
         </q-card>
       </div>
+
+      <!-- Alarmes récentes -->
+      <div class="col-12">
+        <q-card flat bordered>
+          <q-card-section>
+            <div class="text-h6">Alarmes récentes (datalog)</div>
+            <q-separator class="q-mb-sm" />
+            <q-list v-if="stingray.recentAlarms?.length" separator dense>
+              <q-item v-for="alarm in stingray.recentAlarms" :key="alarm.dbId">
+                <q-item-section>
+                  <q-item-label>{{ alarm.alarmText }}</q-item-label>
+                  <q-item-label caption>
+                    {{ formatDateTime(alarm.timeOfOccurence) }} — Sévérité : {{ alarm.severity || "N/A" }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <div v-else class="text-caption text-grey-7">
+              Aucune alarme récente pour ce stingray.
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
     </div>
 
     <div v-else class="text-center text-grey-7 q-pa-xl">
@@ -361,6 +387,14 @@ const positionHistory = ref([]);
 const interventions = ref([]);
 const aisles = ref([]);
 const loading = ref(false);
+
+const POSITION_HISTORY_PAGE_SIZE = 3;
+const showAllPositionHistory = ref(false);
+const visiblePositionHistory = computed(() =>
+  showAllPositionHistory.value
+    ? positionHistory.value
+    : positionHistory.value.slice(0, POSITION_HISTORY_PAGE_SIZE)
+);
 
 const STATE_LABELS = {
   in_service: "En service",
@@ -594,6 +628,7 @@ watch(stingrayId, () => {
   positionForm.value.movedAt = dayjs().format("YYYY-MM-DDTHH:mm");
   occupiedFloors.value = [];
   interventionForm.value.plannedDate = dayjs().format("YYYY-MM-DD");
+  showAllPositionHistory.value = false;
   loadAll();
 });
 </script>
