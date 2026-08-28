@@ -4,77 +4,103 @@
     <div class="text-caption text-grey-7 q-mb-md">
       Suivi de l'état, de la position et du niveau d'alarme des {{ stingrays.length }} stingrays
     </div>
-    <div class="row">
-      <div class="col">
-        <q-table
-          :rows="stingrays"
-          :columns="columns"
-          row-key="id"
-          :pagination="{ rowsPerPage: 20 }"
-          :filter="filter"
-          :loading="loading"
-          class="cursor-pointer"
-        >
-          <template v-slot:top>
-            <q-input
-              v-model="filter"
-              placeholder="Rechercher..."
-              debounce="300"
-              dense
-              outlined
-              class="q-mb-md"
-              style="min-width: 250px"
-            />
-            <q-space />
-            <q-btn
-              v-if="App.userHasAccess('canManageStingrays')"
-              color="primary"
-              dense
-              label="Ajouter un stingray"
-              icon="add"
-              @click="createDialogOpen = true"
-              class="q-mr-sm"
-            />
-            <q-btn
-              flat
-              round
-              dense
-              icon="refresh"
-              color="primary"
-              @click="load"
+
+    <q-tabs
+      v-model="activeTab"
+      dense
+      align="left"
+      active-color="primary"
+      indicator-color="primary"
+      class="q-mb-sm"
+    >
+      <q-tab name="table" label="Table" />
+      <q-tab name="plan" label="Plan du shuttle" />
+    </q-tabs>
+    <q-separator class="q-mb-md" />
+
+    <q-tab-panels v-model="activeTab" animated>
+      <q-tab-panel name="table" class="q-pa-none">
+        <div class="row">
+          <div class="col">
+            <q-table
+              :rows="stingrays"
+              :columns="columns"
+              row-key="id"
+              :pagination="{ rowsPerPage: 20 }"
+              :filter="filter"
               :loading="loading"
-            >
-              <q-tooltip>Actualiser</q-tooltip>
-            </q-btn>
-          </template>
-          <template v-slot:body="props">
-            <q-tr
-              :props="props"
               class="cursor-pointer"
-              :class="{ 'bg-red-1': hasMissingPosition(props.row) }"
-              @click="goToDetails(props.row.id)"
             >
-              <q-td key="number" :props="props">
-                {{ props.row.number }}
-              </q-td>
-              <q-td key="state" :props="props">
-                <q-badge :color="stateColor(props.row.state)">
-                  {{ stateLabel(props.row.state) }}
-                </q-badge>
-              </q-td>
-              <q-td key="position" :props="props">
-                {{ positionLabel(props.row) }}
-              </q-td>
-              <q-td key="alarmLevel" :props="props">
-                <q-badge :color="alarmColor(props.row.alarmLevel)">
-                  {{ alarmLabel(props.row.alarmLevel) }} ({{ props.row.alarmCount }})
-                </q-badge>
-              </q-td>
-            </q-tr>
-          </template>
-        </q-table>
-      </div>
-    </div>
+              <template v-slot:top>
+                <q-input
+                  v-model="filter"
+                  placeholder="Rechercher..."
+                  debounce="300"
+                  dense
+                  outlined
+                  class="q-mb-md"
+                  style="min-width: 250px"
+                />
+                <q-space />
+                <q-btn
+                  v-if="App.userHasAccess('canManageStingrays')"
+                  color="primary"
+                  dense
+                  label="Ajouter un stingray"
+                  icon="add"
+                  @click="createDialogOpen = true"
+                  class="q-mr-sm"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="refresh"
+                  color="primary"
+                  @click="load"
+                  :loading="loading"
+                >
+                  <q-tooltip>Actualiser</q-tooltip>
+                </q-btn>
+              </template>
+              <template v-slot:body="props">
+                <q-tr
+                  :props="props"
+                  class="cursor-pointer"
+                  :class="{ 'bg-red-1': hasMissingPosition(props.row) }"
+                  @click="goToDetails(props.row.id)"
+                >
+                  <q-td key="number" :props="props">
+                    {{ props.row.number }}
+                  </q-td>
+                  <q-td key="state" :props="props">
+                    <q-badge :color="stateColor(props.row.state)">
+                      {{ stateLabel(props.row.state) }}
+                    </q-badge>
+                  </q-td>
+                  <q-td key="position" :props="props">
+                    {{ positionLabel(props.row) }}
+                  </q-td>
+                  <q-td key="alarmLevel" :props="props">
+                    <q-badge :color="alarmColor(props.row.alarmLevel)">
+                      {{ alarmLabel(props.row.alarmLevel) }} ({{ props.row.alarmCount }})
+                    </q-badge>
+                  </q-td>
+                </q-tr>
+              </template>
+            </q-table>
+          </div>
+        </div>
+      </q-tab-panel>
+
+      <q-tab-panel name="plan" class="q-pa-none">
+        <StingrayAisleGrid
+          :stingrays="stingrays"
+          :aisles="aisles"
+          @select="goToDetails"
+        />
+      </q-tab-panel>
+    </q-tab-panels>
 
     <!-- Create Stingray Dialog -->
     <q-dialog v-model="createDialogOpen">
@@ -132,13 +158,16 @@ import { useRouter } from "vue-router";
 import { useStingraysStore } from "stores/stingrays";
 import { useAppStore } from "stores/app";
 import { useQuasar } from "quasar";
+import StingrayAisleGrid from "components/maintenance/StingrayAisleGrid.vue";
 
 const router = useRouter();
 const $q = useQuasar();
 const App = useAppStore();
 const stingraysStore = useStingraysStore();
 
+const activeTab = ref("table");
 const stingrays = ref([]);
+const aisles = ref([]);
 const loading = ref(false);
 const filter = ref("");
 const createDialogOpen = ref(false);
@@ -279,7 +308,12 @@ const submitCreateStingray = async () => {
 const load = async () => {
   loading.value = true;
   try {
-    stingrays.value = await stingraysStore.fetchStingrays();
+    const [stingraysData, aislesData] = await Promise.all([
+      stingraysStore.fetchStingrays(),
+      stingraysStore.fetchAisles(),
+    ]);
+    stingrays.value = stingraysData;
+    aisles.value = aislesData;
   } catch (error) {
     console.error("Error loading stingrays:", error);
     $q.notify({
