@@ -30,6 +30,22 @@ function severityWeight(severity) {
 }
 
 /**
+ * Liste des alarmId considérées comme "primaires" (type = 'primary' ou pas
+ * encore classifiées, type NULL) — même filtre que le reste de l'app
+ * (Alarms.routes.js, KPI...) pour ne pas compter les alarmes secondaires
+ * en cascade comme des incidents distincts.
+ */
+async function getPrimaryAlarmIds(db) {
+  const alarms = await db.models.Alarms.findAll({
+    where: {
+      [Op.or]: [{ type: "primary" }, { type: null }],
+    },
+    attributes: ["alarmId"],
+  });
+  return alarms.map((a) => a.alarmId);
+}
+
+/**
  * Calcule le niveau d'alarme (ok/warning/critical) de chaque stingray à
  * partir du Datalog, sur une fenêtre glissante configurable. Une seule
  * requête agrégée pour tous les stingrays (pas une requête par stingray).
@@ -38,11 +54,13 @@ function severityWeight(severity) {
  * @returns {Promise<Map<number, {count: number, score: number, level: string}>>}
  */
 async function computeAlarmLevels(db) {
-  const [windowDays, warnThreshold, criticalThreshold] = await Promise.all([
-    db.models.Settings.getValue("STINGRAY_ALARM_WINDOW_DAYS"),
-    db.models.Settings.getValue("STINGRAY_ALARM_WARN_THRESHOLD"),
-    db.models.Settings.getValue("STINGRAY_ALARM_CRITICAL_THRESHOLD"),
-  ]);
+  const [windowDays, warnThreshold, criticalThreshold, primaryAlarmIds] =
+    await Promise.all([
+      db.models.Settings.getValue("STINGRAY_ALARM_WINDOW_DAYS"),
+      db.models.Settings.getValue("STINGRAY_ALARM_WARN_THRESHOLD"),
+      db.models.Settings.getValue("STINGRAY_ALARM_CRITICAL_THRESHOLD"),
+      getPrimaryAlarmIds(db),
+    ]);
 
   const since = dayjs()
     .subtract(Number(windowDays) || 30, "day")
@@ -52,6 +70,7 @@ async function computeAlarmLevels(db) {
     where: {
       timeOfOccurence: { [Op.gte]: since },
       alarmText: { [Op.like]: "%Shuttle %" },
+      alarmId: primaryAlarmIds,
     },
     attributes: ["alarmText", "severity"],
   });
@@ -83,9 +102,10 @@ async function computeAlarmLevels(db) {
  * donné, sur la même fenêtre glissante que le calcul du niveau d'alarme.
  */
 async function getRecentAlarmsForStingray(db, number) {
-  const windowDays = await db.models.Settings.getValue(
-    "STINGRAY_ALARM_WINDOW_DAYS"
-  );
+  const [windowDays, primaryAlarmIds] = await Promise.all([
+    db.models.Settings.getValue("STINGRAY_ALARM_WINDOW_DAYS"),
+    getPrimaryAlarmIds(db),
+  ]);
   const since = dayjs()
     .subtract(Number(windowDays) || 30, "day")
     .toDate();
@@ -94,6 +114,7 @@ async function getRecentAlarmsForStingray(db, number) {
     where: {
       timeOfOccurence: { [Op.gte]: since },
       alarmText: { [Op.like]: `%Shuttle ${number}%` },
+      alarmId: primaryAlarmIds,
     },
     order: [["timeOfOccurence", "DESC"]],
   });
