@@ -546,9 +546,9 @@
     "semantic_hash": ""
   },
   "src/pages/alarms/AlarmList.vue": {
-    "mtime": 1787901887.784109,
-    "seen": 1787901914.984977,
-    "ast_hash": "5ca6d5e7dbbd259330e737abc46bee93",
+    "mtime": 1787901659.9375143,
+    "seen": 1787901737.0033782,
+    "ast_hash": "1893180d43436585ee436351e9129c8a",
     "semantic_hash": ""
   },
   "src/pages/alarms/CaseCrashes.vue": {

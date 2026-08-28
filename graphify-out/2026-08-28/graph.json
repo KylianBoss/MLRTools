@@ -3309,7 +3309,7 @@
       "file_type": "code",
       "norm_label": "onshortcutkeydown()",
       "source_file": "src/pages/alarms/AlarmList.vue",
-      "source_location": "L322"
+      "source_location": "L321"
     },
     {
       "id": "src_pages_alarms_alarmlist_onshortcutkeyup",
@@ -3321,7 +3321,7 @@
       "file_type": "code",
       "norm_label": "onshortcutkeyup()",
       "source_file": "src/pages/alarms/AlarmList.vue",
-      "source_location": "L345"
+      "source_location": "L344"
     },
     {
       "id": "src_pages_alarms_alarmlist_rowundercursor",
@@ -3345,7 +3345,7 @@
       "file_type": "code",
       "norm_label": "translatealarm()",
       "source_file": "src/pages/alarms/AlarmList.vue",
-      "source_location": "L352"
+      "source_location": "L351"
     },
     {
       "id": "src_pages_alarms_tgwreportzones_handleenter",
@@ -10259,17 +10259,6 @@
       "source_location": "L23"
     },
     {
-      "id": "package_dependencies_apexcharts",
-      "label": "apexcharts",
-      "_origin": "ast",
-      "community": 35,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "apexcharts",
-      "source_file": "package.json",
-      "source_location": "L31"
-    },
-    {
       "id": "package_dependencies_axios",
       "label": "axios",
       "_origin": "ast",
@@ -10279,6 +10268,17 @@
       "norm_label": "axios",
       "source_file": "package.json",
       "source_location": "L32"
+    },
+    {
+      "id": "package_dependencies_chart_js",
+      "label": "chart.js",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "dependencies",
+      "file_type": "code",
+      "norm_label": "chart.js",
+      "source_file": "package.json",
+      "source_location": "L33"
     },
     {
       "id": "package_dependencies_cloudflared",
@@ -10314,17 +10314,6 @@
       "source_location": "L43"
     },
     {
-      "id": "apexcharts",
-      "label": "apexcharts",
-      "_origin": "ast",
-      "community": 35,
-      "community_name": "dependencies",
-      "file_type": "concept",
-      "norm_label": "apexcharts",
-      "source_file": "package.json",
-      "source_location": "L31"
-    },
-    {
       "id": "axios",
       "label": "axios",
       "_origin": "ast",
@@ -10334,6 +10323,17 @@
       "norm_label": "axios",
       "source_file": "package.json",
       "source_location": "L32"
+    },
+    {
+      "id": "chart_js",
+      "label": "chart.js",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "dependencies",
+      "file_type": "concept",
+      "norm_label": "chart.js",
+      "source_file": "package.json",
+      "source_location": "L33"
     },
     {
       "id": "cloudflared",
@@ -13405,26 +13405,26 @@
       "source_location": "L381"
     },
     {
-      "id": "package_dependencies_chart_js",
-      "label": "chart.js",
+      "id": "package_dependencies_apexcharts",
+      "label": "apexcharts",
       "_origin": "ast",
       "community": 77,
-      "community_name": "chart.js",
+      "community_name": "apexcharts",
       "file_type": "code",
-      "norm_label": "chart.js",
+      "norm_label": "apexcharts",
       "source_file": "package.json",
-      "source_location": "L33"
+      "source_location": "L31"
     },
     {
-      "id": "chart_js",
-      "label": "chart.js",
+      "id": "apexcharts",
+      "label": "apexcharts",
       "_origin": "ast",
       "community": 77,
-      "community_name": "chart.js",
+      "community_name": "apexcharts",
       "file_type": "concept",
-      "norm_label": "chart.js",
+      "norm_label": "apexcharts",
       "source_file": "package.json",
-      "source_location": "L33"
+      "source_location": "L31"
     },
     {
       "id": "package_dependencies_codemirror",
@@ -16589,7 +16589,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/alarms/AlarmList.vue",
-      "source_location": "L341",
+      "source_location": "L340",
       "weight": 1.0
     },
     {
@@ -16601,7 +16601,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/alarms/AlarmList.vue",
-      "source_location": "L342",
+      "source_location": "L341",
       "weight": 1.0
     },
     {
@@ -16613,7 +16613,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/alarms/AlarmList.vue",
-      "source_location": "L348",
+      "source_location": "L347",
       "weight": 1.0
     },
     {
@@ -29475,7 +29475,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/alarms/AlarmList.vue",
-      "source_location": "L322",
+      "source_location": "L321",
       "weight": 1.0
     },
     {
@@ -29486,7 +29486,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/alarms/AlarmList.vue",
-      "source_location": "L345",
+      "source_location": "L344",
       "weight": 1.0
     },
     {
@@ -29497,7 +29497,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/alarms/AlarmList.vue",
-      "source_location": "L352",
+      "source_location": "L351",
       "weight": 1.0
     },
     {
