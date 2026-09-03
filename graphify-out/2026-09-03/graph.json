@@ -1053,7 +1053,7 @@
       "file_type": "code",
       "norm_label": "comparecellstyle()",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L770"
+      "source_location": "L768"
     },
     {
       "id": "src_pages_kpi_kpi_comparevalue",
@@ -1065,7 +1065,7 @@
       "file_type": "code",
       "norm_label": "comparevalue()",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L763"
+      "source_location": "L761"
     },
     {
       "id": "src_pages_kpi_kpi_exitcomparemode",
@@ -1077,7 +1077,7 @@
       "file_type": "code",
       "norm_label": "exitcomparemode()",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L756"
+      "source_location": "L754"
     },
     {
       "id": "src_pages_kpi_kpi_exportimage",
@@ -1089,7 +1089,7 @@
       "file_type": "code",
       "norm_label": "exportimage()",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L1098"
+      "source_location": "L1096"
     },
     {
       "id": "src_pages_kpi_kpi_formatrangelabel",
@@ -1113,7 +1113,7 @@
       "file_type": "code",
       "norm_label": "getalarmsbyuser()",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L1067"
+      "source_location": "L1065"
     },
     {
       "id": "src_pages_kpi_kpi_getdata",
@@ -1125,7 +1125,7 @@
       "file_type": "code",
       "norm_label": "getdata()",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L865"
+      "source_location": "L863"
     },
     {
       "id": "src_pages_kpi_kpi_iscomparedateallowed",
@@ -1149,7 +1149,7 @@
       "file_type": "code",
       "norm_label": "mapvalue()",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L1158"
+      "source_location": "L1156"
     },
     {
       "id": "src_pages_kpi_kpi_normalizerange",
@@ -1173,7 +1173,7 @@
       "file_type": "code",
       "norm_label": "opencomparedialog()",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L750"
+      "source_location": "L748"
     },
     {
       "id": "src_pages_kpi_kpi_runcomparison",
@@ -1185,7 +1185,7 @@
       "file_type": "code",
       "norm_label": "runcomparison()",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L786"
+      "source_location": "L784"
     },
     {
       "id": "src_pages_kpi_kpi_showloading",
@@ -1197,7 +1197,7 @@
       "file_type": "code",
       "norm_label": "showloading()",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L1130"
+      "source_location": "L1128"
     },
     {
       "id": "src_components_dialogs_interventiontimerstopdialog_applylocationmatch",
@@ -17794,7 +17794,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L771",
+      "source_location": "L769",
       "weight": 1.0
     },
     {
@@ -17830,7 +17830,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L902",
+      "source_location": "L900",
       "weight": 1.0
     },
     {
@@ -17842,7 +17842,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L950",
+      "source_location": "L948",
       "weight": 1.0
     },
     {
@@ -17854,7 +17854,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L742",
+      "source_location": "L739",
       "weight": 1.0
     },
     {
@@ -17866,7 +17866,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L788",
+      "source_location": "L786",
       "weight": 1.0
     },
     {
@@ -17878,7 +17878,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L805",
+      "source_location": "L803",
       "weight": 1.0
     },
     {
@@ -33386,7 +33386,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L1067",
+      "source_location": "L1065",
       "weight": 1.0
     },
     {
@@ -33397,7 +33397,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L1098",
+      "source_location": "L1096",
       "weight": 1.0
     },
     {
@@ -33408,7 +33408,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L1130",
+      "source_location": "L1128",
       "weight": 1.0
     },
     {
@@ -33419,7 +33419,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L1158",
+      "source_location": "L1156",
       "weight": 1.0
     },
     {
@@ -33738,7 +33738,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L750",
+      "source_location": "L748",
       "weight": 1.0
     },
     {
@@ -33749,7 +33749,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L756",
+      "source_location": "L754",
       "weight": 1.0
     },
     {
@@ -33760,7 +33760,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L763",
+      "source_location": "L761",
       "weight": 1.0
     },
     {
@@ -33771,7 +33771,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L770",
+      "source_location": "L768",
       "weight": 1.0
     },
     {
@@ -33782,7 +33782,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L786",
+      "source_location": "L784",
       "weight": 1.0
     },
     {
@@ -33793,7 +33793,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/KPI.vue",
-      "source_location": "L865",
+      "source_location": "L863",
       "weight": 1.0
     },
     {

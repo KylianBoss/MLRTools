@@ -254,6 +254,52 @@
             :key="chartOptions.series.length"
             v-if="getData && false"
           />
+
+          <div
+            v-if="compareMode"
+            class="q-pa-sm q-ma-sm bg-orange-1 rounded-borders row items-center justify-between"
+          >
+            <div>
+              <div class="text-weight-bold text-orange-9">
+                <q-icon name="mdi-compare-horizontal" /> Mode comparaison actif
+              </div>
+              <div class="text-caption">
+                Vue actuelle :
+                <span class="text-weight-bold">{{ compareLabels.current }}</span>
+                &nbsp;·&nbsp; Comparée à :
+                <span class="text-weight-bold">{{ compareLabels.compare }}</span>
+              </div>
+              <div class="text-caption">
+                <span
+                  class="q-px-xs"
+                  style="background-color: rgba(76, 175, 80, 0.35)"
+                  >Vert</span
+                >
+                = valeur actuelle plus haute &nbsp;
+                <span
+                  class="q-px-xs"
+                  style="background-color: rgba(244, 67, 54, 0.35)"
+                  >Rouge</span
+                >
+                = plus basse &nbsp;
+                <span
+                  class="q-px-xs"
+                  style="background-color: rgba(255, 152, 0, 0.35)"
+                  >Orange</span
+                >
+                = identique
+              </div>
+            </div>
+            <q-btn
+              flat
+              dense
+              color="primary"
+              icon="mdi-arrow-left"
+              label="Revenir à la vue normale"
+              @click="exitCompareMode"
+            />
+          </div>
+
           <q-btn
             flat
             @click="exportImage('dayResumeTable')"
@@ -262,7 +308,7 @@
           />
           <q-table
             id="dayResumeTable"
-            :rows="dayResume"
+            :rows="displayedDayResume"
             :columns="[
               {
                 name: 'dataSource',
@@ -322,7 +368,40 @@
             bordered
             dense
             :rows-per-page-options="[0]"
-          />
+          >
+            <template v-slot:body-cell-dataSource="props">
+              <q-td
+                :props="props"
+                :style="compareMode ? compareCellStyle(props.row, 'dispo') : null"
+              >
+                {{ props.value }}
+              </q-td>
+            </template>
+            <template v-slot:body-cell-dispo="props">
+              <q-td
+                :props="props"
+                :style="compareMode ? compareCellStyle(props.row, 'dispo') : null"
+              >
+                {{ props.value }}
+                <template v-if="compareMode && compareValue(props.row, 'dispo') !== null">
+                  <div class="text-caption text-grey-8">
+                    vs {{ (compareValue(props.row, 'dispo') * 100).toFixed(2) }}%
+                  </div>
+                </template>
+              </q-td>
+            </template>
+          </q-table>
+
+          <div class="q-pa-sm">
+            <q-btn
+              v-if="!compareMode"
+              color="primary"
+              icon="mdi-compare-horizontal"
+              label="Lancer une comparaison"
+              :disable="gettingData || dayResume.length === 0"
+              @click="openCompareDialog"
+            />
+          </div>
         </q-expansion-item>
       </div>
     </div>
@@ -346,6 +425,51 @@
         </q-expansion-item>
       </div>
     </div>
+
+    <q-dialog v-model="showCompareDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Comparer avec une autre plage</div>
+          <div class="text-caption text-grey-7">
+            La plage sélectionnée doit être entièrement en dehors de la plage
+            actuellement affichée ({{ compareLabels.current }}).
+          </div>
+        </q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-date
+            v-model="compareSelection"
+            :events="days"
+            :options="isCompareDateAllowed"
+            :event-color="
+              (date) =>
+                dataLogStore.isMissingProductionData(date)
+                  ? 'negative'
+                  : 'secondary'
+            "
+            class="full-width"
+            minimal
+            range
+            :navigation-max-year-month="dayjs().format('YYYY/MM')"
+            landscape
+            first-day-of-week="1"
+            locale="fr"
+            flat
+          />
+          <div v-if="compareError" class="text-negative text-caption q-mt-sm">
+            {{ compareError }}
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Annuler" v-close-popup />
+          <q-btn
+            color="primary"
+            label="Lancer la comparaison"
+            :disable="!compareSelection"
+            @click="runComparison"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -354,6 +478,9 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useQuasar, QSpinnerFacebook, event } from "quasar";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween.js";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore.js";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
+import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import utc from "dayjs/plugin/utc.js";
 import { useDataLogStore } from "stores/datalog";
 import MessagesByDay from "src/components/charts/MessagesByDay.vue";
@@ -363,6 +490,9 @@ import html2canvas from "html2canvas";
 import { t } from "semver/internal/re";
 
 dayjs.extend(isBetween);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(customParseFormat);
 dayjs.extend(utc);
 
 const $q = useQuasar();
@@ -560,9 +690,169 @@ const timeoutLoading = ref(null);
 const gettingData = ref(false);
 const alarmsByUsers = ref([]);
 
+// --- Mode comparaison ---
+const compareMode = ref(false);
+const showCompareDialog = ref(false);
+const compareSelection = ref(null);
+const compareError = ref("");
+// Résumé calculé pour la plage de comparaison : Map dataSource -> { dispo, runtime, ... }
+const compareResume = ref({});
+// Plage de comparaison affichée dans le bandeau { from, to }
+const compareRange = ref(null);
+
+const normalizeRange = (filter) => {
+  if (!filter) return null;
+  if (typeof filter === "string") {
+    const d = dayjs(filter).format("YYYY-MM-DD");
+    return { from: d, to: d };
+  }
+  return {
+    from: dayjs(filter.from).format("YYYY-MM-DD"),
+    to: dayjs(filter.to).format("YYYY-MM-DD"),
+  };
+};
+
+const formatRangeLabel = (range) => {
+  if (!range) return "";
+  return dayjs(range.from).isSame(range.to, "day")
+    ? dayjs(range.from).format("DD.MM.YYYY")
+    : `${dayjs(range.from).format("DD.MM.YYYY")} → ${dayjs(range.to).format(
+        "DD.MM.YYYY"
+      )}`;
+};
+
+const compareLabels = computed(() => ({
+  current: formatRangeLabel(normalizeRange(toDisplay.value)),
+  compare: formatRangeLabel(compareRange.value),
+}));
+
+// En mode comparaison on masque la ligne "Total"
+const displayedDayResume = computed(() =>
+  compareMode.value
+    ? dayResume.value.filter((d) => d.dataSource !== "Total")
+    : dayResume.value
+);
+
+// Le q-date du dialogue : n'autorise que les dates hors de la plage actuelle
+const isCompareDateAllowed = (date) => {
+  if (dataLogStore.isDayOff(date)) return false;
+  const d = dayjs(date, "YYYY/MM/DD");
+  // Pas de dates dans le futur
+  if (d.isAfter(dayjs(), "day")) return false;
+  const current = normalizeRange(toDisplay.value);
+  if (!current) return true;
+  return !d.isBetween(
+    dayjs(current.from).subtract(1, "day"),
+    dayjs(current.to).add(1, "day")
+  );
+};
+
+const openCompareDialog = () => {
+  compareSelection.value = null;
+  compareError.value = "";
+  showCompareDialog.value = true;
+};
+
+const exitCompareMode = () => {
+  compareMode.value = false;
+  compareResume.value = {};
+  compareRange.value = null;
+};
+
+// Renvoie la valeur de la plage de comparaison pour une zone / un champ
+const compareValue = (row, field) => {
+  const entry = compareResume.value[row.dataSource];
+  if (!entry) return null;
+  return entry[field];
+};
+
+// Style de fond semi-opaque selon la comparaison (vert/rouge/orange)
+const compareCellStyle = (row, field) => {
+  const compareVal = compareValue(row, field);
+  if (compareVal === null || compareVal === undefined) return null;
+  const currentVal = row[field];
+  const epsilon = 1e-9;
+  let color;
+  if (currentVal > compareVal + epsilon) {
+    color = "rgba(76, 175, 80, 0.35)"; // vert
+  } else if (currentVal < compareVal - epsilon) {
+    color = "rgba(244, 67, 54, 0.35)"; // rouge
+  } else {
+    color = "rgba(255, 152, 0, 0.35)"; // orange
+  }
+  return { backgroundColor: color };
+};
+
+const runComparison = async () => {
+  compareError.value = "";
+  const range = normalizeRange(compareSelection.value);
+  if (!range) {
+    compareError.value = "Veuillez sélectionner une plage.";
+    return;
+  }
+  const current = normalizeRange(toDisplay.value);
+  // Vérifie l'absence de chevauchement avec la plage affichée
+  const overlaps =
+    dayjs(range.from).isSameOrBefore(current.to) &&
+    dayjs(range.to).isSameOrAfter(current.from);
+  if (overlaps) {
+    compareError.value =
+      "La plage de comparaison chevauche la plage affichée. Choisissez une plage entièrement en dehors.";
+    return;
+  }
+
+  showCompareDialog.value = false;
+  showLoading("Calcul de la comparaison...");
+
+  const resume = {};
+  const promises = [];
+  for (const dataSource of dataSources) {
+    const d = dataLogStore
+      .getDayResume({ from: range.from, to: range.to, dataSource })
+      .then((day) => {
+        if (!day || day.length === 0) return;
+        const runtime =
+          1440 * dayjs(range.to).diff(dayjs(range.from), "day") + 1440;
+        const stoptime =
+          day.reduce((acc, message) => {
+            if (message.alarmCode == 0) return acc;
+            return acc + message.duration;
+          }, 0) / 60;
+        const nbFaillures = day.reduce((acc, message) => {
+          if (message.alarmCode == 0) return acc;
+          return acc + 1;
+        }, 0);
+        const MTTR = stoptime / Math.max(nbFaillures, 1);
+        const MTBF = (runtime - stoptime) / Math.max(nbFaillures, 1);
+        const dispo = MTBF / (MTBF + MTTR);
+        resume[dataSource] = {
+          runtime,
+          stoptime,
+          nbFaillures,
+          MTBF,
+          MTTR,
+          dispo,
+        };
+      })
+      .catch((error) => {
+        console.error("Error getting compare day resume:", error);
+      });
+    promises.push(d);
+  }
+  await Promise.all(promises);
+
+  compareResume.value = resume;
+  compareRange.value = range;
+  compareMode.value = true;
+  $q.loading.hide();
+};
+
 watch(toDisplay, async (newDate, oldValue) => {
   if (JSON.stringify(newDate) === JSON.stringify(oldValue)) return;
   if (newDate === null) return;
+
+  // Changer la plage principale invalide la comparaison en cours
+  exitCompareMode();
 
   sectionKPITop3.value = false;
   sectionKPITop3Zone.value = false;

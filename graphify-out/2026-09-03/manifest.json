@@ -492,9 +492,9 @@
     "semantic_hash": ""
   },
   "src/pages/KPI/KPI.vue": {
-    "mtime": 1788417656.033484,
-    "seen": 1788417722.5491633,
-    "ast_hash": "68206c0fa84ffc8d88566b0ffbdf07c0",
+    "mtime": 1788416069.3395336,
+    "seen": 1788416133.4213142,
+    "ast_hash": "36a7a04a7080bb48088ea8ad98104c67",
     "semantic_hash": ""
   },
   "src/pages/KPI/dds-board.vue": {
