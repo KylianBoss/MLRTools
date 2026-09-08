@@ -6,6 +6,7 @@ import express from "express";
 import cors from "cors";
 import routes from "./routes/index.js";
 import { extractTrayAmount } from "./cron/ExtractTrayAmount.js";
+import { createMcpRouter } from "./mcp/index.js";
 
 dayjs.extend(duration);
 
@@ -105,6 +106,10 @@ app.get("/extract/:date", (req, res) => {
   res.json({ message: "Extraction started" });
 });
 app.use(routes);
+
+// MCP server for the agent. Mounted at boot but inert until enableMcp() is
+// called from POST /cron/initialize (bot instance only), same gate as the tunnel.
+app.use("/mcp", createMcpRouter());
 
 app.post("/alarms/zone/:alarmId", async (req, res) => {
   const { zones } = req.body;

@@ -12,6 +12,7 @@ import { cleanDB } from "../cron/CleanDB.js";
 import { autoGroupAlarmsJob } from "../cron/AutoGroupAlarms.js";
 import { sendAlarmReport } from "../cron/SendAlarmReport.js";
 import { startTunnel } from "../cloudflareTunnel.js";
+import { enableMcp } from "../mcp/index.js";
 
 dayjs.extend(utc);
 
@@ -257,6 +258,9 @@ router.post("/initialize", async (req, res) => {
     startTunnel().catch((error) => {
       console.error("Error while starting Cloudflare tunnel:", error);
     });
+
+    // Enable the MCP server on this (bot) instance, same gate as the tunnel.
+    enableMcp();
 
     console.log("Initializing cron jobs for user:", user);
 
