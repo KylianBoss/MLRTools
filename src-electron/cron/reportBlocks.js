@@ -23,6 +23,20 @@ export async function closePuppeteerBrowser() {
 }
 
 /**
+ * Formate un nombre avec des apostrophes comme séparateurs de milliers
+ * (convention suisse, ex: 1'493'948). N'utilise PAS toLocaleString("fr-CH") :
+ * cette locale utilise l'espace fine insécable Unicode (U+202F) comme
+ * séparateur, un caractère absent de l'encodage WinAnsi que PDFKit utilise
+ * pour la police Helvetica par défaut — le glyphe est alors mal rendu dans
+ * le PDF (observé : "/" à la place de l'espace).
+ */
+function formatSwissNumber(value) {
+  return Math.round(value)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+}
+
+/**
  * [D4] Centralise les appels aux endpoints locaux de l'API KPI, réutilisé
  * par tous les renderers qui ont besoin de données déjà exposées en HTTP.
  */
@@ -1310,7 +1324,7 @@ export async function renderSevenDaysAverageBlock(doc, db, ctx) {
     .fontSize(12)
     .fillColor("#666")
     .text(
-      `Traité ${sevenDaysData.total_LHM_processed.toLocaleString("fr-CH")} LHM sur les 7 derniers jours`,
+      `Traité ${formatSwissNumber(sevenDaysData.total_LHM_processed)} LHM sur les 7 derniers jours`,
       { align: "center" }
     );
 

@@ -339,25 +339,28 @@ const requestJob = async () => {
           type: "negative",
           message: "Sélectionnez un rapport à générer.",
         });
-        loading.value = false;
         return;
       }
 
-      $q.notify({
+      const dismissProgressNotify = $q.notify({
         type: "info",
         message: "Génération du PDF en cours...",
         spinner: true,
         timeout: 0,
       });
 
-      await generateAndDownloadKPI(cleanedArgs.reportId);
+      try {
+        await generateAndDownloadKPI(cleanedArgs.reportId);
+        dismissProgressNotify();
 
-      $q.notify({
-        type: "positive",
-        message: "PDF téléchargé avec succès",
-      });
-
-      loading.value = false;
+        $q.notify({
+          type: "positive",
+          message: "PDF téléchargé avec succès",
+        });
+      } catch (genError) {
+        dismissProgressNotify();
+        throw genError;
+      }
       return;
     }
 
