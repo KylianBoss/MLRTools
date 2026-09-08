@@ -112,6 +112,40 @@
               <template v-slot:selected>
                 {{ props.row.reportIds.length }} rapport(s)
               </template>
+              <template
+                v-slot:option="{
+                  index,
+                  itemProps,
+                  opt,
+                  selected,
+                  toggleOption,
+                }"
+              >
+                <div
+                  v-if="
+                    index === 0 ||
+                    reportOptions[index - 1].section !== opt.section
+                  "
+                >
+                  <q-item-label
+                    class="text-bold q-mt-md q-mb-sm text-uppercase q-pl-xs"
+                  >
+                    {{ opt.section }}
+                  </q-item-label>
+                  <q-separator />
+                </div>
+                <q-item v-bind="itemProps">
+                  <q-item-section>
+                    <q-item-label>{{ opt.label }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-toggle
+                      :model-value="selected"
+                      @update:model-value="toggleOption(opt)"
+                    />
+                  </q-item-section>
+                </q-item>
+              </template>
             </q-select>
           </q-td>
           <q-td key="recieveDailyAlarmsByUser" :props="props" class="text-center">
@@ -561,10 +595,11 @@ const access = [
   { section: "Admin", label: "Users", value: "canAccessAdminUser" },
   { section: "Admin", label: "Bots", value: "canAccessAdminBots" },
   { section: "Admin", label: "Settings", value: "canAccessAdminSettings" },
-  { section: "Admin", label: "Rapports KPI - Accès", value: "canAccessAdminReports" },
-  { section: "Admin", label: "Rapports KPI - Créer", value: "canCreateReports" },
-  { section: "Admin", label: "Rapports KPI - Modifier", value: "canUpdateReports" },
-  { section: "Admin", label: "Rapports KPI - Supprimer", value: "canDeleteReports" },
+  // Rapports KPI
+  { section: "Rapports KPI", label: "Accès", value: "canAccessAdminReports" },
+  { section: "Rapports KPI", label: "Créer", value: "canCreateReports" },
+  { section: "Rapports KPI", label: "Modifier", value: "canUpdateReports" },
+  { section: "Rapports KPI", label: "Supprimer", value: "canDeleteReports" },
 ];
 
 const rowClass = (row) => {
@@ -601,6 +636,7 @@ onMounted(async () => {
   try {
     const response = await api.get("/reports");
     reportOptions.value = response.data.map((r) => ({
+      section: "Rapports KPI",
       label: r.name,
       value: r.id,
     }));
