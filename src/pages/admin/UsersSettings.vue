@@ -19,8 +19,8 @@
           <q-td>
             {{ props.row.fullname }}
           </q-td>
-          <q-td key="initals" :props="props">
-            {{ props.row.initals }}
+          <q-td key="initials" :props="props">
+            {{ props.row.initials }}
           </q-td>
           <q-td key="autorised" :props="props" class="text-center">
             <q-toggle
@@ -240,7 +240,7 @@
             outlined
           />
           <q-input
-            v-model="editedUser.initals"
+            v-model="editedUser.initials"
             label="Initiales"
             dense
             outlined
@@ -287,10 +287,10 @@ const columns = [
     sortable: true,
   },
   {
-    name: "initals",
+    name: "initials",
     label: "INITIALES",
     align: "left",
-    field: "initals",
+    field: "initials",
     sortable: true,
   },
   {
@@ -572,7 +572,7 @@ const saveEditDialog = () => {
   if (row) {
     row.username = editedUser.value.username;
     row.fullname = editedUser.value.fullname;
-    row.initals = editedUser.value.initals;
+    row.initials = editedUser.value.initials;
     row.email = editedUser.value.email;
     App.updateUser(row);
   }

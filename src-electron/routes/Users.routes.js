@@ -31,6 +31,7 @@ router.put("/", async (req, res) => {
     id,
     username,
     fullname,
+    initials,
     autorised,
     UserAccesses,
     isBot,
@@ -43,6 +44,7 @@ router.put("/", async (req, res) => {
       {
         username,
         fullname,
+        initials,
         autorised,
         isBot,
         recieveDailyReport,
