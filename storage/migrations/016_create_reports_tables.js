@@ -21,7 +21,10 @@ export async function up(queryInterface, Sequelize) {
   try {
     console.log("Starting migration: Create Reports tables...");
 
-    const tables = await queryInterface.showAllTables();
+    // showAllTables() renvoie soit des strings, soit des objets
+    // {tableName, schema} selon le dialecte/version — normaliser les deux.
+    const rawTables = await queryInterface.showAllTables();
+    const tables = rawTables.map((t) => (typeof t === "string" ? t : t.tableName));
 
     if (!tables.includes("Reports")) {
       await queryInterface.createTable(
