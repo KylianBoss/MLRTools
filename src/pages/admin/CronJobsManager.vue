@@ -71,8 +71,21 @@
                 class="q-mt-sm"
               />
               <div class="text-caption text-grey q-mt-xs">
-                Si désactivé, le PDF sera disponible pour téléchargement
+                Si activé, tous les rapports actifs ayant des abonnés sont
+                générés et envoyés par email. Si désactivé, un seul rapport
+                est généré et proposé au téléchargement direct.
               </div>
+              <q-select
+                v-if="!args.sendEmail"
+                v-model="args.reportId"
+                :options="reportOptions"
+                label="Rapport à générer"
+                emit-value
+                map-options
+                filled
+                class="q-mt-md"
+                :loading="loadingReports"
+              />
             </div>
           </q-card-section>
 
@@ -273,8 +286,10 @@ const args = ref({
 const loading = ref(false);
 const loadingHistory = ref(false);
 const loadingCronJobs = ref(false);
+const loadingReports = ref(false);
 const jobHistory = ref([]);
 const cronJobsStatus = ref([]);
+const reportOptions = ref([]);
 let refreshInterval = null;
 
 const availableActions = [
@@ -302,7 +317,7 @@ const resetArgs = () => {
   } else if (selectedAction.value === "sendAlarmReport") {
     args.value = { date: "" };
   } else if (selectedAction.value === "sendKPI") {
-    args.value = { sendEmail: true };
+    args.value = { sendEmail: true, reportId: reportOptions.value[0]?.value };
   } else if (selectedAction.value === "cleanDB") {
     args.value = {};
   }
@@ -319,6 +334,15 @@ const requestJob = async () => {
 
     // Si c'est sendKPI sans email, générer directement côté client
     if (selectedAction.value === "sendKPI" && !cleanedArgs.sendEmail) {
+      if (!cleanedArgs.reportId) {
+        $q.notify({
+          type: "negative",
+          message: "Sélectionnez un rapport à générer.",
+        });
+        loading.value = false;
+        return;
+      }
+
       $q.notify({
         type: "info",
         message: "Génération du PDF en cours...",
@@ -326,7 +350,7 @@ const requestJob = async () => {
         timeout: 0,
       });
 
-      await generateAndDownloadKPI();
+      await generateAndDownloadKPI(cleanedArgs.reportId);
 
       $q.notify({
         type: "positive",
@@ -337,7 +361,11 @@ const requestJob = async () => {
       return;
     }
 
-    // Sinon, passer par la queue normale
+    // Sinon, passer par la queue normale (sendKPI boucle sur tous les
+    // rapports actifs ayant des abonnés, reportId n'est pas utile ici)
+    if (selectedAction.value === "sendKPI") {
+      delete cleanedArgs.reportId;
+    }
     const response = await api.post("/cron/request-job", {
       action: selectedAction.value,
       userId: appStore.user.id,
@@ -396,9 +424,10 @@ const downloadLatestKPI = async () => {
   }
 };
 
-const generateAndDownloadKPI = async () => {
+const generateAndDownloadKPI = async (reportId) => {
   try {
     const response = await api.get("/kpi/generate-pdf-download", {
+      params: { reportId },
       responseType: "blob",
       timeout: 600000
     });
@@ -565,9 +594,27 @@ const getQueueStatusLabel = (status) => {
   }
 };
 
+const loadReports = async () => {
+  loadingReports.value = true;
+  try {
+    const response = await api.get("/reports");
+    reportOptions.value = response.data
+      .filter((r) => r.active)
+      .map((r) => ({ label: r.name, value: r.id }));
+    if (selectedAction.value === "sendKPI" && !args.value.reportId) {
+      args.value.reportId = reportOptions.value[0]?.value;
+    }
+  } catch (error) {
+    console.error("Error fetching reports:", error);
+  } finally {
+    loadingReports.value = false;
+  }
+};
+
 onMounted(() => {
   loadCronJobs();
   loadJobHistory();
+  loadReports();
   startAutoRefresh();
 });
 
