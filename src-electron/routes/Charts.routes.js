@@ -157,7 +157,12 @@ router.post("/custom-charts/:id/recalculate", async (req, res) => {
 router.get("/custom-charts/", async (req, res) => {
   const db = getDB();
   try {
+    // Par défaut, seuls les graphiques visibles sont renvoyés (utilisé par
+    // le dashboard). La page de gestion passe ?includeHidden=true pour
+    // pouvoir afficher et réactiver les graphiques masqués.
+    const includeHidden = req.query.includeHidden === "true";
     const charts = await db.models.CustomChart.findAll({
+      where: includeHidden ? {} : { visible: true },
       order: [["chartName", "ASC"]],
     });
 
@@ -265,6 +270,31 @@ router.put("/custom-charts/:id", async (req, res) => {
     res.json(chart.toJSON());
   } catch (error) {
     console.error("Error updating custom chart:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+router.patch("/custom-charts/:id/visibility", async (req, res) => {
+  const db = getDB();
+  const { id } = req.params;
+  const { visible } = req.body;
+
+  if (typeof visible !== "boolean") {
+    res.status(400).json({ error: "visible (boolean) is required" });
+    return;
+  }
+
+  try {
+    const chart = await db.models.CustomChart.findByPk(id);
+    if (!chart) {
+      res.status(404).json({ error: "Custom chart not found" });
+      return;
+    }
+
+    chart.visible = visible;
+    await chart.save();
+    res.json(chart.toJSON());
+  } catch (error) {
+    console.error("Error updating custom chart visibility:", error);
     res.status(500).json({ error: error.message });
   }
 });

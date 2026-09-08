@@ -1446,6 +1446,12 @@ function initDB(config) {
           allowNull: true,
           comment: "Max Y value for the charts"
         },
+        visible: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: true,
+          comment: "Whether the chart is shown on the dashboard (kept in DB when hidden)",
+        },
         updatedAt: {
           type: DataTypes.DATE,
           allowNull: true,

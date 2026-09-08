@@ -33,9 +33,21 @@
         <q-tr
           :props="props"
           v-else
-          :class="[props.row.id === 0 ? 'bg-grey-2' : '', 'chart-row']"
+          :class="[
+            props.row.id === 0 ? 'bg-grey-2' : '',
+            'chart-row',
+            props.row.visible === false ? 'text-grey-5' : '',
+          ]"
         >
-          <q-td>{{ props.row.chartName }}</q-td>
+          <q-td>
+            {{ props.row.chartName }}
+            <q-badge
+              v-if="props.row.visible === false"
+              color="grey-6"
+              label="Masqué"
+              class="q-ml-sm"
+            />
+          </q-td>
           <q-td>{{ props.row.createdByName }}</q-td>
           <q-td class="text-center">
             {{ JSON.parse(props.row.alarms).length }}
@@ -51,6 +63,22 @@
             {{ formatDate(props.row.updatedAt) }}
           </q-td>
           <q-td class="text-center row-actions">
+            <q-btn
+              :icon="props.row.visible === false ? 'mdi-eye-off' : 'mdi-eye'"
+              :color="props.row.visible === false ? 'grey' : 'secondary'"
+              dense
+              flat
+              @click="toggleVisibility(props.row)"
+              :disable="App.userHasAccess('canUpdateCustomCharts') === false"
+            >
+              <q-tooltip>
+                {{
+                  props.row.visible === false
+                    ? "Afficher ce graphique sur le dashboard"
+                    : "Masquer ce graphique du dashboard"
+                }}
+              </q-tooltip>
+            </q-btn>
             <q-btn
               icon="mdi-refresh"
               color="secondary"
@@ -439,9 +467,39 @@ const recalculateChart = async (chart) => {
   }
 };
 
+const toggleVisibility = async (chart) => {
+  if (App.userHasAccess("canUpdateCustomCharts") === false) {
+    $q.notify({
+      type: "negative",
+      message: "Vous n'avez pas la permission de modifier un graphique.",
+    });
+    return;
+  }
+
+  const nextVisible = chart.visible === false;
+
+  try {
+    await api.patch(`/charts/custom-charts/${chart.id}/visibility`, {
+      visible: nextVisible,
+    });
+    chart.visible = nextVisible;
+    $q.notify({
+      type: "positive",
+      message: nextVisible
+        ? "Graphique affiché sur le dashboard."
+        : "Graphique masqué du dashboard.",
+    });
+  } catch (error) {
+    $q.notify({
+      type: "negative",
+      message: "Erreur lors de la mise à jour de la visibilité.",
+    });
+  }
+};
+
 const fetchCustomCharts = async () => {
   try {
-    const response = await api.get("/charts/custom-charts");
+    const response = await api.get("/charts/custom-charts?includeHidden=true");
     rows.value = response.data;
     rows.value.push({
       id: 0,

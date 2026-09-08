@@ -285,7 +285,11 @@ export async function generateKPIPDF() {
     order: [["order", "ASC"]],
   });
 
-  const customCharts = await db.models.CustomChart.findAll();
+  const customCharts = await db.models.CustomChart.findAll({
+    where: {
+      visible: true,
+    },
+  });
 
   // Créer le dossier de destination s'il n'existe pas
   const outputDir = path.join(process.cwd(), "storage", "prints");
@@ -329,6 +333,111 @@ export async function generateKPIPDF() {
       );
 
       const pageWidth = doc.page.width - 60;
+
+      // START CASE CRASHES
+      console.log("Generating case crashes summary...");
+      await updateJob(
+        {
+          lastLog: "Generating case crashes summary...",
+        },
+        jobName
+      );
+
+      const CASE_CRASHES_ZONES = [
+        "F013",
+        "X001",
+        "X002",
+        "X003",
+        "X101",
+        "X102",
+        "X103",
+        "X104",
+      ];
+
+      const caseCrashesReportDaysSetting = await db.models.Settings.getValue(
+        "CASE_CRASHES_REPORT_DAYS"
+      );
+      const caseCrashesReportDays =
+        parseInt(caseCrashesReportDaysSetting, 10) || 30;
+
+      const caseCrashesSince = dayjs()
+        .subtract(caseCrashesReportDays, "day")
+        .format("YYYY-MM-DD");
+
+      const caseCrashes = await db.models.CaseCrash.findAll({
+        where: {
+          crashDate: {
+            [db.Sequelize.Op.gte]: caseCrashesSince,
+          },
+        },
+        attributes: ["crashDate", "zone"],
+        order: [["crashDate", "DESC"]],
+        raw: true,
+      });
+
+      const caseCrashesRowsByDate = new Map();
+      for (let i = 0; i < caseCrashesReportDays; i++) {
+        const date = dayjs().subtract(i, "day").format("YYYY-MM-DD");
+        const emptyRow = { date };
+        CASE_CRASHES_ZONES.forEach((zone) => (emptyRow[zone] = 0));
+        caseCrashesRowsByDate.set(date, emptyRow);
+      }
+      for (const crash of caseCrashes) {
+        const date = dayjs(crash.crashDate).format("YYYY-MM-DD");
+        if (!caseCrashesRowsByDate.has(date)) {
+          const emptyRow = { date };
+          CASE_CRASHES_ZONES.forEach((zone) => (emptyRow[zone] = 0));
+          caseCrashesRowsByDate.set(date, emptyRow);
+        }
+        caseCrashesRowsByDate.get(date)[crash.zone] += 1;
+      }
+      const caseCrashesRows = [...caseCrashesRowsByDate.values()].sort(
+        (a, b) => b.date.localeCompare(a.date)
+      );
+
+      doc.addPage();
+
+      doc
+        .fontSize(20)
+        .fillColor("#000")
+        .text("Chutes de tours de caisses", {
+          align: "center",
+        });
+      doc.moveDown(0.3);
+      doc
+        .fontSize(12)
+        .fillColor("#666")
+        .text(
+          `Derniers ${caseCrashesReportDays} jours - ${caseCrashes.length} chute(s)`,
+          {
+            align: "center",
+          }
+        );
+      doc.moveDown(0.8);
+
+      if (caseCrashesRows.length > 0) {
+        generateCaseCrashesTable(
+          doc,
+          caseCrashesRows,
+          CASE_CRASHES_ZONES,
+          30,
+          doc.y,
+          pageWidth
+        );
+      } else {
+        doc
+          .fontSize(11)
+          .fillColor("#666")
+          .text(
+            `Aucune chute de tour de caisses enregistrée sur les derniers ${caseCrashesReportDays} jours.`,
+            {
+              align: "center",
+            }
+          );
+      }
+
+      console.log("Case crashes summary added to PDF.");
+      // END CASE CRASHES
 
       // START SEVEN DAYS AVERAGE PAGE
       console.log("Generating Seven Days Average page...");
@@ -493,111 +602,6 @@ export async function generateKPIPDF() {
         console.log(`Custom chart: ${customChart.chartName} added to PDF.`);
       }
       // END CUSTOM CHART
-
-      // START CASE CRASHES
-      console.log("Generating case crashes summary...");
-      await updateJob(
-        {
-          lastLog: "Generating case crashes summary...",
-        },
-        jobName
-      );
-
-      const CASE_CRASHES_ZONES = [
-        "F013",
-        "X001",
-        "X002",
-        "X003",
-        "X101",
-        "X102",
-        "X103",
-        "X104",
-      ];
-
-      const caseCrashesReportDaysSetting = await db.models.Settings.getValue(
-        "CASE_CRASHES_REPORT_DAYS"
-      );
-      const caseCrashesReportDays =
-        parseInt(caseCrashesReportDaysSetting, 10) || 30;
-
-      const caseCrashesSince = dayjs()
-        .subtract(caseCrashesReportDays, "day")
-        .format("YYYY-MM-DD");
-
-      const caseCrashes = await db.models.CaseCrash.findAll({
-        where: {
-          crashDate: {
-            [db.Sequelize.Op.gte]: caseCrashesSince,
-          },
-        },
-        attributes: ["crashDate", "zone"],
-        order: [["crashDate", "DESC"]],
-        raw: true,
-      });
-
-      const caseCrashesRowsByDate = new Map();
-      for (let i = 0; i < caseCrashesReportDays; i++) {
-        const date = dayjs().subtract(i, "day").format("YYYY-MM-DD");
-        const emptyRow = { date };
-        CASE_CRASHES_ZONES.forEach((zone) => (emptyRow[zone] = 0));
-        caseCrashesRowsByDate.set(date, emptyRow);
-      }
-      for (const crash of caseCrashes) {
-        const date = dayjs(crash.crashDate).format("YYYY-MM-DD");
-        if (!caseCrashesRowsByDate.has(date)) {
-          const emptyRow = { date };
-          CASE_CRASHES_ZONES.forEach((zone) => (emptyRow[zone] = 0));
-          caseCrashesRowsByDate.set(date, emptyRow);
-        }
-        caseCrashesRowsByDate.get(date)[crash.zone] += 1;
-      }
-      const caseCrashesRows = [...caseCrashesRowsByDate.values()].sort(
-        (a, b) => b.date.localeCompare(a.date)
-      );
-
-      doc.addPage();
-
-      doc
-        .fontSize(20)
-        .fillColor("#000")
-        .text("Chutes de tours de caisses", {
-          align: "center",
-        });
-      doc.moveDown(0.3);
-      doc
-        .fontSize(12)
-        .fillColor("#666")
-        .text(
-          `Derniers ${caseCrashesReportDays} jours - ${caseCrashes.length} chute(s)`,
-          {
-            align: "center",
-          }
-        );
-      doc.moveDown(0.8);
-
-      if (caseCrashesRows.length > 0) {
-        generateCaseCrashesTable(
-          doc,
-          caseCrashesRows,
-          CASE_CRASHES_ZONES,
-          30,
-          doc.y,
-          pageWidth
-        );
-      } else {
-        doc
-          .fontSize(11)
-          .fillColor("#666")
-          .text(
-            `Aucune chute de tour de caisses enregistrée sur les derniers ${caseCrashesReportDays} jours.`,
-            {
-              align: "center",
-            }
-          );
-      }
-
-      console.log("Case crashes summary added to PDF.");
-      // END CASE CRASHES
 
       // START PLANNED INTERVENTIONS
       console.log("Generating planned interventions summary...");
