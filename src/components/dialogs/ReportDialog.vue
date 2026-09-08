@@ -115,9 +115,11 @@
 </template>
 
 <script setup>
-import { useDialogPluginComponent } from "quasar";
+import { useDialogPluginComponent, useQuasar } from "quasar";
 import { ref, computed, onMounted } from "vue";
 import { api } from "boot/axios";
+
+const $q = useQuasar();
 
 const props = defineProps({
   reportData: {
@@ -185,17 +187,25 @@ const onOk = () => {
 };
 
 onMounted(async () => {
-  const response = await api.get("/reports/available-blocks");
-  availableBlocks.value = response.data;
+  try {
+    const response = await api.get("/reports/available-blocks");
+    availableBlocks.value = response.data;
 
-  // Résoudre les labels des blocs déjà sélectionnés (édition d'un rapport
-  // existant) à partir du catalogue chargé.
-  selectedBlocks.value = selectedBlocks.value.map((b) => {
-    const match = availableBlocks.value.find(
-      (a) => a.blockType === b.blockType && a.refId === b.refId
-    );
-    return match ? { ...b, label: match.label } : b;
-  });
+    // Résoudre les labels des blocs déjà sélectionnés (édition d'un rapport
+    // existant) à partir du catalogue chargé.
+    selectedBlocks.value = selectedBlocks.value.map((b) => {
+      const match = availableBlocks.value.find(
+        (a) => a.blockType === b.blockType && a.refId === b.refId
+      );
+      return match ? { ...b, label: match.label } : b;
+    });
+  } catch (error) {
+    console.error("Error fetching available blocks:", error);
+    $q.notify({
+      type: "negative",
+      message: "Erreur lors du chargement du catalogue de blocs.",
+    });
+  }
 });
 </script>
 

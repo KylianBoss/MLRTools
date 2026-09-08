@@ -176,7 +176,16 @@ const updateReport = async (report) => {
     return;
   }
 
-  const detailResponse = await api.get(`/reports/${report.id}`);
+  let detailResponse;
+  try {
+    detailResponse = await api.get(`/reports/${report.id}`);
+  } catch (error) {
+    $q.notify({
+      type: "negative",
+      message: "Erreur lors du chargement du rapport.",
+    });
+    return;
+  }
 
   const reportData = await askForReport({
     id: report.id,
