@@ -20,10 +20,23 @@ const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 router.get("/generate-pdf-download", async (req, res) => {
   const db = getDB();
   try {
-    console.log("Generating KPI PDF for direct download...");
+    const reportId = parseInt(req.query.reportId, 10);
+    if (!reportId) {
+      res.status(400).json({ error: "reportId query param is required" });
+      return;
+    }
+
+    // [D5] Garde 404 systématique sur reportId invalide/inexistant
+    const report = await db.models.Reports.findByPk(reportId);
+    if (!report) {
+      res.status(404).json({ error: "Report not found" });
+      return;
+    }
+
+    console.log(`Generating KPI PDF for direct download (report "${report.name}")...`);
 
     // Générer le PDF
-    const pdfPath = await generateKPIPDF();
+    const pdfPath = await generateKPIPDF(reportId);
 
     console.log(`PDF generated at: ${pdfPath}`);
 

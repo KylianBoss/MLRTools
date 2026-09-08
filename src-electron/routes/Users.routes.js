@@ -7,16 +7,23 @@ router.get("/", async (req, res) => {
   const db = getDB();
   try {
     const users = await db.models.Users.findAll({
-      include: {
-        model: db.models.UserAccess,
-        attributes: ["menuId"],
-      },
+      include: [
+        {
+          model: db.models.UserAccess,
+          attributes: ["menuId"],
+        },
+        {
+          model: db.models.UserReports,
+          attributes: ["reportId"],
+        },
+      ],
     });
     res.json(
       users.map((u) => {
         return {
           ...u.toJSON(),
           UserAccesses: u.UserAccesses.map((a) => a.menuId),
+          reportIds: u.UserReports.map((r) => r.reportId),
         };
       })
     );
@@ -34,8 +41,8 @@ router.put("/", async (req, res) => {
     initials,
     autorised,
     UserAccesses,
+    reportIds,
     isBot,
-    recieveDailyReport,
     recieveDailyAlarmsByUser,
     isTechnician,
   } = req.body;
@@ -47,7 +54,6 @@ router.put("/", async (req, res) => {
         initials,
         autorised,
         isBot,
-        recieveDailyReport,
         recieveDailyAlarmsByUser,
         isTechnician,
       },
@@ -71,11 +77,28 @@ router.put("/", async (req, res) => {
       }))
     );
 
+    // Abonnements aux rapports KPI (many-to-many, remplace recieveDailyReport)
+    await db.models.UserReports.destroy({
+      where: {
+        userId: id,
+      },
+    });
+
+    if (Array.isArray(reportIds) && reportIds.length > 0) {
+      await db.models.UserReports.bulkCreate(
+        reportIds.map((reportId) => ({
+          userId: id,
+          reportId,
+        }))
+      );
+    }
+
     res.json(
       user.map((u) => {
         return {
           ...u,
           UserAccesses: UserAccesses,
+          reportIds: reportIds || [],
         };
       })
     );

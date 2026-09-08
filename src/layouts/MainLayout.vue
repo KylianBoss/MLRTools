@@ -293,6 +293,12 @@
               icon="mdi-cog-outline"
               label="Settings"
             />
+            <drawer-item
+              to="admin-reports"
+              autorisation="canAccessAdminReports"
+              icon="mdi-file-document-multiple-outline"
+              label="Rapports KPI"
+            />
           </q-expansion-item>
           <!-- DEV -->
           <q-expansion-item

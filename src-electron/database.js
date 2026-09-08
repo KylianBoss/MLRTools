@@ -1602,8 +1602,151 @@ function initDB(config) {
       }
     );
 
+    // Reports (rapports KPI configurables, remplace la génération unique figée)
+    const Reports = sequelize.define(
+      "Reports",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        name: {
+          type: DataTypes.STRING(100),
+          allowNull: false,
+          comment: "Nom affiché du rapport, ex: Rapport Essentiel",
+        },
+        slug: {
+          type: DataTypes.STRING(50),
+          allowNull: false,
+          unique: true,
+          comment: "Dérivé du nom (kebab-case), utilisé dans le nom du fichier PDF",
+        },
+        description: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
+        active: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: true,
+          comment: "Si false, jamais généré ni envoyé par le cron sendKPI",
+        },
+        createdBy: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          comment: "ID de l'utilisateur qui a créé le rapport",
+        },
+      },
+      {
+        timestamps: true,
+      }
+    );
+
+    // ReportBlocks (liste ordonnée des blocs de contenu composant un rapport)
+    const ReportBlocks = sequelize.define(
+      "ReportBlocks",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        reportId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: Reports,
+            key: "id",
+          },
+        },
+        blockType: {
+          type: DataTypes.ENUM(
+            "caseCrashes",
+            "sevenDaysAverage",
+            "zoneGroup",
+            "customChart",
+            "plannedInterventions",
+            "unplannedInterventions"
+          ),
+          allowNull: false,
+        },
+        refId: {
+          type: DataTypes.STRING(50),
+          allowNull: true,
+          comment:
+            "zoneGroupName ou CustomChart.id stringifié ; NULL pour les blocs statiques",
+        },
+        order: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          defaultValue: 0,
+          comment: "Ordre du bloc dans le rapport, utilisé pour le tri",
+        },
+        config: {
+          type: DataTypes.JSON,
+          allowNull: true,
+          comment: "Réservé pour des paramètres futurs par bloc, non utilisé au lancement",
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
+    // UserReports (liaison many-to-many utilisateur <-> rapport, style manuel comme UserAccess)
+    const UserReports = sequelize.define(
+      "UserReports",
+      {
+        id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        userId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+        },
+        reportId: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: false,
+          references: {
+            model: Reports,
+            key: "id",
+          },
+        },
+      },
+      {
+        timestamps: false,
+      }
+    );
+
     Users.hasMany(UserAccess, {
       foreignKey: "userId",
+    });
+
+    // ===== Associations REPORTS =====
+    Reports.hasMany(ReportBlocks, {
+      foreignKey: "reportId",
+      as: "blocks",
+      onDelete: "CASCADE",
+    });
+    ReportBlocks.belongsTo(Reports, {
+      foreignKey: "reportId",
+    });
+
+    Users.hasMany(UserReports, {
+      foreignKey: "userId",
+    });
+    UserReports.belongsTo(Users, {
+      foreignKey: "userId",
+    });
+    Reports.hasMany(UserReports, {
+      foreignKey: "reportId",
+      onDelete: "CASCADE",
+    });
+    UserReports.belongsTo(Reports, {
+      foreignKey: "reportId",
     });
 
     // Association Intervention -> Users (creator)

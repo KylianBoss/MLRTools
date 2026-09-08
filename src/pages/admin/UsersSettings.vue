@@ -94,15 +94,25 @@
           <q-td>
             {{ props.row.email }}
           </q-td>
-          <q-td key="recieveDailyReport" :props="props" class="text-center">
-            <q-toggle
-              v-model="props.row.recieveDailyReport"
-              color="primary"
+          <q-td key="reportIds" :props="props" class="text-center">
+            <q-select
+              behavior="dialog"
+              v-model="props.row.reportIds"
+              :options="reportOptions"
+              multiple
+              emit-value
+              map-options
               @update:model-value="App.updateUser(props.row)"
+              style="max-width: 200px; overflow: hidden"
+              dense
               :disable="
                 !props.row.email || !props.row.autorised || props.row.isBot
               "
-            />
+            >
+              <template v-slot:selected>
+                {{ props.row.reportIds.length }} rapport(s)
+              </template>
+            </q-select>
           </q-td>
           <q-td key="recieveDailyAlarmsByUser" :props="props" class="text-center">
             <q-toggle
@@ -269,8 +279,10 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useAppStore } from "stores/app";
+import { api } from "boot/axios";
 
 const App = useAppStore();
+const reportOptions = ref([]);
 const columns = [
   {
     name: "id",
@@ -321,10 +333,10 @@ const columns = [
     sortable: false,
   },
   {
-    name: "recieveDailyReport",
-    label: "DAILY REPORT",
+    name: "reportIds",
+    label: "RAPPORTS KPI",
     align: "center",
-    field: "recieveDailyReport",
+    field: (row) => row.reportIds?.length || 0,
     sortable: true,
   },
   {
@@ -549,6 +561,10 @@ const access = [
   { section: "Admin", label: "Users", value: "canAccessAdminUser" },
   { section: "Admin", label: "Bots", value: "canAccessAdminBots" },
   { section: "Admin", label: "Settings", value: "canAccessAdminSettings" },
+  { section: "Admin", label: "Rapports KPI - Accès", value: "canAccessAdminReports" },
+  { section: "Admin", label: "Rapports KPI - Créer", value: "canCreateReports" },
+  { section: "Admin", label: "Rapports KPI - Modifier", value: "canUpdateReports" },
+  { section: "Admin", label: "Rapports KPI - Supprimer", value: "canDeleteReports" },
 ];
 
 const rowClass = (row) => {
@@ -580,8 +596,17 @@ const saveEditDialog = () => {
   closeEditDialog();
 };
 
-onMounted(() => {
+onMounted(async () => {
   App.getUsers();
+  try {
+    const response = await api.get("/reports");
+    reportOptions.value = response.data.map((r) => ({
+      label: r.name,
+      value: r.id,
+    }));
+  } catch (error) {
+    console.error("Error fetching reports for user assignment:", error);
+  }
 });
 </script>
 

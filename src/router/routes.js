@@ -256,6 +256,11 @@ const routes = [
             name: "admin-settings",
             component: () => import("src/pages/admin/SettingsPage.vue"),
           },
+          {
+            path: "reports",
+            name: "admin-reports",
+            component: () => import("src/pages/admin/ReportsManager.vue"),
+          },
         ],
       },
       // === SETTINGS === //
