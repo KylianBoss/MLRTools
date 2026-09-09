@@ -110,7 +110,7 @@
               "
             >
               <template v-slot:selected>
-                {{ props.row.reportIds.length }} rapport(s)
+                {{ props.row.reportIds?.length || 0 }} rapport(s)
               </template>
               <template
                 v-slot:option="{

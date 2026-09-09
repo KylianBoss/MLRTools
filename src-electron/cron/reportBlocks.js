@@ -1372,6 +1372,10 @@ export async function renderZoneGroupBlock(doc, db, ctx, block) {
     jobName
   );
 
+  // NOTE: la clé ignore block.config (réservé, non utilisé au lancement) —
+  // si un renderer se met un jour à lire config, inclure son hash ici pour
+  // éviter que deux rapports au même bloc mais config différente partagent
+  // à tort un rendu en cache.
   const cacheKey = `zoneGroup:${zoneGroupName}`;
   let cached = renderCache?.get(cacheKey);
   if (!cached) {
@@ -1433,6 +1437,7 @@ export async function renderCustomChartBlock(doc, db, ctx, block) {
     jobName
   );
 
+  // NOTE: voir la même remarque dans renderZoneGroupBlock sur block.config.
   const cacheKey = `customChart:${customChartId}`;
   let cached = renderCache?.get(cacheKey);
   if (!cached) {

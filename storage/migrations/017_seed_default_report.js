@@ -165,7 +165,18 @@ export async function up(queryInterface, Sequelize) {
       await blocksTransaction.rollback();
       // Le rapport a déjà été commité — le supprimer pour rester atomique
       // du point de vue de l'utilisateur (pas de rapport sans blocs).
-      await queryInterface.bulkDelete("Reports", { id: reportId });
+      try {
+        await queryInterface.bulkDelete("Reports", { id: reportId });
+      } catch (cleanupError) {
+        // Si CE nettoyage échoue aussi, le Report orphelin (sans bloc) reste
+        // en base — et comme le check d'idempotence en haut de up() ne
+        // regarde que l'existence du slug, une relance ultérieure skipperait
+        // silencieusement sans jamais compléter le seed. Log explicite pour
+        // qu'un opérateur voie le problème au lieu de le découvrir plus tard.
+        console.error(
+          `CRITIQUE: le rapport orphelin id=${reportId} (créé mais sans blocs) n'a pas pu être nettoyé : ${cleanupError.message}. Vérifier/supprimer manuellement cette ligne dans Reports avant de relancer la migration.`
+        );
+      }
       throw blocksError;
     }
   } catch (error) {

@@ -190,6 +190,10 @@ export const sendKPI = async (options = {}) => {
                   err.message
                 );
 
+                // Fermer le navigateur puppeteer pour repartir proprement
+                // (comportement du code d'origine, perdu lors du refactor)
+                await closePuppeteerBrowser();
+
                 if (attempt <= MAX_RETRIES) {
                   console.log(`Retrying in 5 seconds...`);
                   await new Promise((resolve) => setTimeout(resolve, 5000));

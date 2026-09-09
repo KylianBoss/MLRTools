@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { getDB } from "../database.js";
+import { requirePermission } from "../middlewares/permissions.js";
 
 const router = Router();
 
-router.get("/", async (req, res) => {
+router.get("/", requirePermission("canAccessAdminUser"), async (req, res) => {
   const db = getDB();
   try {
     const users = await db.models.Users.findAll({
@@ -32,7 +33,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-router.put("/", async (req, res) => {
+router.put("/", requirePermission("canAccessAdminUser"), async (req, res) => {
   const db = getDB();
   const {
     id,
