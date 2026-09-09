@@ -63,8 +63,13 @@ router.get(
         }
       }
 
-      // Optionnel: Supprimer le fichier après téléchargement pour économiser l'espace
-      // fs.unlinkSync(pdfPath);
+      // Le PDF n'a plus d'utilité une fois téléchargé — pas de conservation
+      // sur disque (économie d'espace, décision explicite).
+      fs.unlink(pdfPath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error(`Failed to delete downloaded PDF ${pdfPath}:`, unlinkErr);
+        }
+      });
     });
   } catch (error) {
     console.error("Error generating KPI PDF:", error);

@@ -326,6 +326,35 @@ export async function generateKPIPDF(reportId, renderCache = new Map()) {
     .format("YYYY-MM-DD")}.pdf`;
   const filePath = path.join(outputDir, fileName);
 
+  // Fichier temporaire unique par tentative + rename atomique une fois le
+  // stream terminé. Sans ça, un retry après timeout (withTimeout n'annule
+  // jamais l'écriture PDFKit/stream en cours) réécrit le même filePath
+  // pendant que le writer précédent y écrit encore, produisant un PDF
+  // tronqué/corrompu (deux streams concurrents sur le même chemin).
+  const tmpPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+
+  // Balaie les .tmp-* orphelins d'une exécution précédente pour ce même
+  // rapport (writer resté bloqué sur un timeout jamais nettoyé) — pas de
+  // conservation de fichiers temporaires inutiles sur disque.
+  try {
+    const tmpPrefix = `${fileName}.tmp-`;
+    for (const entry of fs.readdirSync(outputDir)) {
+      if (entry.startsWith(tmpPrefix)) {
+        fs.unlink(path.join(outputDir, entry), () => {});
+      }
+    }
+  } catch (scanErr) {
+    console.error(`Failed to scan for orphaned temp PDFs in ${outputDir}:`, scanErr);
+  }
+
+  const cleanupTmp = () => {
+    fs.unlink(tmpPath, (unlinkErr) => {
+      if (unlinkErr && unlinkErr.code !== "ENOENT") {
+        console.error(`Failed to clean up temp PDF ${tmpPath}:`, unlinkErr);
+      }
+    });
+  };
+
   return new Promise(async (resolve, reject) => {
     try {
       const doc = new PDFDocument({
@@ -335,7 +364,7 @@ export async function generateKPIPDF(reportId, renderCache = new Map()) {
         autoFirstPage: false,
       });
 
-      const stream = fs.createWriteStream(filePath);
+      const stream = fs.createWriteStream(tmpPath);
       doc.pipe(stream);
 
       // Title page
@@ -379,17 +408,27 @@ export async function generateKPIPDF(reportId, renderCache = new Map()) {
       doc.end();
 
       stream.on("finish", async () => {
+        try {
+          fs.renameSync(tmpPath, filePath);
+        } catch (renameErr) {
+          console.error(`Error finalizing PDF ${filePath}:`, renameErr);
+          cleanupTmp();
+          reject(renameErr);
+          return;
+        }
         console.log(`PDF successfully saved to: ${filePath}`);
         resolve(filePath);
       });
 
       stream.on("error", async (err) => {
         console.error("Error writing PDF:", err);
+        cleanupTmp();
         await closePuppeteerBrowser();
         reject(err);
       });
     } catch (error) {
       console.error("Error generating KPI PDF:", error);
+      cleanupTmp();
       await closePuppeteerBrowser();
       reject(error);
     }
@@ -480,6 +519,13 @@ This is an automatically generated email, please do not reply.`,
       } else {
         console.log(`"${report.name}" report email sent:`, info.response);
         console.log(`Email sent to: ${recipientEmails.join(", ")}`);
+        // Le PDF n'a plus d'utilité une fois envoyé — pas de conservation
+        // sur disque (économie d'espace, décision explicite).
+        fs.unlink(pdfPath, (unlinkErr) => {
+          if (unlinkErr) {
+            console.error(`Failed to delete sent PDF ${pdfPath}:`, unlinkErr);
+          }
+        });
         resolve(info);
       }
     });
