@@ -635,11 +635,13 @@ onMounted(async () => {
   App.getUsers();
   try {
     const response = await api.get("/reports");
-    reportOptions.value = response.data.map((r) => ({
-      section: "Rapports KPI",
-      label: r.name,
-      value: r.id,
-    }));
+    reportOptions.value = response.data
+      .filter((r) => r.active)
+      .map((r) => ({
+        section: "Rapports KPI",
+        label: r.name,
+        value: r.id,
+      }));
   } catch (error) {
     console.error("Error fetching reports for user assignment:", error);
   }

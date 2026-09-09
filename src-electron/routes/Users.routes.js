@@ -78,28 +78,37 @@ router.put("/", requirePermission("canAccessAdminUser"), async (req, res) => {
       }))
     );
 
-    // Abonnements aux rapports KPI (many-to-many, remplace recieveDailyReport)
-    await db.models.UserReports.destroy({
-      where: {
-        userId: id,
-      },
-    });
+    // Abonnements aux rapports KPI (many-to-many, remplace recieveDailyReport).
+    // Transaction : si le bulkCreate échoue (ex: reportIds dupliqués, viole
+    // l'index unique userId+reportId), on ne veut pas laisser l'utilisateur
+    // sans aucun abonnement — trouvé en revue adversariale.
+    const uniqueReportIds = Array.isArray(reportIds)
+      ? [...new Set(reportIds)]
+      : [];
 
-    if (Array.isArray(reportIds) && reportIds.length > 0) {
-      await db.models.UserReports.bulkCreate(
-        reportIds.map((reportId) => ({
-          userId: id,
-          reportId,
-        }))
-      );
-    }
+    await db.transaction(async (transaction) => {
+      await db.models.UserReports.destroy({
+        where: { userId: id },
+        transaction,
+      });
+
+      if (uniqueReportIds.length > 0) {
+        await db.models.UserReports.bulkCreate(
+          uniqueReportIds.map((reportId) => ({
+            userId: id,
+            reportId,
+          })),
+          { transaction }
+        );
+      }
+    });
 
     res.json(
       user.map((u) => {
         return {
           ...u,
           UserAccesses: UserAccesses,
-          reportIds: reportIds || [],
+          reportIds: uniqueReportIds,
         };
       })
     );

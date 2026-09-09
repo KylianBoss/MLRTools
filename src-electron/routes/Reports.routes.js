@@ -4,6 +4,17 @@ import { requirePermission } from "../middlewares/permissions.js";
 
 const router = Router();
 
+// Doit rester synchronisé avec l'ENUM blockType de ReportBlocks
+// (storage/migrations/016_create_reports_tables.js/.sql).
+const VALID_BLOCK_TYPES = [
+  "caseCrashes",
+  "sevenDaysAverage",
+  "zoneGroup",
+  "customChart",
+  "plannedInterventions",
+  "unplannedInterventions",
+];
+
 /**
  * Dérive un slug kebab-case depuis un nom de rapport.
  */
@@ -278,16 +289,33 @@ router.put("/:id/blocks", requirePermission("canUpdateReports"), async (req, res
       return;
     }
 
-    await db.models.ReportBlocks.destroy({ where: { reportId } });
-    await db.models.ReportBlocks.bulkCreate(
-      blocks.map((b, i) => ({
-        reportId,
-        blockType: b.blockType,
-        refId: b.refId || null,
-        order: i,
-        config: b.config || null,
-      }))
+    const invalidBlock = blocks.find(
+      (b) => !VALID_BLOCK_TYPES.includes(b.blockType)
     );
+    if (invalidBlock) {
+      res
+        .status(400)
+        .json({ error: `Invalid blockType: ${invalidBlock.blockType}` });
+      return;
+    }
+
+    // Transaction : si bulkCreate échoue après le destroy, on ne veut pas
+    // laisser le rapport sans aucun bloc (régression trouvée en revue
+    // adversariale — un destroy+bulkCreate non transactionnel peut vider
+    // définitivement un rapport de production sur un simple échec d'écriture).
+    await db.transaction(async (transaction) => {
+      await db.models.ReportBlocks.destroy({ where: { reportId }, transaction });
+      await db.models.ReportBlocks.bulkCreate(
+        blocks.map((b, i) => ({
+          reportId,
+          blockType: b.blockType,
+          refId: b.refId || null,
+          order: i,
+          config: b.config || null,
+        })),
+        { transaction }
+      );
+    });
 
     const updatedBlocks = await db.models.ReportBlocks.findAll({
       where: { reportId },
