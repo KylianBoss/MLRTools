@@ -17,6 +17,7 @@ import InterventionsRouter from "./Interventions.routes.js";
 import SettingsRouter from "./Settings.routes.js";
 import CaseCrashesRouter from "./CaseCrashes.routes.js";
 import StingraysRouter from "./Stingrays.routes.js";
+import ReportsRouter from "./Reports.routes.js";
 
 const router = Router();
 
@@ -37,5 +38,6 @@ router.use("/interventions", InterventionsRouter);
 router.use("/settings", SettingsRouter);
 router.use("/case-crashes", CaseCrashesRouter);
 router.use("/stingrays", StingraysRouter);
+router.use("/reports", ReportsRouter);
 
 export default router;

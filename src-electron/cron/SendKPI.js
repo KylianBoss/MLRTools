@@ -5,27 +5,14 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
 import nodemailer from "nodemailer";
-import puppeteer from "puppeteer";
-import { app } from "electron";
+import { BLOCK_RENDERERS, closePuppeteerBrowser } from "./reportBlocks.js";
 
 const jobName = "sendKPI";
 const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const MAX_RETRIES = 2; // nombre de tentatives supplémentaires après échec
 
-// Utilisation de puppeteer pour générer les graphiques (plus stable que canvas dans Electron)
-let browserInstance = null;
-
-/**
- * Ferme le navigateur puppeteer proprement
- */
-export async function closePuppeteerBrowser() {
-  if (browserInstance) {
-    await browserInstance.close();
-    browserInstance = null;
-    console.log("Puppeteer browser closed");
-  }
-}
+export { closePuppeteerBrowser };
 
 /**
  * Exécute une promesse avec un timeout
@@ -48,11 +35,13 @@ function withTimeout(promise, ms, message = "Operation timed out") {
 }
 
 /**
- * Vérifie si un PDF existe déjà pour la date du jour (veille)
+ * Vérifie si un PDF existe déjà pour la date du jour (veille), scopé par
+ * slug de rapport — sans ça, un seul rapport déjà généré bloquerait la
+ * génération de tous les autres rapports actifs.
  */
-function getExistingPDFPath() {
+function getExistingPDFPath(slug) {
   const outputDir = path.join(process.cwd(), "storage", "prints");
-  const fileName = `KPI_Report_${dayjs()
+  const fileName = `KPI_Report_${slug}_${dayjs()
     .subtract(1, "day")
     .format("YYYY-MM-DD")}.pdf`;
   const filePath = path.join(outputDir, fileName);
@@ -60,6 +49,23 @@ function getExistingPDFPath() {
     return filePath;
   }
   return null;
+}
+
+/**
+ * Envoie une notification d'erreur aux admins pour un rapport spécifique
+ * (utilisé par l'isolation des erreurs par rapport, [D2]).
+ */
+async function notifyAdminsReportError(db, reportName, error) {
+  const admins = await db.models.Users.findAll({
+    where: { isAdmin: true },
+  });
+  for (const admin of admins) {
+    await db.models.Notifications.create({
+      userId: admin.id,
+      message: `Échec de génération/envoi du rapport "${reportName}": ${error.message}`,
+      type: "error",
+    });
+  }
 }
 
 export const sendKPI = async (options = {}) => {
@@ -107,120 +113,140 @@ export const sendKPI = async (options = {}) => {
       return { success: true, skipped: true };
     }
 
-    // Vérifier si un PDF existe déjà pour cette date
-    const existingPDF = getExistingPDFPath();
-    let pdfPath;
+    // [D9] Cache de rendu partagé entre tous les rapports de cette exécution :
+    // un bloc zoneGroup/customChart déjà rendu pour un rapport précédent est
+    // réutilisé pour les rapports suivants qui incluent le même bloc.
+    const renderCache = new Map();
 
-    if (existingPDF) {
-      console.log(`Existing PDF found: ${existingPDF}, skipping generation.`);
-      await updateJob(
-        {
-          lastLog: `Existing PDF found: ${existingPDF}, skipping generation.`,
-        },
-        jobName
-      );
-      pdfPath = existingPDF;
-    } else {
-      // Génération du PDF KPI avec timeout et retry
-      let attempt = 0;
-      let lastError = null;
+    const reports = await db.models.Reports.findAll({ where: { active: true } });
+    const results = [];
 
-      while (attempt <= MAX_RETRIES) {
-        attempt++;
+    try {
+      for (const report of reports) {
+        // [D2] Isolation des erreurs par rapport : un rapport en échec
+        // notifie les admins pour ce rapport et n'empêche pas les suivants.
         try {
+          // Récupérer les abonnés en un seul aller-retour DB, réutilisé
+          // ensuite pour l'envoi (évite un second aller-retour — [D10]).
+          const userReports = await db.models.UserReports.findAll({
+            where: { reportId: report.id },
+          });
+
+          if (userReports.length === 0) {
+            console.log(
+              `Report "${report.name}" has no subscribers, skipping generation.`
+            );
+            continue;
+          }
+
+          const subscribers = await db.models.Users.findAll({
+            where: { id: userReports.map((ur) => ur.userId) },
+          });
+
           await updateJob(
             {
-              lastLog: `Generating KPI PDF report... (attempt ${attempt}/${MAX_RETRIES + 1})`,
+              lastLog: `Generating KPI PDF report "${report.name}"...`,
             },
             jobName
           );
 
-          console.log(`Generating KPI PDF report... (attempt ${attempt}/${MAX_RETRIES + 1})`);
-          pdfPath = await withTimeout(
-            generateKPIPDF(),
-            TIMEOUT_MS,
-            "PDF generation timed out"
-          );
+          // Vérifier si un PDF existe déjà pour ce rapport à cette date
+          const existingPDF = getExistingPDFPath(report.slug);
+          let pdfPath;
 
-          await updateJob(
-            {
-              lastLog: `PDF generated: ${pdfPath}`,
-            },
-            jobName
-          );
+          if (existingPDF) {
+            console.log(
+              `Existing PDF found for report "${report.name}": ${existingPDF}, skipping generation.`
+            );
+            pdfPath = existingPDF;
+          } else {
+            // Génération du PDF avec timeout et retry
+            let attempt = 0;
+            let lastError = null;
 
-          console.log(`PDF generated: ${pdfPath}`);
-          lastError = null;
-          break; // Succès, on sort de la boucle
-        } catch (err) {
-          lastError = err;
-          console.error(`Attempt ${attempt}/${MAX_RETRIES + 1} failed:`, err.message);
+            while (attempt <= MAX_RETRIES) {
+              attempt++;
+              try {
+                await updateJob(
+                  {
+                    lastLog: `Generating "${report.name}" PDF... (attempt ${attempt}/${MAX_RETRIES + 1})`,
+                  },
+                  jobName
+                );
 
-          // Fermer le navigateur puppeteer pour repartir proprement
-          await closePuppeteerBrowser();
+                pdfPath = await withTimeout(
+                  generateKPIPDF(report.id, renderCache),
+                  TIMEOUT_MS,
+                  `PDF generation timed out for report "${report.name}"`
+                );
 
-          if (attempt <= MAX_RETRIES) {
+                console.log(`PDF generated for "${report.name}": ${pdfPath}`);
+                lastError = null;
+                break;
+              } catch (err) {
+                lastError = err;
+                console.error(
+                  `Attempt ${attempt}/${MAX_RETRIES + 1} failed for report "${report.name}":`,
+                  err.message
+                );
+
+                // Fermer le navigateur puppeteer pour repartir proprement
+                // (comportement du code d'origine, perdu lors du refactor)
+                await closePuppeteerBrowser();
+
+                if (attempt <= MAX_RETRIES) {
+                  console.log(`Retrying in 5 seconds...`);
+                  await new Promise((resolve) => setTimeout(resolve, 5000));
+                }
+              }
+            }
+
+            if (lastError) {
+              throw lastError;
+            }
+          }
+
+          // Envoi du PDF par mail
+          if (sendEmail) {
             await updateJob(
               {
-                lastLog: `Attempt ${attempt} failed: ${err.message}. Retrying...`,
+                lastLog: `Sending "${report.name}" PDF by email...`,
               },
               jobName
             );
-            console.log(`Retrying in 5 seconds...`);
-            await new Promise((resolve) => setTimeout(resolve, 5000));
+
+            await withTimeout(
+              sendPDFByEmail(pdfPath, report, subscribers),
+              TIMEOUT_MS,
+              `Email sending timed out for report "${report.name}"`
+            );
+
+            console.log(`"${report.name}" PDF sent by email successfully.`);
           }
+
+          results.push({ reportId: report.id, reportName: report.name, pdfPath });
+        } catch (reportError) {
+          console.error(
+            `Error processing report "${report.name}":`,
+            reportError
+          );
+          await notifyAdminsReportError(db, report.name, reportError);
         }
       }
-
-      if (lastError) {
-        throw lastError;
-      }
-    }
-
-    // Envoi du PDF par mail ou simple génération pour téléchargement
-    if (sendEmail) {
-      await updateJob(
-        {
-          lastLog: "Sending PDF by email...",
-        },
-        jobName
-      );
-
-      console.log("Sending PDF by email...");
-      await withTimeout(
-        sendPDFByEmail(pdfPath),
-        TIMEOUT_MS,
-        "Email sending timed out"
-      );
-
-      await updateJob(
-        {
-          lastLog: "PDF sent by email successfully.",
-        },
-        jobName
-      );
-
-      console.log("PDF sent by email successfully.");
-
-      // Fermer le navigateur puppeteer après envoi
+    } finally {
+      // Ferme puppeteer une fois toutes les itérations terminées. Note :
+      // le comportement existant (getBrowser/generateImage etc. dans
+      // reportBlocks.js) peut déjà avoir fermé et relancé le navigateur en
+      // cas d'erreur individuelle pendant la boucle — ce `finally` garantit
+      // seulement qu'aucune instance ne reste ouverte à la toute fin du job.
       await closePuppeteerBrowser();
-    } else {
-      await updateJob(
-        {
-          lastLog: "PDF ready for download.",
-        },
-        jobName
-      );
-
-      console.log("PDF ready for download.");
-      // Le navigateur sera fermé après le téléchargement si c'est via l'API
     }
 
     console.log("SendKPI job completed.");
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: "SendKPI job completed.",
+        lastLog: `SendKPI job completed. ${results.length} report(s) processed.`,
         endAt: new Date(),
         actualState: "idle",
       },
@@ -235,14 +261,13 @@ export const sendKPI = async (options = {}) => {
       await db.models.Notifications.create({
         userId: admin.id,
         message: sendEmail
-          ? "KPI data has been sent by mail."
-          : "KPI report is ready for download.",
+          ? `KPI data has been sent by mail (${results.length} report(s)).`
+          : `KPI report(s) ready for download (${results.length} report(s)).`,
         type: "info",
       });
     }
 
-    // Retourner le chemin du PDF pour permettre le téléchargement
-    return { pdfPath, success: true };
+    return { success: true, reports: results };
   } catch (error) {
     console.error("Error during SendKPI job:", error);
     await updateJob(
@@ -273,23 +298,22 @@ export const sendKPI = async (options = {}) => {
 };
 
 /**
- * Génère le PDF KPI avec tous les graphiques
+ * Génère le PDF pour un rapport donné, en bouclant sur ses blocs ordonnés.
+ * @param {number} reportId
+ * @param {Map} [renderCache] cache de rendu partagé entre rapports d'un même job ([D9])
  * @returns {Promise<string>} Chemin du fichier PDF généré
  */
-export async function generateKPIPDF() {
+export async function generateKPIPDF(reportId, renderCache = new Map()) {
   const db = getDB();
-  const groups = await db.models.ZoneGroups.findAll({
-    where: {
-      display: true,
-    },
-    order: [["order", "ASC"]],
+  const report = await db.models.Reports.findByPk(reportId, {
+    include: [{ model: db.models.ReportBlocks, as: "blocks" }],
   });
 
-  const customCharts = await db.models.CustomChart.findAll({
-    where: {
-      visible: true,
-    },
-  });
+  if (!report) {
+    throw new Error(`Report ${reportId} not found`);
+  }
+
+  const blocks = [...report.blocks].sort((a, b) => a.order - b.order);
 
   // Créer le dossier de destination s'il n'existe pas
   const outputDir = path.join(process.cwd(), "storage", "prints");
@@ -297,7 +321,7 @@ export async function generateKPIPDF() {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  const fileName = `KPI_Report_${dayjs()
+  const fileName = `KPI_Report_${report.slug}_${dayjs()
     .subtract(1, "day")
     .format("YYYY-MM-DD")}.pdf`;
   const filePath = path.join(outputDir, fileName);
@@ -319,7 +343,7 @@ export async function generateKPIPDF() {
       doc.moveDown();
       doc
         .fontSize(40)
-        .text(`KPI REPORT ${dayjs().subtract(1, "day").format("DD.MM.YYYY")}`, {
+        .text(`${report.name.toUpperCase()} ${dayjs().subtract(1, "day").format("DD.MM.YYYY")}`, {
           align: "center",
           valign: "center",
         });
@@ -333,1657 +357,52 @@ export async function generateKPIPDF() {
       );
 
       const pageWidth = doc.page.width - 60;
+      const ctx = { pageWidth, renderCache };
 
-      // START CASE CRASHES
-      console.log("Generating case crashes summary...");
-      await updateJob(
-        {
-          lastLog: "Generating case crashes summary...",
-        },
-        jobName
-      );
-
-      const CASE_CRASHES_ZONES = [
-        "F013",
-        "X001",
-        "X002",
-        "X003",
-        "X101",
-        "X102",
-        "X103",
-        "X104",
-      ];
-
-      const caseCrashesReportDaysSetting = await db.models.Settings.getValue(
-        "CASE_CRASHES_REPORT_DAYS"
-      );
-      const caseCrashesReportDays =
-        parseInt(caseCrashesReportDaysSetting, 10) || 30;
-
-      const caseCrashesSince = dayjs()
-        .subtract(caseCrashesReportDays, "day")
-        .format("YYYY-MM-DD");
-
-      const caseCrashes = await db.models.CaseCrash.findAll({
-        where: {
-          crashDate: {
-            [db.Sequelize.Op.gte]: caseCrashesSince,
-          },
-        },
-        attributes: ["crashDate", "zone"],
-        order: [["crashDate", "DESC"]],
-        raw: true,
-      });
-
-      const caseCrashesRowsByDate = new Map();
-      for (let i = 0; i < caseCrashesReportDays; i++) {
-        const date = dayjs().subtract(i, "day").format("YYYY-MM-DD");
-        const emptyRow = { date };
-        CASE_CRASHES_ZONES.forEach((zone) => (emptyRow[zone] = 0));
-        caseCrashesRowsByDate.set(date, emptyRow);
-      }
-      for (const crash of caseCrashes) {
-        const date = dayjs(crash.crashDate).format("YYYY-MM-DD");
-        if (!caseCrashesRowsByDate.has(date)) {
-          const emptyRow = { date };
-          CASE_CRASHES_ZONES.forEach((zone) => (emptyRow[zone] = 0));
-          caseCrashesRowsByDate.set(date, emptyRow);
+      for (const block of blocks) {
+        const renderer = BLOCK_RENDERERS[block.blockType];
+        if (!renderer) {
+          console.warn(`Unknown blockType "${block.blockType}", skipping.`);
+          continue;
         }
-        caseCrashesRowsByDate.get(date)[crash.zone] += 1;
-      }
-      const caseCrashesRows = [...caseCrashesRowsByDate.values()].sort(
-        (a, b) => b.date.localeCompare(a.date)
-      );
-
-      doc.addPage();
-
-      doc
-        .fontSize(20)
-        .fillColor("#000")
-        .text("Chutes de tours de caisses", {
-          align: "center",
-        });
-      doc.moveDown(0.3);
-      doc
-        .fontSize(12)
-        .fillColor("#666")
-        .text(
-          `Derniers ${caseCrashesReportDays} jours - ${caseCrashes.length} chute(s)`,
-          {
-            align: "center",
-          }
-        );
-      doc.moveDown(0.8);
-
-      if (caseCrashesRows.length > 0) {
-        generateCaseCrashesTable(
-          doc,
-          caseCrashesRows,
-          CASE_CRASHES_ZONES,
-          30,
-          doc.y,
-          pageWidth
-        );
-      } else {
-        doc
-          .fontSize(11)
-          .fillColor("#666")
-          .text(
-            `Aucune chute de tour de caisses enregistrée sur les derniers ${caseCrashesReportDays} jours.`,
-            {
-              align: "center",
-            }
+        try {
+          await renderer(doc, db, ctx, block);
+        } catch (blockError) {
+          console.error(
+            `Error rendering block ${block.blockType} (refId=${block.refId}):`,
+            blockError
           );
-      }
-
-      console.log("Case crashes summary added to PDF.");
-      // END CASE CRASHES
-
-      // START SEVEN DAYS AVERAGE PAGE
-      console.log("Generating Seven Days Average page...");
-      await updateJob(
-        { lastLog: "Generating Seven Days Average page..." },
-        jobName
-      );
-
-      const sevenDaysResponse = await fetch(
-        `http://localhost:${process.env.PORT || 3000}/kpi/charts/global-last-7-days`
-      );
-      const sevenDaysData = await sevenDaysResponse.json();
-
-      const top10Response = await fetch(
-        `http://localhost:${process.env.PORT || 3000}/kpi/charts/global-last-7-days/top-10`
-      );
-      const top10Data = await top10Response.json();
-
-      const amountsResponse = await fetch(
-        `http://localhost:${process.env.PORT || 3000}/kpi/charts/amount`
-      );
-      const amountsData = await amountsResponse.json();
-
-      doc.addPage();
-
-      // Titre
-      doc
-        .fontSize(18)
-        .fillColor("#000")
-        .text("Rapport des 7 derniers jours", { align: "center" });
-      doc
-        .fontSize(12)
-        .fillColor("#666")
-        .text(
-          `Traité ${sevenDaysData.total_LHM_processed.toLocaleString("fr-CH")} LHM sur les 7 derniers jours`,
-          { align: "center" }
-        );
-
-      // Graphique
-      const sevenDaysImageBuffer = await generateSevenDaysAverageImage(sevenDaysData);
-      if (sevenDaysImageBuffer) {
-        doc.image(sevenDaysImageBuffer, 30, 80, {
-          width: pageWidth,
-          height: 180,
-        });
-      }
-
-      // Tableau top-10
-      const { tableRows: sevenDaysRows, tableColumns: sevenDaysColumns } =
-        formatSevenDaysTableData(top10Data, amountsData);
-
-      if (sevenDaysRows.length > 0) {
-        generateTable(doc, sevenDaysRows, sevenDaysColumns, 30, 270, pageWidth);
-      }
-
-      console.log("Seven Days Average page added to PDF.");
-      // END SEVEN DAYS AVERAGE PAGE
-
-      // START GROUP CHART
-      // Générer les graphiques pour chaque groupe
-      for (const group of groups) {
-        console.log(`Generating chart for group: ${group.zoneGroupName}`);
-
-        await updateJob(
-          {
-            lastLog: `Generating chart for group: ${group.zoneGroupName}`,
-          },
-          jobName
-        );
-
-        // Récupérer les données du graphique
-        const response = await fetch(
-          `http://localhost:${
-            process.env.PORT || 3000
-          }/kpi/charts/alarms-by-group/${group.zoneGroupName}`
-        );
-        const data = await response.json();
-
-        doc.addPage();
-        const imageBuffer = await generateImage(data);
-        const { tableRows, tableColumns } = formatDataForTable(data);
-
-        // Titre de la page
-        doc.fontSize(18).fillColor("#000").text(`${group.zoneGroupName}`);
-        const zones = await db.models.Zones.findAll();
-        const zoneDescriptions = group.zones
-          .map((z) => zones.find((z1) => z1.zone === z)?.zoneDescription)
-          .join(", ");
-        doc.fontSize(10).text(zoneDescriptions);
-
-        // Graphique 1
-        if (imageBuffer !== null) {
-          doc.image(imageBuffer, 30, 90, {
-            width: pageWidth,
-            height: 200,
-          });
+          // Un bloc en échec ne doit pas empêcher les suivants de se dessiner.
         }
-
-        // Tableau de données
-        if (tableRows.length > 0) {
-          generateTable(doc, tableRows, tableColumns, 30, 300, pageWidth);
-        }
-
-        console.log(`Chart for group: ${group.zoneGroupName} added to PDF.`);
       }
-      // END GROUP CHART
-
-      // START CUSTOM CHART
-      // Custom charts
-      for (const customChart of customCharts) {
-        console.log(`Generating custom chart: ${customChart.chartName}`);
-
-        await updateJob(
-          {
-            lastLog: `Generating custom chart: ${customChart.chartName}`,
-          },
-          jobName
-        );
-
-        const response = await fetch(
-          `http://localhost:${process.env.PORT || 3000}/kpi/charts/custom/${
-            customChart.id
-          }`
-        );
-        const customData = await response.json();
-
-        // Récupérer les détails des alarmes depuis la base de données
-        const alarmIds = JSON.parse(customChart.alarms) || [];
-        const alarmList = await db.models.Alarms.findAll({
-          where: {
-            alarmId: alarmIds,
-          },
-          attributes: ["alarmId", "dataSource", "alarmArea", "alarmText"],
-          raw: true,
-        });
-
-        customData.alarmList = alarmList;
-
-        doc.addPage();
-        const imageBuffer = await generateCustomChartImage(customData);
-        const { tableRows, tableColumns } = formatDataForCustomChart(
-          customData,
-          customChart
-        );
-
-        // Titre de la page
-        doc.fontSize(18).fillColor("#000").text(`${customChart.chartName}`);
-
-        // Graphique
-        if (imageBuffer !== null) {
-          doc.image(imageBuffer, 30, 90, {
-            width: pageWidth,
-            height: 200,
-          });
-        }
-
-        // Tableau de données
-        if (tableRows.length > 0) {
-          generateTable(doc, tableRows, tableColumns, 30, 300, pageWidth);
-        }
-
-        console.log(`Custom chart: ${customChart.chartName} added to PDF.`);
-      }
-      // END CUSTOM CHART
-
-      // START PLANNED INTERVENTIONS
-      console.log("Generating planned interventions summary...");
-      await updateJob(
-        {
-          lastLog: "Generating planned interventions summary...",
-        },
-        jobName
-      );
-
-      // Récupérer toutes les alarmes planifiées avec commentaire
-      const yesterday = dayjs().subtract(1, "day");
-      const startOfDay = yesterday.startOf("day").format("YYYY-MM-DD HH:mm:ss");
-      const endOfDay = yesterday.endOf("day").format("YYYY-MM-DD HH:mm:ss");
-
-      const plannedAlarms = await db.models.Datalog.findAll({
-        where: {
-          timeOfOccurence: {
-            [db.Sequelize.Op.between]: [startOfDay, endOfDay],
-          },
-          x_state: "planned",
-          x_comment: {
-            [db.Sequelize.Op.ne]: null,
-          },
-        },
-        order: [
-          ["x_group", "ASC"],
-          ["timeOfOccurence", "ASC"],
-        ],
-        raw: true,
-      });
-
-      if (plannedAlarms.length > 0) {
-        doc.addPage();
-
-        // Titre de la page
-        doc
-          .fontSize(20)
-          .fillColor("#000")
-          .text("Résumé des interventions planifiées", {
-            align: "center",
-          });
-        doc.moveDown();
-        doc
-          .fontSize(12)
-          .fillColor("#666")
-          .text(
-            `Date: ${yesterday.format("DD/MM/YYYY")} - ${
-              plannedAlarms.length
-            } alarme(s)`,
-            {
-              align: "center",
-            }
-          );
-        doc.moveDown(2);
-
-        // Grouper les alarmes par x_group
-        const groupedPlannedAlarms = plannedAlarms.reduce((acc, alarm) => {
-          const groupKey = alarm.x_group || `single_${alarm.dbId}`;
-          if (!acc[groupKey]) {
-            acc[groupKey] = [];
-          }
-          acc[groupKey].push(alarm);
-          return acc;
-        }, {});
-
-        let yPosition = doc.y;
-        const maxY = doc.page.height - 60; // Marge du bas
-
-        for (const [_, alarms] of Object.entries(groupedPlannedAlarms)) {
-          const firstAlarm = alarms[0]; // Premier alarme du groupe
-          const lastAlarm = alarms[alarms.length - 1]; // Dernière alarme du groupe
-
-          // Calculer le temps total de l'intervention
-          const startTime = dayjs(firstAlarm.timeOfOccurence);
-          const endTime = dayjs(
-            lastAlarm.timeOfAcknowledge || lastAlarm.timeOfOccurence
-          ).add(lastAlarm.duration || 0, "second");
-          const totalDuration = endTime.diff(startTime, "minute");
-          const hours = Math.floor(totalDuration / 60);
-          const minutes = totalDuration % 60;
-          const durationText =
-            hours > 0
-              ? `${hours}h${minutes.toString().padStart(2, "0")}`
-              : `${minutes}min`;
-
-          // Encadré pour chaque intervention
-          doc.rect(30, yPosition - 5, pageWidth, 0).stroke();
-
-          // Titre = Commentaire
-          doc.fontSize(12).fillColor("#0066cc").font("Helvetica-Bold");
-          doc.text(firstAlarm.x_comment || firstAlarm.alarmText, 35, yPosition, {
-            width: pageWidth - 10,
-          });
-          yPosition += 20;
-
-          // Détails de l'intervention
-          doc.fontSize(10).font("Helvetica").fillColor("#333");
-          doc.text(`Zone: ${firstAlarm.dataSource}`, 35, yPosition);
-          doc.text(`Début: ${startTime.format("HH:mm")}`, 200, yPosition);
-          doc.text(`Fin: ${endTime.format("HH:mm")}`, 350, yPosition);
-          doc.text(`Durée: ${durationText}`, 480, yPosition);
-          doc.text(`Nombre d'alarmes: ${alarms.length}`, 580, yPosition);
-
-          yPosition += 20; // Espacement entre les interventions
-
-          // Vérifier si on doit ajouter une nouvelle page
-          if (yPosition > maxY) {
-            doc.addPage();
-            yPosition = 30;
-          }
-        }
-
-        console.log("Planned interventions summary added to PDF.");
-      } else {
-        console.log("No planned interventions found for yesterday.");
-      }
-      // END PLANNED INTERVENTIONS
-
-      // START UNPLANNED INTERVENTIONS
-      console.log("Generating unplanned interventions summary...");
-      await updateJob(
-        {
-          lastLog: "Generating unplanned interventions summary...",
-        },
-        jobName
-      );
-
-      // Récupérer toutes les alarmes non-planifiées avec commentaire
-      const unplannedAlarms = await db.models.Datalog.findAll({
-        where: {
-          timeOfOccurence: {
-            [db.Sequelize.Op.between]: [startOfDay, endOfDay],
-          },
-          x_state: {
-            [db.Sequelize.Op.ne]: "planned",
-          },
-          x_comment: {
-            [db.Sequelize.Op.ne]: null,
-          },
-        },
-        order: [
-          ["x_group", "ASC"],
-          ["timeOfOccurence", "ASC"],
-        ],
-        raw: true,
-      });
-
-      if (unplannedAlarms.length > 0) {
-        doc.addPage();
-
-        // Titre de la page
-        doc
-          .fontSize(20)
-          .fillColor("#000")
-          .text("Résumé des interventions non-planifiées", {
-            align: "center",
-          });
-        doc.moveDown();
-        doc
-          .fontSize(12)
-          .fillColor("#666")
-          .text(
-            `Date: ${yesterday.format("DD/MM/YYYY")} - ${
-              unplannedAlarms.length
-            } alarme(s)`,
-            {
-              align: "center",
-            }
-          );
-        doc.moveDown(2);
-
-        // Grouper les alarmes par x_group
-        const groupedUnplannedAlarms = unplannedAlarms.reduce((acc, alarm) => {
-          const groupKey = alarm.x_group || `single_${alarm.dbId}`;
-          if (!acc[groupKey]) {
-            acc[groupKey] = [];
-          }
-          acc[groupKey].push(alarm);
-          return acc;
-        }, {});
-
-        let yPosition = doc.y;
-        const maxY = doc.page.height - 60; // Marge du bas
-
-        for (const [_, alarms] of Object.entries(
-          groupedUnplannedAlarms
-        )) {
-          const firstAlarm = alarms[0]; // Premier alarme du groupe
-          const lastAlarm = alarms[alarms.length - 1]; // Dernière alarme du groupe
-
-          // Calculer le temps total de l'intervention
-          const startTime = dayjs(firstAlarm.timeOfOccurence);
-          const endTime = dayjs(
-            lastAlarm.timeOfAcknowledge || lastAlarm.timeOfOccurence
-          ).add(lastAlarm.duration || 0, "second");
-          const totalDuration = endTime.diff(startTime, "minute");
-          const hours = Math.floor(totalDuration / 60);
-          const minutes = totalDuration % 60;
-          const durationText =
-            hours > 0
-              ? `${hours}h${minutes.toString().padStart(2, "0")}`
-              : `${minutes}min`;
-
-          // Encadré pour chaque intervention
-          doc.rect(30, yPosition - 5, pageWidth, 0).stroke();
-
-          // Titre = Commentaire
-          doc.fontSize(12).fillColor("#d32f2f").font("Helvetica-Bold");
-          doc.text(firstAlarm.x_comment || firstAlarm.alarmText, 35, yPosition, {
-            width: pageWidth - 10,
-          });
-          yPosition += 20;
-
-          // Détails de l'intervention
-          doc.fontSize(10).font("Helvetica").fillColor("#333");
-          doc.text(`Zone: ${firstAlarm.dataSource}`, 35, yPosition);
-          doc.text(`Début: ${startTime.format("HH:mm")}`, 200, yPosition);
-          doc.text(`Fin: ${endTime.format("HH:mm")}`, 350, yPosition);
-          doc.text(`Durée: ${durationText}`, 480, yPosition);
-          doc.text(`Nombre d'alarmes: ${alarms.length}`, 580, yPosition);
-
-          yPosition += 20; // Espacement entre les interventions
-
-          // Vérifier si on doit ajouter une nouvelle page
-          if (yPosition > maxY) {
-            doc.addPage();
-            yPosition = 30;
-          }
-        }
-
-        console.log("Unplanned interventions summary added to PDF.");
-      } else {
-        console.log("No unplanned interventions found for yesterday.");
-      }
-      // END UNPLANNED INTERVENTIONS
 
       doc.end();
 
       stream.on("finish", async () => {
         console.log(`PDF successfully saved to: ${filePath}`);
-        // Ne pas fermer le navigateur ici, il sera fermé après l'utilisation du PDF
         resolve(filePath);
       });
 
       stream.on("error", async (err) => {
         console.error("Error writing PDF:", err);
-        // Fermer le navigateur puppeteer en cas d'erreur
-        if (browserInstance) {
-          await browserInstance.close();
-          browserInstance = null;
-        }
+        await closePuppeteerBrowser();
         reject(err);
       });
     } catch (error) {
       console.error("Error generating KPI PDF:", error);
-      // Fermer le navigateur puppeteer en cas d'erreur
-      if (browserInstance) {
-        await browserInstance.close();
-        browserInstance = null;
-      }
+      await closePuppeteerBrowser();
       reject(error);
     }
   });
 }
 
 /**
- * Obtient ou crée une instance de navigateur puppeteer
+ * Envoie le PDF par email aux abonnés d'un rapport.
+ * @param {string} pdfPath
+ * @param {object} report instance Reports (id, name, slug)
+ * @param {object[]} subscribers instances Users déjà résolues par sendKPI ([D10])
  */
-async function getBrowser() {
-  if (!browserInstance) {
-    browserInstance = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-  }
-  return browserInstance;
-}
-
-/**
- * Génère l'image du graphique pour un groupe en utilisant puppeteer
- */
-async function generateImage(data) {
-  const filteredData = data.chartData.filter(
-    (d) => d.minProdReached && d.errors > 0 && d.downtime > 0
-  );
-
-  if (filteredData.length === 0) {
-    return null;
-  }
-
-  const labels = filteredData.map((item) => {
-    const date = new Date(item.date);
-    return date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-    });
-  });
-
-  const transportLabel =
-    data.chartData[0]?.transportType === "tray" ? "trays" : "palettes";
-  const transportDivisor =
-    data.chartData[0]?.transportType === "tray" ? "1000" : "100";
-
-  // Calculer la ligne de tendance (régression linéaire)
-  const calculateTrendLine = (values) => {
-    const n = values.length;
-    const xValues = Array.from({ length: n }, (_, i) => i);
-    const yValues = values.map((v) => parseFloat(v));
-
-    const sumX = xValues.reduce((a, b) => a + b, 0);
-    const sumY = yValues.reduce((a, b) => a + b, 0);
-    const sumXY = xValues.reduce((sum, x, i) => sum + x * yValues[i], 0);
-    const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0);
-
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-
-    return {
-      data: xValues.map((x) => parseFloat((slope * x + intercept).toFixed(2))),
-      slope: slope,
-    };
-  };
-
-  const trendLine = calculateTrendLine(filteredData.map((item) => item.errors));
-
-  const getTrendColor = (slope) => {
-    const avgValue =
-      filteredData.reduce((sum, item) => sum + parseFloat(item.errors), 0) /
-      filteredData.length;
-    const relativeSlope = Math.abs(slope) / avgValue;
-
-    if (relativeSlope < 0.01) return "#FFA500";
-    return slope < 0 ? "#00C853" : "#FF1744";
-  };
-
-  const trendColor = getTrendColor(trendLine.slope);
-
-  // Calculer l'échelle max basée sur les données et moyennes
-  const errorValues = filteredData.map((item) => parseFloat(item.errors));
-  const movingAverageValues = filteredData.map((item) =>
-    parseFloat(item.movingAverageErrors)
-  );
-  const allErrorValues = [
-    ...errorValues,
-    ...movingAverageValues,
-    ...trendLine.data,
-  ].sort((a, b) => a - b);
-  const percentile90Index = Math.floor(allErrorValues.length * 0.9);
-  const maxScale =
-    data.options.maxY || Math.round(allErrorValues[percentile90Index] * 1.5);
-
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-  await page.setViewport({
-    width: 2346,
-    height: 600,
-    deviceScaleFactor: 3,
-  });
-
-  const configuration = {
-    type: "bar",
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          type: "line",
-          label: "Tendance",
-          data: trendLine.data,
-          borderColor: trendColor,
-          backgroundColor: trendColor,
-          borderWidth: 3,
-          borderDash: [5, 5],
-          fill: false,
-          pointRadius: 0,
-          tension: 0,
-          yAxisID: "y",
-        },
-        {
-          type: "line",
-          label: "Moyenne 7 jours (nombre)",
-          data: filteredData.map((item) => item.movingAverageErrors),
-          borderColor: "#C10015",
-          backgroundColor: "#C10015",
-          borderWidth: 2,
-          fill: false,
-          pointRadius: 0,
-          tension: 0.2,
-          yAxisID: "y",
-        },
-        {
-          type: "bar",
-          label: `Pannes / ${transportDivisor} ${transportLabel} (temps [minutes])`,
-          data: filteredData.map((item) =>
-            parseFloat(item.downtime.toFixed(2))
-          ),
-          backgroundColor: "#00e396",
-          borderColor: "#00e396",
-          yAxisID: "y1",
-        },
-        {
-          type: "bar",
-          label: `Pannes / ${transportDivisor} ${transportLabel} (nombre)`,
-          data: filteredData.map((item) => parseFloat(item.errors.toFixed(2))),
-          backgroundColor: "#008ffb",
-          borderColor: "#008ffb",
-          yAxisID: "y",
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: {
-        padding: 0,
-      },
-      plugins: {
-        title: {
-          display: true,
-          text: "Total history",
-          font: {
-            size: 20,
-            weight: "bold",
-          },
-        },
-        legend: {
-          display: true,
-          position: "bottom",
-        },
-      },
-      scales: {
-        x: {
-          ticks: {
-            maxRotation: 90,
-            minRotation: 90,
-          },
-          grid: {
-            display: false,
-          },
-        },
-        y: {
-          type: "linear",
-          display: true,
-          position: "left",
-          beginAtZero: true,
-          min: 0,
-          max: maxScale,
-          title: {
-            display: true,
-            text: `Nombre de pannes / ${transportDivisor} ${transportLabel}`,
-          },
-        },
-        y1: {
-          type: "linear",
-          display: true,
-          position: "right",
-          beginAtZero: true,
-          min: 0,
-          title: {
-            display: true,
-            text: `Temps de pannes / ${transportDivisor} ${transportLabel} (minutes)`,
-          },
-          grid: {
-            drawOnChartArea: false,
-          },
-        },
-      },
-    },
-  };
-
-  // Générer le HTML avec Chart.js
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-      <style>
-        body { margin: 0; padding: 0; background: white; }
-        #chartContainer { width: 100vw; height: 100vh; }
-        canvas { width: 100% !important; height: 100% !important; }
-      </style>
-    </head>
-    <body>
-      <div id="chartContainer">
-        <canvas id="myChart"></canvas>
-      </div>
-      <script>
-        const ctx = document.getElementById('myChart');
-        const config = ${JSON.stringify(configuration)};
-        new Chart(ctx, config);
-      </script>
-    </body>
-    </html>
-  `;
-
-  await page.setContent(htmlContent);
-  // Attendre que le graphique soit rendu (compatibilité Puppeteer)
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  const chartElement = await page.$("#chartContainer");
-  const imageBuffer = await chartElement.screenshot({ type: "png" });
-
-  await page.close();
-  return imageBuffer;
-}
-
-/**
- * Génère l'image du graphique pour un custom chart en utilisant puppeteer
- */
-async function generateCustomChartImage(data) {
-  const chartData = data.chartData;
-
-  if (!chartData || chartData.length === 0) return null;
-
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-  await page.setViewport({
-    width: 2346,
-    height: 600,
-    deviceScaleFactor: 3,
-  });
-
-  const labels = chartData.map((item) => {
-    const date = new Date(item.date);
-    return date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-    });
-  });
-
-  // Calculer la ligne de tendance (régression linéaire)
-  const calculateTrendLine = (values) => {
-    const n = values.length;
-    const xValues = Array.from({ length: n }, (_, i) => i);
-    const yValues = values.map((v) => parseFloat(v));
-
-    const sumX = xValues.reduce((a, b) => a + b, 0);
-    const sumY = yValues.reduce((a, b) => a + b, 0);
-    const sumXY = xValues.reduce((sum, x, i) => sum + x * yValues[i], 0);
-    const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0);
-
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-
-    return {
-      data: xValues.map((x) => parseFloat((slope * x + intercept).toFixed(2))),
-      slope: slope,
-    };
-  };
-
-  const trendLine = calculateTrendLine(
-    chartData.map((item) => parseFloat(item.data))
-  );
-
-  const getTrendColor = (slope) => {
-    const avgValue =
-      chartData.reduce((sum, item) => sum + parseFloat(item.data), 0) /
-      chartData.length;
-    const relativeSlope = Math.abs(slope) / avgValue;
-
-    if (relativeSlope < 0.01) return "#FFA500";
-    return slope < 0 ? "#00C853" : "#FF1744";
-  };
-
-  const trendColor = getTrendColor(trendLine.slope);
-
-  // Calculer l'échelle max basée sur les données et moyennes (sans targets)
-  const dataValues = chartData.map((item) => parseFloat(item.data));
-  const movingAverageValues = chartData.map((item) =>
-    parseFloat(item.movingAverage)
-  );
-  const allValues = [
-    ...dataValues,
-    ...movingAverageValues,
-    ...trendLine.data,
-  ].sort((a, b) => a - b);
-  const percentile90Index = Math.floor(allValues.length * 0.9);
-  const maxScale = Math.round(allValues[percentile90Index] * 1.5);
-
-  const configuration = {
-    type: "bar",
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          type: "line",
-          label: "Tendance",
-          data: trendLine.data,
-          borderColor: trendColor,
-          backgroundColor: trendColor,
-          borderWidth: 3,
-          borderDash: [5, 5],
-          fill: false,
-          pointRadius: 0,
-          tension: 0,
-          yAxisID: "y",
-        },
-        {
-          type: "line",
-          label: "Moyenne 7 jours (nombre)",
-          data: chartData.map((item) => parseFloat(item.movingAverage)),
-          borderColor: "#C10015",
-          backgroundColor: "#C10015",
-          borderWidth: 2,
-          fill: false,
-          pointRadius: 0,
-          tension: 0.2,
-          yAxisID: "y",
-        },
-        {
-          type: "line",
-          label: "Target",
-          data: chartData.map((item) => parseFloat(item.target) || 0),
-          borderColor: "#34db34",
-          backgroundColor: "#34db34",
-          borderWidth: 2,
-          fill: false,
-          pointRadius: 0,
-          yAxisID: "y",
-        },
-        {
-          type: "bar",
-          label: "Nombre d'erreurs",
-          data: chartData.map((item) => parseFloat(item.data)),
-          backgroundColor: "#008ffb",
-          borderColor: "#008ffb",
-          yAxisID: "y",
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: {
-        padding: 0,
-      },
-      plugins: {
-        title: {
-          display: true,
-          text: "Total history",
-          font: {
-            size: 20,
-            weight: "bold",
-          },
-        },
-        legend: {
-          display: true,
-          position: "bottom",
-        },
-      },
-      scales: {
-        x: {
-          ticks: {
-            maxRotation: 90,
-            minRotation: 90,
-          },
-          grid: {
-            display: false,
-          },
-        },
-        y: {
-          type: "linear",
-          display: true,
-          position: "left",
-          beginAtZero: true,
-          min: 0,
-          max: maxScale,
-          title: {
-            display: true,
-            text: "Nombre d'erreurs",
-          },
-        },
-      },
-    },
-  };
-
-  // Générer le HTML avec Chart.js
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-      <style>
-        body { margin: 0; padding: 0; background: white; }
-        #chartContainer { width: 100vw; height: 100vh; }
-        canvas { width: 100% !important; height: 100% !important; }
-      </style>
-    </head>
-    <body>
-      <div id="chartContainer">
-        <canvas id="myChart"></canvas>
-      </div>
-      <script>
-        const ctx = document.getElementById('myChart');
-        const config = ${JSON.stringify(configuration)};
-        new Chart(ctx, config);
-      </script>
-    </body>
-    </html>
-  `;
-
-  await page.setContent(htmlContent);
-  // Attendre que le graphique soit rendu (compatibilité Puppeteer)
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  const chartElement = await page.$("#chartContainer");
-  const imageBuffer = await chartElement.screenshot({ type: "png" });
-
-  await page.close();
-  return imageBuffer;
-}
-
-/**
- * Formate les données pour le custom chart
- */
-function formatDataForCustomChart(data, customChart) {
-  const tableData = data.tableData;
-  let alarmMap = new Map();
-  const dates = new Set();
-
-  if (!tableData || tableData.length === 0)
-    return { tableRows: [], tableColumns: [] };
-
-  tableData.forEach((row) => {
-    dates.add(row.day_date);
-
-    try {
-      const alarmsDetail = JSON.parse(`[${row.alarms_detail}]`);
-      alarmsDetail.forEach((alarm) => {
-        if (!alarmMap.has(alarm.alarm_id)) {
-          alarmMap.set(alarm.alarm_id, {
-            dailyBreakdown: {},
-            alarmId: alarm.alarm_id,
-          });
-        }
-
-        alarmMap.get(alarm.alarm_id).dailyBreakdown[row.day_date] = alarm.count;
-      });
-    } catch (e) {
-      console.error("Error parsing alarms_detail:", e);
-    }
-  });
-
-  alarmMap.forEach((value, key) => {
-    value.count = Object.values(value.dailyBreakdown).reduce(
-      (sum, current) => sum + current,
-      0
-    );
-    alarmMap.set(key, value);
-  });
-
-  alarmMap = new Map(
-    Array.from(alarmMap.entries()).sort((a, b) => b[1].count - a[1].count)
-  );
-
-  const sortedDates = Array.from(dates).sort();
-
-  const tableColumns = [
-    { name: "dataSource", label: "Source", align: "left" },
-    { name: "alarmArea", label: "Module", align: "left" },
-    { name: "error", label: "Erreur", align: "left" },
-  ];
-
-  sortedDates.forEach((date) => {
-    const dateObj = new Date(date);
-    const formattedDate = `${String(dateObj.getDate()).padStart(
-      2,
-      "0"
-    )}/${String(dateObj.getMonth() + 1).padStart(2, "0")}`;
-
-    tableColumns.push({
-      name: date,
-      label: formattedDate,
-      align: "center",
-    });
-  });
-
-  const alarmList = data.alarmList || [];
-
-  const tableRows = Array.from(alarmMap.values()).map((alarm) => {
-    const alarmDetails = alarmList.find((a) => a.alarmId === alarm.alarmId);
-
-    const row = {
-      alarmId: alarm.alarmId,
-      dataSource: alarmDetails?.dataSource || "UNKNOWN",
-      alarmArea: alarmDetails?.alarmArea || "",
-      error: alarmDetails?.alarmText || alarm.alarmId,
-    };
-
-    sortedDates.forEach((date) => {
-      row[date] = alarm.dailyBreakdown[date] || 0;
-    });
-
-    return row;
-  });
-
-  return { tableRows, tableColumns, sortedDates };
-}
-
-/**
- * Formate les données pour la table d'un groupe
- */
-function formatDataForTable(data) {
-  let alarmMap = new Map();
-  const dates = new Set();
-
-  if (data.alarms.length === 0) return { tableRows: [], tableColumns: [] };
-
-  data.alarms.forEach((row) => {
-    dates.add(row.alarm_date);
-
-    if (!alarmMap.has(row.alarmId)) {
-      alarmMap.set(row.alarmId, {
-        dataSource: row.dataSource,
-        alarmArea: row.alarmArea,
-        alarmId: row.alarmId,
-        error: row.alarmText,
-        dailyBreakdown: {},
-      });
-    }
-
-    alarmMap.get(row.alarmId).dailyBreakdown[row.alarm_date] = row.daily_count;
-  });
-
-  alarmMap.forEach((value, key) => {
-    value.count = Object.values(value.dailyBreakdown).reduce(
-      (sum, current) => sum + current,
-      0
-    );
-    alarmMap.set(key, value);
-  });
-
-  alarmMap = new Map(
-    Array.from(alarmMap.entries()).sort((a, b) => b[1].count - a[1].count)
-  );
-  const sortedDates = Array.from(dates).sort();
-
-  const tableColumns = [
-    { name: "dataSource", label: "Source", align: "left" },
-    { name: "alarmArea", label: "Module", align: "left" },
-    { name: "error", label: "Erreur", align: "left" },
-  ];
-
-  sortedDates.forEach((date) => {
-    const dateObj = new Date(date);
-    const formattedDate = `${String(dateObj.getDate()).padStart(
-      2,
-      "0"
-    )}/${String(dateObj.getMonth() + 1).padStart(2, "0")}`;
-
-    tableColumns.push({
-      name: date,
-      label: formattedDate,
-      align: "center",
-    });
-  });
-
-  const tableRows = Array.from(alarmMap.values()).map((alarm) => {
-    const row = {
-      alarmId: alarm.alarmId,
-      dataSource: alarm.dataSource,
-      alarmArea: alarm.alarmArea,
-      error: alarm.error,
-    };
-
-    sortedDates.forEach((date) => {
-      row[date] = alarm.dailyBreakdown[date] || 0;
-    });
-
-    return row;
-  });
-
-  // Ajouter la ligne des quantités de trays/palettes
-  if (
-    sortedDates
-      .map((d) => {
-        return data.chartData.find((t) => t.date === d)?.traysAmount || 0;
-      })
-      .some((v) => v > 0)
-  ) {
-    tableRows.unshift({
-      dataSource: "----",
-      alarmArea: "----",
-      error:
-        data.chartData[0].transportType === "tray"
-          ? "Quantité de trays"
-          : "Quantité de palettes",
-      ...Object.fromEntries(
-        sortedDates.map((date) => {
-          const trayEntry = data.chartData.find((t) => t.date === date);
-          return [date, trayEntry ? trayEntry.traysAmount : 0];
-        })
-      ),
-    });
-  }
-
-  return { tableRows, tableColumns, sortedDates };
-}
-
-/**
- * Génère l'image du graphique SevenDaysAverage
- */
-async function generateSevenDaysAverageImage(data) {
-  const max = Math.round(
-    Math.max(data.errors_per_thousand, data.downtime_minutes_per_thousand) * 1.5
-  );
-
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-  await page.setViewport({ width: 900, height: 400, deviceScaleFactor: 2 });
-
-  const configuration = {
-    type: "bar",
-    data: {
-      datasets: [
-        {
-          label: "Nombre de pannes",
-          data: [
-            {
-              x: "Nombre d'erreurs moyen",
-              y: parseFloat(data.errors_per_thousand.toFixed(2)),
-            },
-          ],
-          backgroundColor: "#008ffb",
-        },
-        {
-          label: "Temps de pannes [min]",
-          data: [
-            {
-              x: "Temps de panne moyen",
-              y: parseFloat(data.downtime_minutes_per_thousand.toFixed(2)),
-            },
-          ],
-          backgroundColor: "#00e396",
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        title: {
-          display: true,
-          text: "Rapport des 7 derniers jours",
-          font: { size: 18, weight: "bold" },
-        },
-        legend: { display: true, position: "bottom" },
-        datalabels: { display: false },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          min: 0,
-          max: max,
-          title: { display: true, text: "Valeur / 1000 trays" },
-        },
-      },
-    },
-  };
-
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-      <style>
-        body { margin: 0; padding: 0; background: white; }
-        #chartContainer { width: 100vw; height: 100vh; }
-        canvas { width: 100% !important; height: 100% !important; }
-      </style>
-    </head>
-    <body>
-      <div id="chartContainer">
-        <canvas id="myChart"></canvas>
-      </div>
-      <script>
-        const ctx = document.getElementById('myChart');
-        const config = ${JSON.stringify(configuration)};
-        new Chart(ctx, config);
-      </script>
-    </body>
-    </html>
-  `;
-
-  await page.setContent(htmlContent);
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  const chartElement = await page.$("#chartContainer");
-  const imageBuffer = await chartElement.screenshot({ type: "png" });
-  await page.close();
-  return imageBuffer;
-}
-
-/**
- * Formate les données top-10 des 7 derniers jours pour le tableau
- */
-function formatSevenDaysTableData(top10Data, amountsData) {
-  const alarmMap = new Map();
-  const dates = new Set();
-
-  top10Data.forEach((row) => {
-    dates.add(row.alarm_date);
-    if (!alarmMap.has(row.alarmId)) {
-      alarmMap.set(row.alarmId, {
-        dataSource: row.dataSource,
-        alarmArea: row.alarmArea,
-        alarmId: row.alarmId,
-        error: row.alarmText,
-        dailyBreakdown: {},
-      });
-    }
-    alarmMap.get(row.alarmId).dailyBreakdown[row.alarm_date] = row.daily_count;
-  });
-
-  const sortedDates = Array.from(dates).sort();
-
-  const tableColumns = [
-    { name: "dataSource", label: "Source", align: "left" },
-    { name: "alarmArea", label: "Module", align: "left" },
-    { name: "error", label: "Erreur", align: "left" },
-  ];
-
-  sortedDates.forEach((date) => {
-    const dateObj = new Date(date);
-    const formattedDate = `${String(dateObj.getDate()).padStart(2, "0")}/${String(
-      dateObj.getMonth() + 1
-    ).padStart(2, "0")}`;
-    tableColumns.push({ name: date, label: formattedDate, align: "center" });
-  });
-
-  const tableRows = Array.from(alarmMap.values()).map((alarm) => {
-    const row = {
-      alarmId: alarm.alarmId,
-      dataSource: alarm.dataSource,
-      alarmArea: alarm.alarmArea,
-      error: alarm.error,
-    };
-    sortedDates.forEach((date) => {
-      row[date] = alarm.dailyBreakdown[date] || 0;
-    });
-    return row;
-  });
-
-  // Lignes de quantités
-  tableRows.unshift({
-    dataSource: "----",
-    alarmArea: "----",
-    error: "Quantité de trays sortie (entrée palletiseurs)",
-    ...Object.fromEntries(
-      sortedDates.map((date) => {
-        const total = amountsData
-          .filter(
-            (t) =>
-              t.date === date && ["X101", "X102", "X103", "X104"].includes(t.zoneName)
-          )
-          .reduce((sum, curr) => sum + curr.total, 0);
-        return [date, total];
-      })
-    ),
-  });
-  tableRows.unshift({
-    dataSource: "----",
-    alarmArea: "----",
-    error: "Quantité de trays entrée (sortie dépalettiseurs)",
-    ...Object.fromEntries(
-      sortedDates.map((date) => {
-        const total = amountsData
-          .filter(
-            (t) =>
-              t.date === date && ["X001", "X002", "X003", "X004"].includes(t.zoneName)
-          )
-          .reduce((sum, curr) => sum + curr.total, 0);
-        return [date, total];
-      })
-    ),
-  });
-  tableRows.unshift({
-    dataSource: "----",
-    alarmArea: "----",
-    error: "Quantité de palettes sortie",
-    ...Object.fromEntries(
-      sortedDates.map((date) => {
-        const total = amountsData
-          .filter((t) => t.date === date && ["F013"].includes(t.zoneName))
-          .reduce((sum, curr) => sum + curr.total, 0);
-        return [date, total];
-      })
-    ),
-  });
-  tableRows.unshift({
-    dataSource: "----",
-    alarmArea: "----",
-    error: "Quantité de palettes entrée",
-    ...Object.fromEntries(
-      sortedDates.map((date) => {
-        const total = amountsData
-          .filter(
-            (t) =>
-              t.date === date &&
-              ["X001_PAL", "X002_PAL", "X003_PAL"].includes(t.zoneName)
-          )
-          .reduce((sum, curr) => sum + curr.total, 0);
-        return [date, total];
-      })
-    ),
-  });
-
-  return { tableRows, tableColumns };
-}
-
-/**
- * Génère une table dans le PDF
- */
-function generateTable(
-  doc,
-  tableRows,
-  tableColumns,
-  startX = 30,
-  startY = null,
-  tableWidth = null
-) {
-  if (startY === null) startY = doc.y;
-  if (tableWidth === null) tableWidth = doc.page.width - 60;
-
-  const fontSize = 7;
-  const rowHeight = 13;
-  const headerHeight = 20;
-
-  const fixedColumnsWidth = {
-    dataSource: Math.min(40, tableWidth * 0.15),
-    alarmArea: Math.min(40, tableWidth * 0.15),
-    error: Math.min(350, tableWidth * 0.55),
-  };
-
-  const dateColumns = tableColumns.filter(
-    (col) => !["dataSource", "alarmArea", "error"].includes(col.name)
-  );
-
-  const fixedWidth =
-    fixedColumnsWidth.dataSource +
-    fixedColumnsWidth.alarmArea +
-    fixedColumnsWidth.error;
-  const remainingWidth = tableWidth - fixedWidth;
-  const dateColumnWidth = Math.max(15, remainingWidth / dateColumns.length);
-
-  const getCellColor = (value, row, allRows, colName) => {
-    if (row.dataSource === "----") return "#a5d8ff";
-    if (
-      colName === "dataSource" ||
-      colName === "alarmArea" ||
-      colName === "error"
-    )
-      return null;
-    if (value === null || value === undefined || value === 0) return "#e9ecef";
-
-    const rowsValues = allRows
-      .slice(1)
-      .map((r) =>
-        Object.keys(r)
-          .filter(
-            (k) => !["alarmId", "dataSource", "alarmArea", "error"].includes(k)
-          )
-          .map((k) => r[k])
-      )
-      .flat()
-      .filter((v) => v > 0);
-
-    const maxValue = Math.max(...rowsValues);
-    const minValue = Math.min(...rowsValues);
-    const range = maxValue - minValue;
-    const normalizedValue = (value - minValue) / range;
-
-    if (normalizedValue < 0.1) return "#51cf66";
-    if (normalizedValue < 0.2) return "#ffd43b";
-    if (normalizedValue < 0.5) return "#ff922b";
-    return "#ff6b6b";
-  };
-
-  // Dessiner l'en-tête
-  doc.fontSize(fontSize).font("Helvetica-Bold");
-  let currentX = startX;
-
-  ["dataSource", "alarmArea", "error"].forEach((colName) => {
-    const col = tableColumns.find((c) => c.name === colName);
-    const colWidth = fixedColumnsWidth[colName];
-
-    doc
-      .rect(currentX, startY, colWidth, headerHeight)
-      .fillAndStroke("#f1f3f5", "#000");
-    doc.fillColor("#000").text(col.label, currentX + 5, startY + 8, {
-      width: colWidth - 10,
-      align: col.align || "left",
-    });
-
-    currentX += colWidth;
-  });
-
-  // En-têtes des dates
-  dateColumns.forEach((col) => {
-    doc
-      .rect(currentX, startY, dateColumnWidth, headerHeight)
-      .fillAndStroke("#f1f3f5", "#000");
-    doc.fillColor("#000").text(col.label, currentX + 2, startY + 8, {
-      width: dateColumnWidth - 4,
-      align: "center",
-    });
-
-    currentX += dateColumnWidth;
-  });
-
-  startY += headerHeight;
-
-  // Dessiner les lignes de données
-  doc.font("Helvetica").fontSize(fontSize);
-
-  tableRows.forEach((row) => {
-    if (startY > doc.page.height - 60) {
-      doc.addPage();
-      startY = 50;
-    }
-
-    currentX = startX;
-
-    // Colonnes fixes
-    ["dataSource", "alarmArea", "error"].forEach((colName) => {
-      const colWidth = fixedColumnsWidth[colName];
-      const value = row[colName] || "";
-
-      doc.rect(currentX, startY, colWidth, rowHeight).stroke("#000");
-      doc.fillColor("#000").text(value, currentX + 5, startY + 4, {
-        width: colWidth - 10,
-        align: "left",
-        ellipsis: true,
-      });
-
-      currentX += colWidth;
-    });
-
-    // Colonnes de dates
-    dateColumns.forEach((col) => {
-      const value = row[col.name] || 0;
-      const bgColor = getCellColor(value, row, tableRows, col.name);
-
-      if (bgColor) {
-        doc
-          .rect(currentX, startY, dateColumnWidth, rowHeight)
-          .fillAndStroke(bgColor, "#000");
-      } else {
-        doc.rect(currentX, startY, dateColumnWidth, rowHeight).stroke("#000");
-      }
-
-      if (value > 0) {
-        doc.fillColor("#000").text(value.toString(), currentX + 2, startY + 4, {
-          width: dateColumnWidth - 4,
-          align: "center",
-        });
-      }
-
-      currentX += dateColumnWidth;
-    });
-
-    startY += rowHeight;
-  });
-}
-
-/**
- * Dessine le tableau croisé des chutes de tours de caisses (dates x zones),
- * avec une ligne de total par zone, dans le même style visuel que generateTable().
- */
-function generateCaseCrashesTable(
-  doc,
-  rows,
-  zones,
-  startX = 30,
-  startY = null,
-  tableWidth = null
-) {
-  if (startY === null) startY = doc.y;
-  if (tableWidth === null) tableWidth = doc.page.width - 60;
-
-  const fontSize = 7;
-  const rowHeight = 13;
-  const headerHeight = 20;
-
-  const dateColumnWidth = Math.min(60, tableWidth * 0.2);
-  const zoneColumnWidth = Math.max(
-    20,
-    (tableWidth - dateColumnWidth) / zones.length
-  );
-
-  const totals = {};
-  zones.forEach((zone) => {
-    totals[zone] = rows.reduce((sum, row) => sum + (row[zone] || 0), 0);
-  });
-
-  const drawHeaderRow = (label, getValue, isBold, y) => {
-    doc.font(isBold ? "Helvetica-Bold" : "Helvetica").fontSize(fontSize);
-    let currentX = startX;
-
-    doc
-      .rect(currentX, y, dateColumnWidth, headerHeight)
-      .fillAndStroke("#f1f3f5", "#000");
-    doc.fillColor("#000").text(label, currentX + 5, y + 6, {
-      width: dateColumnWidth - 10,
-      align: "left",
-    });
-    currentX += dateColumnWidth;
-
-    zones.forEach((zone) => {
-      doc
-        .rect(currentX, y, zoneColumnWidth, headerHeight)
-        .fillAndStroke("#f1f3f5", "#000");
-      doc.fillColor("#000").text(getValue(zone), currentX + 2, y + 6, {
-        width: zoneColumnWidth - 4,
-        align: "center",
-      });
-      currentX += zoneColumnWidth;
-    });
-
-    return y + headerHeight;
-  };
-
-  // En-tête (noms de zones)
-  startY = drawHeaderRow("Date", (zone) => zone, true, startY);
-
-  // Lignes de données
-  doc.font("Helvetica").fontSize(fontSize);
-  rows.forEach((row) => {
-    if (startY > doc.page.height - 60) {
-      doc.addPage();
-      startY = 50;
-    }
-
-    let currentX = startX;
-
-    doc.rect(currentX, startY, dateColumnWidth, rowHeight).stroke("#000");
-    doc
-      .fillColor("#000")
-      .text(dayjs(row.date).format("DD/MM/YYYY"), currentX + 5, startY + 4, {
-        width: dateColumnWidth - 10,
-        align: "left",
-      });
-    currentX += dateColumnWidth;
-
-    zones.forEach((zone) => {
-      const value = row[zone] || 0;
-      const bgColor = value > 0 ? "#ffd43b" : "#e9ecef";
-
-      doc
-        .rect(currentX, startY, zoneColumnWidth, rowHeight)
-        .fillAndStroke(bgColor, "#000");
-
-      if (value > 0) {
-        doc.fillColor("#000").text(value.toString(), currentX + 2, startY + 4, {
-          width: zoneColumnWidth - 4,
-          align: "center",
-        });
-      }
-
-      currentX += zoneColumnWidth;
-    });
-
-    startY += rowHeight;
-
-    // Vérifier si on doit ajouter une nouvelle page pour la prochaine ligne
-    if (startY > doc.page.height - 60) {
-      doc.addPage();
-      startY = 50;
-    }
-  });
-
-  // Ligne de total en bas
-  startY = drawHeaderRow("Total", (zone) => totals[zone], true, startY);
-}
-
-/**
- * Envoie le PDF par email aux utilisateurs configurés
- */
-async function sendPDFByEmail(pdfPath) {
-  const db = getDB();
+async function sendPDFByEmail(pdfPath, report, subscribers) {
   // Vérifier si le fichier existe
   if (!fs.existsSync(pdfPath)) {
     throw new Error(`PDF file not found: ${pdfPath}`);
@@ -1996,22 +415,12 @@ async function sendPDFByEmail(pdfPath) {
     return;
   }
 
-  // Récupérer les utilisateurs qui doivent recevoir le rapport
-  const users = await db.models.Users.findAll({
-    where: { recieveDailyReport: true },
-  });
-
-  if (!users || users.length === 0) {
-    console.log("No users configured to receive daily report.");
-    return;
-  }
-
-  const recipientEmails = users
+  const recipientEmails = subscribers
     .map((u) => u.email)
     .filter((email) => email && email.includes("@"));
 
   if (recipientEmails.length === 0) {
-    console.log("No valid email addresses found.");
+    console.log(`No valid email addresses found for report "${report.name}".`);
     return;
   }
 
@@ -2033,7 +442,7 @@ async function sendPDFByEmail(pdfPath) {
   const mailOptions = {
     from: `MLR Tool <${config.email.user}>`,
     to: recipientEmails,
-    subject: `KPI Daily Report - ${dayjs()
+    subject: `${report.name} - ${dayjs()
       .subtract(1, "day")
       .format("YYYY-MM-DD")}`,
     text: `
@@ -2066,10 +475,10 @@ This is an automatically generated email, please do not reply.`,
   return new Promise((resolve, reject) => {
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
-        console.error("Error sending KPI report email:", error);
+        console.error(`Error sending "${report.name}" report email:`, error);
         reject(error);
       } else {
-        console.log("KPI report email sent:", info.response);
+        console.log(`"${report.name}" report email sent:`, info.response);
         console.log(`Email sent to: ${recipientEmails.join(", ")}`);
         resolve(info);
       }

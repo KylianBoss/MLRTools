@@ -33,6 +33,12 @@ yarn-error.log*
 .env.local*
 .env
 
-storage/
+storage/*
+# Migrations SQL/Sequelize suivent le schéma versionné dans database.js —
+# elles doivent rester traçables dans git, contrairement au reste de
+# storage/ (secrets, PDFs générés, cache). Git ne peut pas ré-inclure un
+# sous-dossier d'un dossier déjà exclu en bloc, d'où storage/* ci-dessus
+# (exclut le contenu, pas le dossier) plutôt que storage/.
+!storage/migrations/
 
 *.md

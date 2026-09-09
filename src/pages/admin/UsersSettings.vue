@@ -94,15 +94,59 @@
           <q-td>
             {{ props.row.email }}
           </q-td>
-          <q-td key="recieveDailyReport" :props="props" class="text-center">
-            <q-toggle
-              v-model="props.row.recieveDailyReport"
-              color="primary"
+          <q-td key="reportIds" :props="props" class="text-center">
+            <q-select
+              behavior="dialog"
+              v-model="props.row.reportIds"
+              :options="reportOptions"
+              multiple
+              emit-value
+              map-options
               @update:model-value="App.updateUser(props.row)"
+              style="max-width: 200px; overflow: hidden"
+              dense
               :disable="
                 !props.row.email || !props.row.autorised || props.row.isBot
               "
-            />
+            >
+              <template v-slot:selected>
+                {{ props.row.reportIds?.length || 0 }} rapport(s)
+              </template>
+              <template
+                v-slot:option="{
+                  index,
+                  itemProps,
+                  opt,
+                  selected,
+                  toggleOption,
+                }"
+              >
+                <div
+                  v-if="
+                    index === 0 ||
+                    reportOptions[index - 1].section !== opt.section
+                  "
+                >
+                  <q-item-label
+                    class="text-bold q-mt-md q-mb-sm text-uppercase q-pl-xs"
+                  >
+                    {{ opt.section }}
+                  </q-item-label>
+                  <q-separator />
+                </div>
+                <q-item v-bind="itemProps">
+                  <q-item-section>
+                    <q-item-label>{{ opt.label }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-toggle
+                      :model-value="selected"
+                      @update:model-value="toggleOption(opt)"
+                    />
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
           </q-td>
           <q-td key="recieveDailyAlarmsByUser" :props="props" class="text-center">
             <q-toggle
@@ -269,8 +313,10 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useAppStore } from "stores/app";
+import { api } from "boot/axios";
 
 const App = useAppStore();
+const reportOptions = ref([]);
 const columns = [
   {
     name: "id",
@@ -321,10 +367,10 @@ const columns = [
     sortable: false,
   },
   {
-    name: "recieveDailyReport",
-    label: "DAILY REPORT",
+    name: "reportIds",
+    label: "RAPPORTS KPI",
     align: "center",
-    field: "recieveDailyReport",
+    field: (row) => row.reportIds?.length || 0,
     sortable: true,
   },
   {
@@ -549,6 +595,11 @@ const access = [
   { section: "Admin", label: "Users", value: "canAccessAdminUser" },
   { section: "Admin", label: "Bots", value: "canAccessAdminBots" },
   { section: "Admin", label: "Settings", value: "canAccessAdminSettings" },
+  // Rapports KPI
+  { section: "Rapports KPI", label: "Accès", value: "canAccessAdminReports" },
+  { section: "Rapports KPI", label: "Créer", value: "canCreateReports" },
+  { section: "Rapports KPI", label: "Modifier", value: "canUpdateReports" },
+  { section: "Rapports KPI", label: "Supprimer", value: "canDeleteReports" },
 ];
 
 const rowClass = (row) => {
@@ -580,8 +631,20 @@ const saveEditDialog = () => {
   closeEditDialog();
 };
 
-onMounted(() => {
+onMounted(async () => {
   App.getUsers();
+  try {
+    const response = await api.get("/reports");
+    reportOptions.value = response.data
+      .filter((r) => r.active)
+      .map((r) => ({
+        section: "Rapports KPI",
+        label: r.name,
+        value: r.id,
+      }));
+  } catch (error) {
+    console.error("Error fetching reports for user assignment:", error);
+  }
 });
 </script>
 

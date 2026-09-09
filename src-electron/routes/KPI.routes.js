@@ -9,6 +9,7 @@ import path from "path";
 import nodemailer from "nodemailer";
 import minMax from "dayjs/plugin/minMax.js";
 import { generateKPIPDF, closePuppeteerBrowser } from "../cron/SendKPI.js";
+import { requirePermission } from "../middlewares/permissions.js";
 
 dayjs.extend(minMax);
 
@@ -17,13 +18,29 @@ const STORAGE_PATH = path.join(process.cwd(), "storage");
 const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 
 // Générer et télécharger le PDF KPI directement (sans passer par la queue)
-router.get("/generate-pdf-download", async (req, res) => {
+router.get(
+  "/generate-pdf-download",
+  requirePermission("canAccessAdminReports"),
+  async (req, res) => {
   const db = getDB();
   try {
-    console.log("Generating KPI PDF for direct download...");
+    const reportId = parseInt(req.query.reportId, 10);
+    if (!reportId) {
+      res.status(400).json({ error: "reportId query param is required" });
+      return;
+    }
+
+    // [D5] Garde 404 systématique sur reportId invalide/inexistant
+    const report = await db.models.Reports.findByPk(reportId);
+    if (!report) {
+      res.status(404).json({ error: "Report not found" });
+      return;
+    }
+
+    console.log(`Generating KPI PDF for direct download (report "${report.name}")...`);
 
     // Générer le PDF
-    const pdfPath = await generateKPIPDF();
+    const pdfPath = await generateKPIPDF(reportId);
 
     console.log(`PDF generated at: ${pdfPath}`);
 
