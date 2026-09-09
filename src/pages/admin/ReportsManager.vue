@@ -230,7 +230,7 @@ const toggleActive = async (report) => {
   const nextActive = report.active === false;
 
   try {
-    await api.put(`/reports/${report.id}`, { active: nextActive });
+    await api.put(`/reports/${report.id}/active`, { active: nextActive });
     report.active = nextActive;
     $q.notify({
       type: "positive",

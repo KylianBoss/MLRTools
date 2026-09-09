@@ -196,8 +196,10 @@ router.post("/", requirePermission("canCreateReports"), async (req, res) => {
   }
 });
 
-// PUT /:id : mettre à jour un rapport (nom/description/active). [D3] la
-// "suppression" côté UI passe par ici avec active:false, pas de route DELETE.
+// PUT /:id : mettre à jour le nom/description d'un rapport (canUpdateReports).
+// L'activation/désactivation passe par la route dédiée PUT /:id/active
+// (canDeleteReports) — routes séparées pour que les 4 permissions [D11]
+// contrôlent chacune exactement l'action qu'elle décrit.
 router.put("/:id", requirePermission("canUpdateReports"), async (req, res) => {
   const db = getDB();
   try {
@@ -210,7 +212,7 @@ router.put("/:id", requirePermission("canUpdateReports"), async (req, res) => {
       return;
     }
 
-    const { name, description, active } = req.body;
+    const { name, description } = req.body;
     const updates = {};
 
     if (name !== undefined && name !== report.name) {
@@ -218,13 +220,41 @@ router.put("/:id", requirePermission("canUpdateReports"), async (req, res) => {
       updates.slug = await generateUniqueSlug(db, name, reportId);
     }
     if (description !== undefined) updates.description = description;
-    if (active !== undefined) updates.active = active;
 
     await report.update(updates);
 
     res.json(report);
   } catch (error) {
     console.error("Error updating report:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /:id/active : bascule active/inactive (soft delete [D3]). Route dédiée
+// gardée par canDeleteReports, séparée de PUT /:id (canUpdateReports).
+router.put("/:id/active", requirePermission("canDeleteReports"), async (req, res) => {
+  const db = getDB();
+  try {
+    const reportId = parseInt(req.params.id, 10);
+    const report = await db.models.Reports.findByPk(reportId);
+
+    // [D5] Garde 404 systématique
+    if (!report) {
+      res.status(404).json({ error: "Report not found" });
+      return;
+    }
+
+    const { active } = req.body;
+    if (typeof active !== "boolean") {
+      res.status(400).json({ error: "active (boolean) is required" });
+      return;
+    }
+
+    await report.update({ active });
+
+    res.json(report);
+  } catch (error) {
+    console.error("Error toggling report active state:", error);
     res.status(500).json({ error: error.message });
   }
 });
