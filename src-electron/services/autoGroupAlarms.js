@@ -199,6 +199,10 @@ export const autoGroupAlarms = async (targetDate, db) => {
       });
 
       captured.push(trigger);
+      // Comme pour les autres groupes, c'est la première alarme dans le
+      // temps qui "gagne" (reçoit le commentaire et s'affiche pour le
+      // groupe) — le trigger n'est pas forcément la plus ancienne.
+      captured.sort((a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence));
       if (captured.length < 2) continue;
 
       captured.forEach((a) => usedDbIds.add(a.dbId));

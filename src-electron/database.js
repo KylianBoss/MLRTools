@@ -346,7 +346,7 @@ function initDB(config) {
         comment: {
           type: DataTypes.STRING,
           allowNull: true,
-          comment: "Commentaire automatiquement appliqué aux alarmes (optionnel pour action=treat)",
+          comment: "Commentaire automatiquement appliqué aux alarmes (optionnel pour action=treat et action=trigger : si vide, retombe sur le texte de la première alarme temporelle du groupe)",
         },
         groupBy: {
           type: DataTypes.ENUM("location", "zone"),

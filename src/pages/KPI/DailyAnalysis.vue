@@ -1008,7 +1008,7 @@
             <q-input v-model="ruleForm.dataSourceFilter" label="Source de données (optionnel)" outlined dense hint="ex: X001 — laisser vide pour toutes les sources" />
           </template>
 
-          <q-input v-model="ruleForm.comment" label="Commentaire appliqué" outlined dense :hint="ruleForm.action === 'treat' ? 'Optionnel' : 'Obligatoire'" />
+          <q-input v-model="ruleForm.comment" label="Commentaire appliqué" outlined dense :hint="ruleForm.action === 'group' ? 'Obligatoire' : 'Optionnel — si vide, le texte de la première alarme (temporellement) du groupe est utilisé'" />
           <template v-if="ruleForm.action === 'group'">
             <q-select
               v-model="ruleForm.groupBy"
@@ -2321,6 +2321,10 @@ const computeAutoGroups = () => {
       });
 
       captured.push(trigger);
+      // Comme pour les autres groupes, c'est la première alarme dans le
+      // temps qui "gagne" (reçoit le commentaire et s'affiche pour le
+      // groupe) — le trigger n'est pas forcément la plus ancienne.
+      captured.sort((a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence));
       if (captured.length < 2) continue;
 
       captured.forEach((a) => usedDbIds.add(a.dbId));
