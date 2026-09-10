@@ -924,15 +924,15 @@
 
             <template v-slot:body-cell-action="props">
               <q-td :props="props">
-                <q-badge :color="props.row.action === 'treat' ? 'positive' : 'primary'">
-                  {{ props.row.action === "treat" ? "Traiter" : "Grouper" }}
+                <q-badge :color="props.row.action === 'treat' ? 'positive' : props.row.action === 'trigger' ? 'deep-orange' : 'primary'">
+                  {{ props.row.action === "treat" ? "Traiter" : props.row.action === "trigger" ? "Déclencheur" : "Grouper" }}
                 </q-badge>
               </q-td>
             </template>
 
             <template v-slot:body-cell-groupBy="props">
               <q-td :props="props">
-                <span v-if="props.row.action !== 'treat'">
+                <span v-if="props.row.action === 'group'">
                   <q-badge :color="props.row.groupBy === 'zone' ? 'deep-purple' : 'blue-grey'">
                     {{ props.row.groupBy === "zone" ? "Zone" : "Emplacement" }}
                   </q-badge>
@@ -943,7 +943,10 @@
 
             <template v-slot:body-cell-zone="props">
               <q-td :props="props">
-                <span v-if="props.row.zone">
+                <span v-if="props.row.action === 'trigger' && props.row.zone">
+                  {{ props.row.zone.map((z) => `${z.dataSource}.${z.alarmArea}`).join(", ") }}
+                </span>
+                <span v-else-if="props.row.zone">
                   {{ props.row.zone.join(", ") }}
                 </span>
                 <span v-else class="text-grey-5">—</span>
@@ -988,18 +991,22 @@
 
         <q-card-section class="q-gutter-sm">
           <q-input v-model="ruleForm.name" label="Nom" outlined dense />
-          <q-input v-model="ruleForm.keyword" label="Mot-clé dans alarmText (optionnel)" outlined dense hint="Insensible à la casse" />
-          <q-input v-model="ruleForm.alarmCodePattern" label="Regex alarmArea (optionnel)" outlined dense hint="ex: 14[0-9][0-9], 2000|14[0-9][0-9] — \d est converti automatiquement en [0-9]" :rules="[v => !v || isValidRegex(v) || 'Regex invalide']" />
-          <q-input v-model="ruleForm.dataSourceFilter" label="Source de données (optionnel)" outlined dense hint="ex: X001 — laisser vide pour toutes les sources" />
           <q-select
             v-model="ruleForm.action"
-            :options="[{ label: 'Grouper les alarmes', value: 'group' }, { label: 'Marquer comme traité', value: 'treat' }]"
+            :options="[{ label: 'Grouper les alarmes', value: 'group' }, { label: 'Marquer comme traité', value: 'treat' }, { label: 'Déclencheur (capturer une zone pendant la durée d\'une alarme)', value: 'trigger' }]"
             label="Action"
             outlined
             dense
             emit-value
             map-options
           />
+
+          <template v-if="ruleForm.action !== 'trigger'">
+            <q-input v-model="ruleForm.keyword" label="Mot-clé dans alarmText (optionnel)" outlined dense hint="Insensible à la casse" />
+            <q-input v-model="ruleForm.alarmCodePattern" label="Regex alarmArea (optionnel)" outlined dense hint="ex: 14[0-9][0-9], 2000|14[0-9][0-9] — \d est converti automatiquement en [0-9]" :rules="[v => !v || isValidRegex(v) || 'Regex invalide']" />
+            <q-input v-model="ruleForm.dataSourceFilter" label="Source de données (optionnel)" outlined dense hint="ex: X001 — laisser vide pour toutes les sources" />
+          </template>
+
           <q-input v-model="ruleForm.comment" label="Commentaire appliqué" outlined dense :hint="ruleForm.action === 'treat' ? 'Optionnel' : 'Obligatoire'" />
           <template v-if="ruleForm.action === 'group'">
             <q-select
@@ -1020,11 +1027,46 @@
               hint="Ex: F004, F005, F006"
             />
           </template>
+          <template v-if="ruleForm.action === 'trigger'">
+            <div class="text-caption text-grey-7">
+              L'alarme <strong>déclencheuse</strong> (ex: interrupteur à clé) est identifiée par son alarmId exact
+              ci-dessous — pas de mot-clé ni de regex, pour éviter toute ambiguïté. Toutes les alarmes des
+              emplacements (dataSource + alarmArea) de la zone ci-dessous, survenant à partir du début de
+              l'incident déjà en cours jusqu'à la clôture de l'alarme déclencheuse (+ marge), seront regroupées
+              avec elle.
+            </div>
+            <q-input
+              v-model="ruleForm.triggerAlarmId"
+              label="alarmId exact de l'alarme déclencheuse"
+              outlined
+              dense
+              hint="ex: identifiant unique de l'alarme 'interrupteur à clé' dans la table Alarms — utilisez le champ Source ci-dessous pour restreindre si besoin"
+            />
+            <q-input v-model="ruleForm.dataSourceFilter" label="Source de la porte (optionnel)" outlined dense hint="ex: F013 — restreint le déclencheur à cette dataSource si l'alarmId n'est pas déjà unique" />
+            <q-input
+              v-model.number="ruleForm.windowAfterMs"
+              type="number"
+              label="Marge après clôture de l'alarme déclencheuse (secondes)"
+              outlined
+              dense
+              hint="Ex: 120 pour 2 minutes"
+              :model-value="Math.round((ruleForm.windowAfterMs ?? 120000) / 1000)"
+              @update:model-value="val => ruleForm.windowAfterMs = Math.round((val || 0) * 1000)"
+            />
+
+            <div class="text-subtitle2 q-mt-sm">Zone à capturer (emplacements précis)</div>
+            <div v-for="(pair, idx) in ruleFormZonePairs" :key="idx" class="row q-gutter-sm items-center">
+              <q-input v-model="pair.dataSource" label="dataSource" outlined dense class="col" hint="ex: F013" />
+              <q-input v-model="pair.alarmArea" label="alarmArea" outlined dense class="col" hint="ex: M2000" />
+              <q-btn flat round dense icon="close" color="negative" @click="ruleFormZonePairs.splice(idx, 1)" />
+            </div>
+            <q-btn flat dense icon="add" label="Ajouter un emplacement" color="primary" @click="ruleFormZonePairs.push({ dataSource: '', alarmArea: '' })" />
+          </template>
         </q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat label="Annuler" color="grey-7" v-close-popup />
-          <q-btn flat label="Tester" icon="science" color="primary" @click="testRuleRegex" :loading="testRegexLoading" :disable="!ruleForm.alarmCodePattern && !ruleForm.keyword && !ruleForm.dataSourceFilter" />
+          <q-btn v-if="ruleForm.action !== 'trigger'" flat label="Tester" icon="science" color="primary" @click="testRuleRegex" :loading="testRegexLoading" :disable="!ruleForm.alarmCodePattern && !ruleForm.keyword && !ruleForm.dataSourceFilter" />
           <q-btn label="Enregistrer" color="primary" @click="saveRule" :loading="ruleFormLoading" />
         </q-card-actions>
       </q-card>
@@ -1086,6 +1128,7 @@ const $q = useQuasar();
 const App = useAppStore();
 
 const alarms = ref([]);
+const triggerAlarmsPool = ref([]);
 const selectedAlarms = ref([]);
 const loading = ref(false);
 const validationLoading = ref(false);
@@ -1312,6 +1355,20 @@ const loadAlarms = async () => {
     });
   } finally {
     loading.value = false;
+  }
+};
+
+// Pool séparé des occurrences des alarmes déclencheuses (règles "trigger"),
+// toutes catégories confondues (ex: 'human') — non affichées dans la liste
+// principale mais nécessaires pour évaluer ces règles.
+const loadTriggerAlarmsPool = async () => {
+  try {
+    const response = await api.get("/alarms/daily-analysis-triggers", {
+      params: { date: selectedDateISO.value },
+    });
+    triggerAlarmsPool.value = response.data;
+  } catch (error) {
+    console.error("Error fetching trigger alarms pool:", error);
   }
 };
 
@@ -1874,12 +1931,13 @@ const testRegexLoading = ref(false);
 const testRegexDialog = ref(false);
 const testRegexResults = ref([]);
 const editingRule = ref(null);
-const ruleForm = ref({ name: "", keyword: "", alarmCodePattern: "", dataSourceFilter: "", comment: "", action: "group", groupBy: "location" });
+const ruleForm = ref({ name: "", keyword: "", alarmCodePattern: "", dataSourceFilter: "", comment: "", action: "group", groupBy: "location", windowAfterMs: 120000, triggerAlarmId: "" });
 const ruleFormZoneText = ref("");
+const ruleFormZonePairs = ref([]); // [{ dataSource, alarmArea }] — utilisé quand action === "trigger"
 
 const rulesColumns = [
   { name: "name", label: "Nom", field: "name", align: "left", sortable: true },
-  { name: "keyword", label: "Mot-clé", field: "keyword", align: "left" },
+  { name: "keyword", label: "Mot-clé / alarmId déclencheur", field: (row) => (row.action === "trigger" ? row.triggerAlarmId : row.keyword), align: "left" },
   { name: "alarmCodePattern", label: "Area pattern", field: "alarmCodePattern", align: "center" },
   { name: "dataSourceFilter", label: "Source", field: "dataSourceFilter", align: "center" },
   { name: "action", label: "Action", field: "action", align: "center" },
@@ -1900,19 +1958,24 @@ const copyRule = (rule) => {
     comment: rule.comment || "",
     action: rule.action || "group",
     groupBy: rule.groupBy || "location",
+    windowAfterMs: rule.windowAfterMs ?? 120000,
+    triggerAlarmId: rule.triggerAlarmId || "",
   };
-  ruleFormZoneText.value = rule.zone ? rule.zone.join(", ") : "";
+  ruleFormZoneText.value = rule.action !== "trigger" && rule.zone ? rule.zone.join(", ") : "";
+  ruleFormZonePairs.value = rule.action === "trigger" && rule.zone ? rule.zone.map((z) => ({ ...z })) : [];
   ruleFormDialog.value = true;
 };
 
 const openRuleForm = (rule = null) => {
   editingRule.value = rule;
   if (rule) {
-    ruleForm.value = { name: rule.name, keyword: rule.keyword, alarmCodePattern: rule.alarmCodePattern || "", dataSourceFilter: rule.dataSourceFilter || "", comment: rule.comment, action: rule.action || "group", groupBy: rule.groupBy || "location" };
-    ruleFormZoneText.value = rule.zone ? rule.zone.join(", ") : "";
+    ruleForm.value = { name: rule.name, keyword: rule.keyword, alarmCodePattern: rule.alarmCodePattern || "", dataSourceFilter: rule.dataSourceFilter || "", comment: rule.comment, action: rule.action || "group", groupBy: rule.groupBy || "location", windowAfterMs: rule.windowAfterMs ?? 120000, triggerAlarmId: rule.triggerAlarmId || "" };
+    ruleFormZoneText.value = rule.action !== "trigger" && rule.zone ? rule.zone.join(", ") : "";
+    ruleFormZonePairs.value = rule.action === "trigger" && rule.zone ? rule.zone.map((z) => ({ ...z })) : [];
   } else {
-    ruleForm.value = { name: "", keyword: "", alarmCodePattern: "", dataSourceFilter: "", comment: "", action: "group", groupBy: "location" };
+    ruleForm.value = { name: "", keyword: "", alarmCodePattern: "", dataSourceFilter: "", comment: "", action: "group", groupBy: "location", windowAfterMs: 120000, triggerAlarmId: "" };
     ruleFormZoneText.value = "";
+    ruleFormZonePairs.value = [];
   }
   ruleFormDialog.value = true;
 };
@@ -1947,27 +2010,49 @@ const saveRule = async () => {
     $q.notify({ type: "warning", message: "Le nom est requis" });
     return;
   }
-  if (!ruleForm.value.keyword && !ruleForm.value.alarmCodePattern && !ruleForm.value.dataSourceFilter) {
-    $q.notify({ type: "warning", message: "Au moins un critère de filtre est requis (mot-clé, regex ou source)" });
-    return;
+
+  if (ruleForm.value.action === "trigger") {
+    if (!ruleForm.value.triggerAlarmId?.trim()) {
+      $q.notify({ type: "warning", message: "L'alarmId exact de l'alarme déclencheuse est requis" });
+      return;
+    }
+    const validPairs = ruleFormZonePairs.value.filter((p) => p.dataSource?.trim() && p.alarmArea?.trim());
+    if (validPairs.length === 0) {
+      $q.notify({ type: "warning", message: "Au moins un emplacement (dataSource + alarmArea) est requis pour la zone" });
+      return;
+    }
+  } else {
+    if (!ruleForm.value.keyword && !ruleForm.value.alarmCodePattern && !ruleForm.value.dataSourceFilter) {
+      $q.notify({ type: "warning", message: "Au moins un critère de filtre est requis (mot-clé, regex ou source)" });
+      return;
+    }
+    if (ruleForm.value.alarmCodePattern && !isValidRegex(ruleForm.value.alarmCodePattern)) {
+      $q.notify({ type: "warning", message: "La regex alarmArea est invalide" });
+      return;
+    }
   }
-  if (ruleForm.value.alarmCodePattern && !isValidRegex(ruleForm.value.alarmCodePattern)) {
-    $q.notify({ type: "warning", message: "La regex alarmArea est invalide" });
-    return;
-  }
+
   try {
     ruleFormLoading.value = true;
-    const zone =
-      ruleForm.value.action === "group" && ruleForm.value.groupBy === "zone"
-        ? ruleFormZoneText.value.split(",").map((s) => s.trim()).filter(Boolean)
-        : null;
+
+    let zone = null;
+    if (ruleForm.value.action === "trigger") {
+      zone = ruleFormZonePairs.value
+        .filter((p) => p.dataSource?.trim() && p.alarmArea?.trim())
+        .map((p) => ({ dataSource: p.dataSource.trim(), alarmArea: p.alarmArea.trim() }));
+    } else if (ruleForm.value.action === "group" && ruleForm.value.groupBy === "zone") {
+      zone = ruleFormZoneText.value.split(",").map((s) => s.trim()).filter(Boolean);
+    }
 
     const payload = {
       ...ruleForm.value,
       zone,
-      alarmCodePattern: ruleForm.value.alarmCodePattern
-        ? ruleForm.value.alarmCodePattern.replace(/\\d/g, "[0-9]")
-        : null,
+      keyword: ruleForm.value.action === "trigger" ? null : ruleForm.value.keyword,
+      alarmCodePattern:
+        ruleForm.value.action !== "trigger" && ruleForm.value.alarmCodePattern
+          ? ruleForm.value.alarmCodePattern.replace(/\\d/g, "[0-9]")
+          : null,
+      triggerAlarmId: ruleForm.value.action === "trigger" ? ruleForm.value.triggerAlarmId.trim() : null,
     };
 
     if (editingRule.value?.id) {
@@ -1977,6 +2062,7 @@ const saveRule = async () => {
     }
 
     await loadAutoGroupRules();
+    await loadTriggerAlarmsPool();
     ruleFormDialog.value = false;
     $q.notify({ type: "positive", message: "Règle enregistrée" });
   } catch (e) {
@@ -2101,6 +2187,91 @@ const computeAutoGroups = () => {
       alarms: matchingAlarms,
       comment: rule.comment || "",
     });
+  }
+
+  // --- Règles "trigger" : une alarme déclencheuse (alarmId exact, ex:
+  // interrupteur à clé) capture toutes les alarmes d'une zone (paires
+  // précises dataSource+alarmArea) sur toute la durée de l'incident : on
+  // remonte jusqu'au début de la chaîne d'alarmes déjà en cours dans la zone
+  // à l'instant du déclencheur (l'ouverture de porte suit déjà une erreur),
+  // puis on étend jusqu'à sa clôture + une marge après. ---
+  const GAP_MS = 5 * 60 * 1000;
+  for (const rule of autoGroupRules.value) {
+    if (!rule.enabled || rule.action !== "trigger" || !rule.zone?.length || !rule.triggerAlarmId) continue;
+
+    const triggers = triggerAlarmsPool.value.filter(
+      (a) =>
+        a.alarmId === rule.triggerAlarmId &&
+        !a.x_group &&
+        !a.x_treated &&
+        (rule.dataSourceFilter ? a.dataSource === rule.dataSourceFilter : true) &&
+        !usedDbIds.has(a.dbId)
+    );
+    if (triggers.length === 0) continue;
+
+    const windowAfterMs = rule.windowAfterMs ?? 120000;
+    const inZone = (a) => rule.zone.some((z) => z.dataSource === a.dataSource && z.alarmArea === a.alarmArea);
+    const zoneCandidates = candidates
+      .filter(inZone)
+      .sort((a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence));
+
+    for (const trigger of triggers) {
+      if (usedDbIds.has(trigger.dbId)) continue; // déjà absorbée par un trigger précédent
+
+      const triggerStart = new Date(trigger.timeOfOccurence).getTime();
+      const triggerEnd =
+        new Date(trigger.timeOfAcknowledge || trigger.timeOfOccurence).getTime() + windowAfterMs;
+
+      // Remonte la chaîne d'alarmes de la zone déjà connectées (gap <= GAP_MS)
+      // qui touche l'instant du déclencheur, pour englober l'incident déjà en
+      // cours avant l'ouverture de la porte.
+      let windowStart = triggerStart;
+      for (let i = zoneCandidates.length - 1; i >= 0; i--) {
+        const a = zoneCandidates[i];
+        if (usedDbIds.has(a.dbId)) continue;
+        const aStart = new Date(a.timeOfOccurence).getTime();
+        const aEnd = new Date(a.timeOfAcknowledge || a.timeOfOccurence).getTime();
+        if (aStart > windowStart) continue;
+        if (windowStart - aEnd > GAP_MS) break;
+        windowStart = Math.min(windowStart, aStart);
+      }
+
+      // Étend en avant : toute alarme de la zone qui s'enchaîne (gap <= GAP_MS)
+      // depuis la fenêtre courante est absorbée, jusqu'à triggerEnd inclus.
+      let windowEnd = triggerEnd;
+      let extended = true;
+      while (extended) {
+        extended = false;
+        for (const a of zoneCandidates) {
+          if (usedDbIds.has(a.dbId)) continue;
+          const aStart = new Date(a.timeOfOccurence).getTime();
+          if (aStart < windowStart || aStart > windowEnd + GAP_MS) continue;
+          const aEnd = new Date(a.timeOfAcknowledge || a.timeOfOccurence).getTime() + windowAfterMs;
+          if (aEnd > windowEnd) {
+            windowEnd = aEnd;
+            extended = true;
+          }
+        }
+      }
+
+      const captured = zoneCandidates.filter((a) => {
+        if (usedDbIds.has(a.dbId)) return false;
+        const t = new Date(a.timeOfOccurence).getTime();
+        return t >= windowStart && t <= windowEnd;
+      });
+
+      captured.push(trigger);
+      if (captured.length < 2) continue;
+
+      captured.forEach((a) => usedDbIds.add(a.dbId));
+      proposals.push({
+        type: "group",
+        fromRule: true,
+        location: rule.name,
+        alarms: captured,
+        comment: rule.comment,
+      });
+    }
   }
 
   // --- Règles "group" avec groupBy: "zone" ---
@@ -2436,6 +2607,7 @@ const handleKeyboardShortcuts = (e) => {
 watch(selectedDate, async (val) => {
   if (val?.length === 10) {
     await loadAlarms();
+    await loadTriggerAlarmsPool();
     await loadPendingInterventions();
     if (isYesterday.value) await loadDailyDoneStatus();
     else dailyDone.value = false;
@@ -2443,7 +2615,7 @@ watch(selectedDate, async (val) => {
 });
 
 onMounted(async () => {
-  await Promise.all([loadAlarms(), loadPendingInterventions(), loadAutoGroupRules(), loadDailyDoneStatus()]);
+  await Promise.all([loadAlarms(), loadTriggerAlarmsPool(), loadPendingInterventions(), loadAutoGroupRules(), loadDailyDoneStatus()]);
   window.addEventListener("keydown", handleKeyboardShortcuts);
 });
 
