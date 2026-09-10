@@ -877,8 +877,8 @@
     </q-dialog>
 
     <!-- Rules Dialog -->
-    <q-dialog v-model="rulesDialog" persistent transition-show="scale" transition-hide="scale">
-      <q-card style="min-width: 800px; max-width: 1000px">
+    <q-dialog v-model="rulesDialog" persistent maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card>
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">Règles de traitement automatique</div>
           <q-space />
@@ -892,7 +892,7 @@
             row-key="id"
             flat
             dense
-            :pagination="{ rowsPerPage: 10 }"
+            :pagination="{ rowsPerPage: 20 }"
           >
             <template v-slot:top-right>
               <q-btn
@@ -1069,10 +1069,13 @@
               @update:model-value="val => ruleForm.windowAfterMs = Math.round((val || 0) * 1000)"
             />
 
-            <div class="text-subtitle2 q-mt-sm">Zone à capturer (emplacements précis)</div>
+            <div class="text-subtitle2 q-mt-sm">
+              Zone à capturer (emplacements précis)
+              <span class="text-caption text-grey-7">— ex: dataSource F013, alarmArea M2000</span>
+            </div>
             <div v-for="(pair, idx) in ruleFormZonePairs" :key="idx" class="row q-gutter-sm items-center">
-              <q-input v-model="pair.dataSource" label="dataSource" outlined dense class="col" hint="ex: F013" />
-              <q-input v-model="pair.alarmArea" label="alarmArea" outlined dense class="col" hint="ex: M2000" />
+              <q-input v-model="pair.dataSource" label="dataSource" outlined dense class="col" />
+              <q-input v-model="pair.alarmArea" label="alarmArea" outlined dense class="col" />
               <q-btn flat round dense icon="close" color="negative" @click="ruleFormZonePairs.splice(idx, 1)" />
             </div>
             <q-btn flat dense icon="add" label="Ajouter un emplacement" color="primary" @click="ruleFormZonePairs.push({ dataSource: '', alarmArea: '' })" />
