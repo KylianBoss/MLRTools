@@ -999,6 +999,7 @@
             dense
             emit-value
             map-options
+            @update:model-value="val => { if (val === 'trigger') primeTriggerAlarmOptions(ruleForm.triggerAlarmId); }"
           />
 
           <template v-if="ruleForm.action !== 'trigger'">
@@ -1035,14 +1036,28 @@
               l'incident déjà en cours jusqu'à la clôture de l'alarme déclencheuse (+ marge), seront regroupées
               avec elle.
             </div>
-            <q-input
+            <q-select
               v-model="ruleForm.triggerAlarmId"
-              label="alarmId exact de l'alarme déclencheuse"
+              :options="filteredTriggerAlarmOptions"
+              label="Alarme déclencheuse"
               outlined
               dense
-              hint="ex: identifiant unique de l'alarme 'interrupteur à clé' dans la table Alarms — utilisez le champ Source ci-dessous pour restreindre si besoin"
-            />
-            <q-input v-model="ruleForm.dataSourceFilter" label="Source de la porte (optionnel)" outlined dense hint="ex: F013 — restreint le déclencheur à cette dataSource si l'alarmId n'est pas déjà unique" />
+              use-input
+              fill-input
+              hide-selected
+              emit-value
+              map-options
+              input-debounce="0"
+              :loading="alarmsCatalogLoading"
+              hint="Cherchez par code, texte ou dataSource"
+              @filter="filterTriggerAlarmOptions"
+            >
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey">Aucune alarme trouvée</q-item-section>
+                </q-item>
+              </template>
+            </q-select>
             <q-input
               v-model.number="ruleForm.windowAfterMs"
               type="number"
@@ -1935,6 +1950,40 @@ const ruleForm = ref({ name: "", keyword: "", alarmCodePattern: "", dataSourceFi
 const ruleFormZoneText = ref("");
 const ruleFormZonePairs = ref([]); // [{ dataSource, alarmArea }] — utilisé quand action === "trigger"
 
+// Catalogue des alarmes (table Alarms) pour le select avec recherche du
+// déclencheur d'une règle "trigger"
+const alarmsCatalog = ref([]);
+const alarmsCatalogLoading = ref(false);
+const filteredTriggerAlarmOptions = ref([]);
+
+const alarmCatalogLabel = (a) => `${a.alarmId} — ${a.alarmText || "(sans texte)"} [${a.dataSource}${a.alarmArea ? "/" + a.alarmArea : ""}]`;
+
+const loadAlarmsCatalog = async () => {
+  if (alarmsCatalog.value.length > 0) return; // déjà chargé
+  alarmsCatalogLoading.value = true;
+  try {
+    const response = await api.get("/alarms/unique");
+    alarmsCatalog.value = response.data.map((a) => ({ label: alarmCatalogLabel(a), value: a.alarmId }));
+  } catch (e) {
+    console.error("Erreur chargement catalogue alarmes:", e);
+  } finally {
+    alarmsCatalogLoading.value = false;
+  }
+};
+
+const filterTriggerAlarmOptions = (val, update) => {
+  update(() => {
+    if (!val) {
+      filteredTriggerAlarmOptions.value = alarmsCatalog.value.slice(0, 50);
+      return;
+    }
+    const needle = val.toLowerCase();
+    filteredTriggerAlarmOptions.value = alarmsCatalog.value
+      .filter((o) => o.label.toLowerCase().includes(needle))
+      .slice(0, 50);
+  });
+};
+
 const rulesColumns = [
   { name: "name", label: "Nom", field: "name", align: "left", sortable: true },
   { name: "keyword", label: "Mot-clé / alarmId déclencheur", field: (row) => (row.action === "trigger" ? row.triggerAlarmId : row.keyword), align: "left" },
@@ -1947,6 +1996,15 @@ const rulesColumns = [
   { name: "enabled", label: "Actif", field: "enabled", align: "center" },
   { name: "actions", label: "", field: "actions", align: "right" },
 ];
+
+// Précharge le catalogue d'alarmes et pré-remplit les options affichées du
+// select trigger avec l'alarme déjà sélectionnée (le cas échéant), pour que
+// son libellé s'affiche immédiatement même avant toute recherche.
+const primeTriggerAlarmOptions = async (currentAlarmId) => {
+  await loadAlarmsCatalog();
+  const current = currentAlarmId ? alarmsCatalog.value.filter((o) => o.value === currentAlarmId) : [];
+  filteredTriggerAlarmOptions.value = current.length ? current : alarmsCatalog.value.slice(0, 50);
+};
 
 const copyRule = (rule) => {
   editingRule.value = null;
@@ -1963,6 +2021,7 @@ const copyRule = (rule) => {
   };
   ruleFormZoneText.value = rule.action !== "trigger" && rule.zone ? rule.zone.join(", ") : "";
   ruleFormZonePairs.value = rule.action === "trigger" && rule.zone ? rule.zone.map((z) => ({ ...z })) : [];
+  if (rule.action === "trigger") primeTriggerAlarmOptions(rule.triggerAlarmId);
   ruleFormDialog.value = true;
 };
 
@@ -1972,6 +2031,7 @@ const openRuleForm = (rule = null) => {
     ruleForm.value = { name: rule.name, keyword: rule.keyword, alarmCodePattern: rule.alarmCodePattern || "", dataSourceFilter: rule.dataSourceFilter || "", comment: rule.comment, action: rule.action || "group", groupBy: rule.groupBy || "location", windowAfterMs: rule.windowAfterMs ?? 120000, triggerAlarmId: rule.triggerAlarmId || "" };
     ruleFormZoneText.value = rule.action !== "trigger" && rule.zone ? rule.zone.join(", ") : "";
     ruleFormZonePairs.value = rule.action === "trigger" && rule.zone ? rule.zone.map((z) => ({ ...z })) : [];
+    if (rule.action === "trigger") primeTriggerAlarmOptions(rule.triggerAlarmId);
   } else {
     ruleForm.value = { name: "", keyword: "", alarmCodePattern: "", dataSourceFilter: "", comment: "", action: "group", groupBy: "location", windowAfterMs: 120000, triggerAlarmId: "" };
     ruleFormZoneText.value = "";
