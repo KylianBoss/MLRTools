@@ -878,7 +878,7 @@
 
     <!-- Rules Dialog -->
     <q-dialog v-model="rulesDialog" persistent maximized transition-show="slide-up" transition-hide="slide-down">
-      <q-card class="bg-dark text-white">
+      <q-card style="background-color: #f5f5f5">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">Règles de traitement automatique</div>
           <q-space />
@@ -892,7 +892,6 @@
             row-key="id"
             flat
             dense
-            dark
             :pagination="{ rowsPerPage: 25 }"
           >
             <template v-slot:top-right>
@@ -967,10 +966,10 @@
 
             <template v-slot:body-cell-actions="props">
               <q-td :props="props">
-                <q-btn flat round dense icon="edit" size="sm" color="grey-5" @click="openRuleForm(props.row)">
+                <q-btn flat round dense icon="edit" size="sm" color="grey-7" @click="openRuleForm(props.row)">
                   <q-tooltip>Modifier</q-tooltip>
                 </q-btn>
-                <q-btn flat round dense icon="content_copy" size="sm" color="grey-5" @click="copyRule(props.row)">
+                <q-btn flat round dense icon="content_copy" size="sm" color="grey-7" @click="copyRule(props.row)">
                   <q-tooltip>Dupliquer</q-tooltip>
                 </q-btn>
                 <q-btn flat round dense icon="delete" size="sm" color="negative" @click="deleteRule(props.row)">
