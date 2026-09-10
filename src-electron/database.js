@@ -319,29 +319,34 @@ function initDB(config) {
         },
         keyword: {
           type: DataTypes.STRING,
-          allowNull: false,
-          comment: "Mot-clé à chercher dans alarmText (insensible à la casse)",
+          allowNull: true,
+          comment: "Mot-clé à chercher dans alarmText (insensible à la casse). Non utilisé si action = trigger",
         },
         alarmCodePattern: {
           type: DataTypes.STRING,
           allowNull: true,
-          comment: "Pattern wildcard sur alarmCode, ex: '14xx', '1[4-5]xx' (x = chiffre)",
+          comment: "Pattern wildcard sur alarmCode, ex: '14xx', '1[4-5]xx' (x = chiffre). Non utilisé si action = trigger",
         },
         dataSourceFilter: {
           type: DataTypes.STRING,
           allowNull: true,
           comment: "Filtre optionnel sur une dataSource précise, ex: 'X001'",
         },
+        triggerAlarmId: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: "alarmId exact et unique (table Alarms) de l'alarme déclencheuse, peu importe son type ('human' inclus). Utilisé uniquement si action = trigger — pas de mot-clé/regex ici pour éviter toute ambiguïté sur le déclencheur.",
+        },
         action: {
-          type: DataTypes.ENUM("group", "treat"),
+          type: DataTypes.ENUM("group", "treat", "trigger"),
           allowNull: false,
           defaultValue: "group",
-          comment: "'group' = grouper les alarmes, 'treat' = marquer comme traitées sans grouper",
+          comment: "'group' = grouper les alarmes, 'treat' = marquer comme traitées sans grouper, 'trigger' = capturer toutes les alarmes d'une zone pendant qu'une alarme déclencheuse est active + une marge",
         },
         comment: {
           type: DataTypes.STRING,
           allowNull: true,
-          comment: "Commentaire automatiquement appliqué aux alarmes (optionnel pour action=treat)",
+          comment: "Commentaire automatiquement appliqué aux alarmes (optionnel pour action=treat et action=trigger : si vide, retombe sur le texte de la première alarme temporelle du groupe)",
         },
         groupBy: {
           type: DataTypes.ENUM("location", "zone"),
@@ -352,7 +357,13 @@ function initDB(config) {
         zone: {
           type: DataTypes.JSON,
           allowNull: true,
-          comment: "Array de dataSources concernées (utilisé si groupBy = zone)",
+          comment: "Si groupBy = zone: array de dataSources (string[]). Si action = trigger: array de paires précises {dataSource, alarmArea} définissant la zone à capturer (un même alarmArea pouvant exister sur plusieurs dataSources).",
+        },
+        windowAfterMs: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
+          defaultValue: 120000,
+          comment: "Marge en ms après la clôture (timeOfAcknowledge, sinon timeOfOccurence) de l'alarme déclencheuse pendant laquelle les alarmes de 'zone' sont capturées (utilisé si action = trigger). Défaut 2 minutes.",
         },
         enabled: {
           type: DataTypes.BOOLEAN,

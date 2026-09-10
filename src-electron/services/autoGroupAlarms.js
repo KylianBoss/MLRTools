@@ -27,21 +27,40 @@ export const autoGroupAlarms = async (targetDate, db) => {
 
   const MIN_ALARM_DURATION = await db.models.Settings.getValue("MIN_ALARM_DURATION");
 
+  const dayRange = [
+    targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+    targetDate.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+  ];
+
   const candidates = await db.models.Datalog.findAll({
     where: {
       x_group: null,
       x_treated: false,
       alarmId: primaryAlarms,
       duration: { [Op.gte]: MIN_ALARM_DURATION },
-      timeOfOccurence: {
-        [Op.between]: [
-          targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
-          targetDate.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
-        ],
-      },
+      timeOfOccurence: { [Op.between]: dayRange },
     },
     order: [["timeOfOccurence", "ASC"]],
   });
+
+  // 2bis. Pool séparé pour les déclencheurs de règles "trigger" : toutes
+  // catégories d'alarme confondues (y compris 'human'), sans le filtre de
+  // durée minimale (un événement type "porte ouverte" peut être bref).
+  const triggerRuleIds = rules
+    .filter((r) => r.action === "trigger" && r.triggerAlarmId)
+    .map((r) => r.triggerAlarmId);
+
+  const triggerPool = triggerRuleIds.length
+    ? await db.models.Datalog.findAll({
+        where: {
+          x_group: null,
+          x_treated: false,
+          alarmId: triggerRuleIds,
+          timeOfOccurence: { [Op.between]: dayRange },
+        },
+        order: [["timeOfOccurence", "ASC"]],
+      })
+    : [];
 
   // 3. Construire les proposals (même logique que le frontend)
   const proposals = [];
@@ -108,6 +127,87 @@ export const autoGroupAlarms = async (targetDate, db) => {
 
     matchingAlarms.forEach((a) => usedDbIds.add(a.dbId));
     proposals.push({ type: "treat", alarms: matchingAlarms, comment: rule.comment });
+  }
+
+  // Règles "trigger" : une alarme déclencheuse (identifiée par son alarmId
+  // exact, ex: interrupteur à clé) capture toutes les alarmes d'une zone
+  // (paires précises dataSource+alarmArea) sur toute la durée de l'incident :
+  // on remonte jusqu'au début de la chaîne d'alarmes déjà en cours dans la
+  // zone à l'instant du déclencheur (l'ouverture de porte suit déjà une
+  // erreur), puis on étend jusqu'à sa clôture + une marge après.
+  for (const rule of rules) {
+    if (rule.action !== "trigger" || !rule.zone?.length || !rule.triggerAlarmId) continue;
+
+    const triggers = triggerPool.filter(
+      (a) =>
+        a.alarmId === rule.triggerAlarmId &&
+        (rule.dataSourceFilter ? a.dataSource === rule.dataSourceFilter : true) &&
+        !usedDbIds.has(a.dbId)
+    );
+    if (triggers.length === 0) continue;
+
+    const windowAfterMs = rule.windowAfterMs ?? 120000;
+    const inZone = (a) =>
+      rule.zone.some((z) => z.dataSource === a.dataSource && z.alarmArea === a.alarmArea);
+    const zoneCandidates = candidates
+      .filter(inZone)
+      .sort((a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence));
+
+    for (const trigger of triggers) {
+      if (usedDbIds.has(trigger.dbId)) continue; // déjà absorbée par un trigger précédent
+
+      const triggerStart = new Date(trigger.timeOfOccurence).getTime();
+      const triggerEnd =
+        new Date(trigger.timeOfAcknowledge || trigger.timeOfOccurence).getTime() + windowAfterMs;
+
+      // Remonte la chaîne d'alarmes de la zone déjà connectées (gap <= GAP_MS)
+      // qui touche l'instant du déclencheur, pour englober l'incident déjà en
+      // cours avant l'ouverture de la porte.
+      let windowStart = triggerStart;
+      for (let i = zoneCandidates.length - 1; i >= 0; i--) {
+        const a = zoneCandidates[i];
+        if (usedDbIds.has(a.dbId)) continue;
+        const aStart = new Date(a.timeOfOccurence).getTime();
+        const aEnd = new Date(a.timeOfAcknowledge || a.timeOfOccurence).getTime();
+        if (aStart > windowStart) continue; // pas encore atteint l'instant du trigger
+        if (windowStart - aEnd > GAP_MS) break; // rupture de chaîne, on arrête de remonter
+        windowStart = Math.min(windowStart, aStart);
+      }
+
+      // Étend en avant : toute alarme de la zone qui s'enchaîne (gap <= GAP_MS)
+      // depuis la fenêtre courante est absorbée, jusqu'à triggerEnd inclus.
+      let windowEnd = triggerEnd;
+      let extended = true;
+      while (extended) {
+        extended = false;
+        for (const a of zoneCandidates) {
+          if (usedDbIds.has(a.dbId)) continue;
+          const aStart = new Date(a.timeOfOccurence).getTime();
+          if (aStart < windowStart || aStart > windowEnd + GAP_MS) continue;
+          const aEnd = new Date(a.timeOfAcknowledge || a.timeOfOccurence).getTime() + windowAfterMs;
+          if (aEnd > windowEnd) {
+            windowEnd = aEnd;
+            extended = true;
+          }
+        }
+      }
+
+      const captured = zoneCandidates.filter((a) => {
+        if (usedDbIds.has(a.dbId)) return false;
+        const t = new Date(a.timeOfOccurence).getTime();
+        return t >= windowStart && t <= windowEnd;
+      });
+
+      captured.push(trigger);
+      // Comme pour les autres groupes, c'est la première alarme dans le
+      // temps qui "gagne" (reçoit le commentaire et s'affiche pour le
+      // groupe) — le trigger n'est pas forcément la plus ancienne.
+      captured.sort((a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence));
+      if (captured.length < 2) continue;
+
+      captured.forEach((a) => usedDbIds.add(a.dbId));
+      proposals.push({ type: "group", alarms: captured, comment: rule.comment });
+    }
   }
 
   // Règles "group" zone

@@ -896,6 +896,46 @@ router.get("/daily-analysis", async (req, res) => {
   }
 });
 
+// Pool séparé pour les déclencheurs de règles "trigger" : toutes catégories
+// d'alarme confondues (y compris 'human'), sans le filtre de durée minimale
+// appliqué à /daily-analysis (un événement type "porte ouverte" peut être bref).
+router.get(
+  "/daily-analysis-triggers",
+  requireAnyPermission(["canGroupAlarms", "canManageAutoGroupRules"]),
+  async (req, res) => {
+    try {
+      const db = getDB();
+
+      const targetDate = req.query.date ? dayjs(req.query.date) : dayjs().subtract(1, "day");
+
+      const triggerAlarmIds = await db.models.AutoGroupRules.findAll({
+        where: { enabled: true, action: "trigger", triggerAlarmId: { [Op.ne]: null } },
+        attributes: ["triggerAlarmId"],
+      }).then((rows) => [...new Set(rows.map((r) => r.triggerAlarmId))]);
+
+      if (triggerAlarmIds.length === 0) return res.json([]);
+
+      const alarms = await db.models.Datalog.findAll({
+        where: {
+          alarmId: triggerAlarmIds,
+          timeOfOccurence: {
+            [Op.between]: [
+              targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+              targetDate.endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+            ],
+          },
+        },
+        order: [["timeOfOccurence", "ASC"]],
+      });
+
+      res.json(alarms);
+    } catch (e) {
+      console.error("Error fetching daily analysis triggers:", e);
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
 // Update alarm state (planned/unplanned)
 router.patch(
   "/update-state",
@@ -1177,23 +1217,32 @@ router.post(
   async (req, res) => {
     try {
       const db = getDB();
-      const { name, keyword, comment, action, groupBy, zone, alarmCodePattern, dataSourceFilter } = req.body;
+      const { name, keyword, comment, action, groupBy, zone, alarmCodePattern, dataSourceFilter, windowAfterMs, triggerAlarmId } = req.body;
       if (!name) {
         return res.status(400).json({ error: "Le nom est requis" });
       }
-      if (!keyword && !alarmCodePattern && !dataSourceFilter) {
+      const resolvedAction = action || "group";
+      if (resolvedAction === "trigger") {
+        if (!triggerAlarmId) {
+          return res.status(400).json({ error: "L'alarmId exact de l'alarme déclencheuse est requis pour une règle 'trigger'" });
+        }
+        if (!zone || !zone.length || zone.some((z) => !z?.dataSource || !z?.alarmArea)) {
+          return res.status(400).json({ error: "La zone doit contenir au moins une paire {dataSource, alarmArea} pour une règle 'trigger'" });
+        }
+      } else if (!keyword && !alarmCodePattern && !dataSourceFilter) {
         return res.status(400).json({ error: "Au moins un critère de filtre est requis (keyword, alarmCodePattern ou dataSourceFilter)" });
       }
-      const resolvedAction = action || "group";
       const rule = await db.models.AutoGroupRules.create({
         name,
-        keyword,
-        alarmCodePattern: alarmCodePattern ? alarmCodePattern.replace(/\\d/g, "[0-9]") : null,
+        keyword: resolvedAction === "trigger" ? null : keyword,
+        alarmCodePattern: resolvedAction !== "trigger" && alarmCodePattern ? alarmCodePattern.replace(/\\d/g, "[0-9]") : null,
         dataSourceFilter: dataSourceFilter || null,
+        triggerAlarmId: resolvedAction === "trigger" ? triggerAlarmId : null,
         action: resolvedAction,
         comment: comment || null,
         groupBy: resolvedAction === "group" ? (groupBy || "location") : null,
-        zone: resolvedAction === "group" && groupBy === "zone" ? (zone || null) : null,
+        zone: resolvedAction === "trigger" || (resolvedAction === "group" && groupBy === "zone") ? (zone || null) : null,
+        windowAfterMs: resolvedAction === "trigger" ? (windowAfterMs || 120000) : null,
         updatedBy: req.userId,
       });
       res.status(201).json(rule);
@@ -1211,17 +1260,29 @@ router.put(
       const db = getDB();
       const rule = await db.models.AutoGroupRules.findByPk(req.params.id);
       if (!rule) return res.status(404).json({ error: "Règle introuvable" });
-      const { name, keyword, comment, action, groupBy, zone, alarmCodePattern, dataSourceFilter, enabled } = req.body;
+      const { name, keyword, comment, action, groupBy, zone, alarmCodePattern, dataSourceFilter, enabled, windowAfterMs, triggerAlarmId } = req.body;
       const resolvedAction = action || rule.action || "group";
+      if (resolvedAction === "trigger") {
+        if (!triggerAlarmId) {
+          return res.status(400).json({ error: "L'alarmId exact de l'alarme déclencheuse est requis pour une règle 'trigger'" });
+        }
+        if (!zone || !zone.length || zone.some((z) => !z?.dataSource || !z?.alarmArea)) {
+          return res.status(400).json({ error: "La zone doit contenir au moins une paire {dataSource, alarmArea} pour une règle 'trigger'" });
+        }
+      } else if (!keyword && !alarmCodePattern && !dataSourceFilter) {
+        return res.status(400).json({ error: "Au moins un critère de filtre est requis (keyword, alarmCodePattern ou dataSourceFilter)" });
+      }
       await rule.update({
         name,
-        keyword,
-        alarmCodePattern: alarmCodePattern ? alarmCodePattern.replace(/\\d/g, "[0-9]") : null,
+        keyword: resolvedAction === "trigger" ? null : keyword,
+        alarmCodePattern: resolvedAction !== "trigger" && alarmCodePattern ? alarmCodePattern.replace(/\\d/g, "[0-9]") : null,
         dataSourceFilter: dataSourceFilter || null,
+        triggerAlarmId: resolvedAction === "trigger" ? triggerAlarmId : null,
         action: resolvedAction,
         comment: comment || null,
         groupBy: resolvedAction === "group" ? (groupBy || "location") : null,
-        zone: resolvedAction === "group" && groupBy === "zone" ? (zone || null) : null,
+        zone: resolvedAction === "trigger" || (resolvedAction === "group" && groupBy === "zone") ? (zone || null) : null,
+        windowAfterMs: resolvedAction === "trigger" ? (windowAfterMs || 120000) : null,
         enabled,
         updatedBy: req.userId,
       });
