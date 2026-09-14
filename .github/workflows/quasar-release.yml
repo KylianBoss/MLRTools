@@ -16,7 +16,13 @@ permissions:
 
 jobs:
   release:
-    if: contains(github.event.head_commit.message, 'RELEASE')
+    # Se déclenche si le dernier commit du push contient "RELEASE" (push direct
+    # sur main) OU si l'un des commits inclus dans le push le contient (merge de
+    # PR : le head_commit est alors le merge commit lui-même, qui ne porte pas
+    # le message "RELEASE" même si un commit de la PR l'a). toJSON() sérialise
+    # tout le tableau github.event.commits (messages inclus) pour une recherche
+    # simple, sans dépendre d'une syntaxe de filtre sur les expressions GitHub.
+    if: contains(github.event.head_commit.message, 'RELEASE') || contains(toJSON(github.event.commits), 'RELEASE')
     runs-on: windows-latest
 
     steps:
