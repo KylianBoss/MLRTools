@@ -850,6 +850,12 @@ function initDB(config) {
           allowNull: true,
           comment: "Error message if job failed",
         },
+        result: {
+          type: DataTypes.JSON,
+          allowNull: true,
+          comment:
+            "Résultat du job (ex: lignes retournées par une requête MVN)",
+        },
         createdAt: {
           type: DataTypes.DATE,
           allowNull: false,

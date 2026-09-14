@@ -1,69 +1,78 @@
 import { Router } from "express";
 import { getDB } from "../database.js";
 import dayjs from "dayjs";
-import Sequelize, { Op } from "sequelize";
+import { Op } from "sequelize";
 import { require2FA } from "./Auth.routes.js";
 import { exportDatabaseSQL } from "../backup.js";
 import path from "path";
-import fs from "fs";
 
 const router = Router();
 
-const MVN_CONFIG_PATH = path.join(
-  process.cwd(),
-  "storage",
-  "mlrtools-config.json"
-);
+// --- Exécution de requêtes MVN via le PC BOT ---
+// Le serveur qui reçoit /db/execute-code n'a généralement pas d'accès réseau
+// à Oracle/MVN (chaque instance de l'app a son propre serveur local ; seul le
+// PC BOT, qui poll JobQueue, est sur le bon réseau). On délègue donc en
+// enfilant un job "executeMvnQuery" dans JobQueue (voir Cron.routes.js), et on
+// attend son résultat par polling, avec un timeout.
+const MVN_JOB_POLL_INTERVAL_MS = 1000;
+const MVN_JOB_TIMEOUT_MS = 60000; // le bot poll la queue toutes les 15s
 
-// Ouvre une connexion Sequelize/Oracle vers la base MVN à la demande.
-// L'appelant est responsable de fermer la connexion (MVNDB.close()) une
-// fois la requête terminée, comme dans cron/ExtractWMS.js.
-async function openMvnConnection() {
-  const config = JSON.parse(fs.readFileSync(MVN_CONFIG_PATH, "utf-8"));
-  const MVNDB = new Sequelize(
-    config.mvnDatabase,
-    config.mvnUsername,
-    config.mvnPassword,
-    {
-      host: config.mvnHost,
-      dialect: "oracle",
-      dialectOptions: {
-        connectString: config.mvnConnectString,
-        connectTimeout: 60000,
-      },
-      pool: {
-        max: 5,
-        min: 0,
-        acquire: 60000,
-        idle: 10000,
-      },
-      logging: false,
-      retry: {
-        max: 3,
-      },
-    }
+async function isBotActive(db) {
+  const INACTIVE_BOT_THRESHOLD_MINUTES = 5;
+  const bot = await db.models.Users.findOne({
+    where: { isBot: true },
+  });
+  if (!bot || !bot.isBotActive) return false;
+  return dayjs(bot.isBotActive).isAfter(
+    dayjs().subtract(INACTIVE_BOT_THRESHOLD_MINUTES, "minutes")
   );
-  await MVNDB.authenticate();
-  return MVNDB;
+}
+
+async function runMvnSelectViaBot(db, sql) {
+  if (typeof sql !== "string" || !/^\s*select/i.test(sql)) {
+    throw new Error(
+      "mvnDb.query: seules les requêtes SELECT sont autorisées."
+    );
+  }
+
+  if (!(await isBotActive(db))) {
+    throw new Error(
+      "mvnDb.query: aucun PC BOT actif pour exécuter la requête MVN (celui-ci a seul l'accès réseau à Oracle)."
+    );
+  }
+
+  const job = await db.models.JobQueue.create({
+    jobName: "Console DEV - requête MVN",
+    action: "executeMvnQuery",
+    args: { sql },
+    requestedBy: null,
+    scheduledFor: null,
+  });
+
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < MVN_JOB_TIMEOUT_MS) {
+    await new Promise((resolve) =>
+      setTimeout(resolve, MVN_JOB_POLL_INTERVAL_MS)
+    );
+    await job.reload();
+    if (job.status === "completed") {
+      return job.result;
+    }
+    if (job.status === "failed") {
+      throw new Error(job.error || "La requête MVN a échoué sur le PC BOT.");
+    }
+  }
+
+  throw new Error(
+    "mvnDb.query: délai dépassé en attendant le résultat du PC BOT."
+  );
 }
 
 // Wrapper en lecture seule exposé dans la console : uniquement des SELECT,
-// pas d'accès aux méthodes de modification (pas de modèles Sequelize côté
-// MVN de toute façon, seulement query() en SQL brut).
-function buildMvnReadOnlyProxy(MVNDB) {
+// délégués au PC BOT via JobQueue (voir runMvnSelectViaBot ci-dessus).
+function buildMvnReadOnlyProxy(db) {
   return {
-    query: (sql, options = {}) => {
-      if (typeof sql === "string" && /^\s*select/i.test(sql) === false) {
-        throw new Error(
-          "mvnDb.query: seules les requêtes SELECT sont autorisées."
-        );
-      }
-      return MVNDB.query(sql, {
-        type: Sequelize.QueryTypes.SELECT,
-        ...options,
-      });
-    },
-    QueryTypes: Sequelize.QueryTypes,
+    query: (sql) => runMvnSelectViaBot(db, sql),
   };
 }
 
@@ -364,18 +373,13 @@ router.post("/execute-code", async (req, res) => {
     }
   }
 
-  // Ouvrir la connexion MVN uniquement si le code y fait référence, pour ne
-  // pas payer le coût d'une connexion Oracle sur du code qui ne l'utilise pas.
-  const needsMvn = /\bmvnDb\b/.test(code);
-  let MVNDB = null;
-
   try {
     const MAX_RESULTS = 5000;
 
-    if (needsMvn) {
-      MVNDB = await openMvnConnection();
-    }
-    const mvnDb = MVNDB ? buildMvnReadOnlyProxy(MVNDB) : undefined;
+    // mvnDb délègue au PC BOT via JobQueue (voir runMvnSelectViaBot) ; pas de
+    // connexion à ouvrir/fermer ici, uniquement si le code y fait référence.
+    const needsMvn = /\bmvnDb\b/.test(code);
+    const mvnDb = needsMvn ? buildMvnReadOnlyProxy(db) : undefined;
 
     // Créer un proxy de db qui ajoute automatiquement un limit aux requêtes
     const dbProxy = new Proxy(db, {
@@ -466,14 +470,6 @@ router.post("/execute-code", async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
-  } finally {
-    if (MVNDB) {
-      try {
-        await MVNDB.close();
-      } catch (closeError) {
-        console.error("Error closing MVN connection:", closeError);
-      }
-    }
   }
 });
 
@@ -499,16 +495,13 @@ router.post("/execute-code-override", require2FA, async (req, res) => {
     return;
   }
 
-  const needsMvn = /\bmvnDb\b/.test(code);
-  let MVNDB = null;
-
   try {
     const MAX_RESULTS = 5000;
 
-    if (needsMvn) {
-      MVNDB = await openMvnConnection();
-    }
-    const mvnDb = MVNDB ? buildMvnReadOnlyProxy(MVNDB) : undefined;
+    // mvnDb délègue au PC BOT via JobQueue (voir runMvnSelectViaBot) ; pas de
+    // connexion à ouvrir/fermer ici, uniquement si le code y fait référence.
+    const needsMvn = /\bmvnDb\b/.test(code);
+    const mvnDb = needsMvn ? buildMvnReadOnlyProxy(db) : undefined;
 
     // Créer un proxy de db qui ajoute automatiquement un limit aux requêtes
     const dbProxy = new Proxy(db, {
@@ -610,14 +603,6 @@ router.post("/execute-code-override", require2FA, async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
-  } finally {
-    if (MVNDB) {
-      try {
-        await MVNDB.close();
-      } catch (closeError) {
-        console.error("Error closing MVN connection:", closeError);
-      }
-    }
   }
 });
 
