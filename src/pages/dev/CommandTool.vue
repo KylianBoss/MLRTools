@@ -7,7 +7,8 @@
             <div class="text-h6">Console d'Exécution de Code</div>
             <div class="text-caption">
               Exécutez du code JavaScript côté serveur avec accès en LECTURE
-              SEULE à la base de données (db, Op, dayjs disponibles)
+              SEULE à la base de données (db, Op, dayjs disponibles) et à la
+              base MVN (mvnDb.query(), SELECT uniquement)
             </div>
             <div class="text-caption text-warning q-mt-xs">
               ⚠️ Les opérations UPDATE, DELETE, CREATE et INSERT sont interdites
@@ -219,6 +220,16 @@ const customCompletions = (context) => {
       label: "db.QueryTypes.SELECT",
       type: "constant",
       info: "SELECT query type",
+    },
+    {
+      label: "mvnDb",
+      type: "variable",
+      info: "Connexion Oracle MVN (READ ONLY)",
+    },
+    {
+      label: "mvnDb.query",
+      type: "function",
+      info: "Execute raw SQL SELECT on MVN database (READ ONLY)",
     },
     // Sequelize methods (READ ONLY)
     { label: "findAll", type: "function", info: "Find all records (READ)" },
