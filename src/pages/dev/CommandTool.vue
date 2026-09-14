@@ -8,7 +8,8 @@
             <div class="text-caption">
               Exécutez du code JavaScript côté serveur avec accès en LECTURE
               SEULE à la base de données (db, Op, dayjs disponibles) et à la
-              base MVN (mvnDb.query(), SELECT uniquement)
+              base MVN (mvnDb.query(), SELECT uniquement — délégué au PC BOT,
+              compter jusqu'à ~15-20s de latence)
             </div>
             <div class="text-caption text-warning q-mt-xs">
               ⚠️ Les opérations UPDATE, DELETE, CREATE et INSERT sont interdites
