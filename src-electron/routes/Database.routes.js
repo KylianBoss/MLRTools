@@ -1,12 +1,71 @@
 import { Router } from "express";
 import { getDB } from "../database.js";
 import dayjs from "dayjs";
-import { Op } from "sequelize";
+import Sequelize, { Op } from "sequelize";
 import { require2FA } from "./Auth.routes.js";
 import { exportDatabaseSQL } from "../backup.js";
 import path from "path";
+import fs from "fs";
 
 const router = Router();
+
+const MVN_CONFIG_PATH = path.join(
+  process.cwd(),
+  "storage",
+  "mlrtools-config.json"
+);
+
+// Ouvre une connexion Sequelize/Oracle vers la base MVN à la demande.
+// L'appelant est responsable de fermer la connexion (MVNDB.close()) une
+// fois la requête terminée, comme dans cron/ExtractWMS.js.
+async function openMvnConnection() {
+  const config = JSON.parse(fs.readFileSync(MVN_CONFIG_PATH, "utf-8"));
+  const MVNDB = new Sequelize(
+    config.mvnDatabase,
+    config.mvnUsername,
+    config.mvnPassword,
+    {
+      host: config.mvnHost,
+      dialect: "oracle",
+      dialectOptions: {
+        connectString: config.mvnConnectString,
+        connectTimeout: 60000,
+      },
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 60000,
+        idle: 10000,
+      },
+      logging: false,
+      retry: {
+        max: 3,
+      },
+    }
+  );
+  await MVNDB.authenticate();
+  return MVNDB;
+}
+
+// Wrapper en lecture seule exposé dans la console : uniquement des SELECT,
+// pas d'accès aux méthodes de modification (pas de modèles Sequelize côté
+// MVN de toute façon, seulement query() en SQL brut).
+function buildMvnReadOnlyProxy(MVNDB) {
+  return {
+    query: (sql, options = {}) => {
+      if (typeof sql === "string" && /^\s*select/i.test(sql) === false) {
+        throw new Error(
+          "mvnDb.query: seules les requêtes SELECT sont autorisées."
+        );
+      }
+      return MVNDB.query(sql, {
+        type: Sequelize.QueryTypes.SELECT,
+        ...options,
+      });
+    },
+    QueryTypes: Sequelize.QueryTypes,
+  };
+}
 
 router.post("/sync-models", async (req, res) => {
   const db = getDB();
@@ -305,8 +364,18 @@ router.post("/execute-code", async (req, res) => {
     }
   }
 
+  // Ouvrir la connexion MVN uniquement si le code y fait référence, pour ne
+  // pas payer le coût d'une connexion Oracle sur du code qui ne l'utilise pas.
+  const needsMvn = /\bmvnDb\b/.test(code);
+  let MVNDB = null;
+
   try {
     const MAX_RESULTS = 5000;
+
+    if (needsMvn) {
+      MVNDB = await openMvnConnection();
+    }
+    const mvnDb = MVNDB ? buildMvnReadOnlyProxy(MVNDB) : undefined;
 
     // Créer un proxy de db qui ajoute automatiquement un limit aux requêtes
     const dbProxy = new Proxy(db, {
@@ -367,10 +436,10 @@ router.post("/execute-code", async (req, res) => {
       .join(", ")}];`;
     const wrappedCode = `${resultsCode}\n${returnCode}`;
 
-    const fn = new AsyncFunction("db", "Op", "dayjs", wrappedCode);
+    const fn = new AsyncFunction("db", "Op", "dayjs", "mvnDb", wrappedCode);
 
-    // Execute the function with db proxy, Op, and dayjs in scope
-    let result = await fn(dbProxy, Op, dayjs);
+    // Execute the function with db proxy, Op, dayjs, and mvnDb in scope
+    let result = await fn(dbProxy, Op, dayjs, mvnDb);
 
     // If result is a Promise, wait for it
     if (result && typeof result.then === "function") {
@@ -397,6 +466,14 @@ router.post("/execute-code", async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
+  } finally {
+    if (MVNDB) {
+      try {
+        await MVNDB.close();
+      } catch (closeError) {
+        console.error("Error closing MVN connection:", closeError);
+      }
+    }
   }
 });
 
@@ -414,6 +491,7 @@ router.get("/models", async (req, res) => {
 
 // Route protégée par 2FA pour override les forbiddenPatterns
 router.post("/execute-code-override", require2FA, async (req, res) => {
+  const db = getDB();
   const { code } = req.body;
 
   if (!code) {
@@ -421,8 +499,16 @@ router.post("/execute-code-override", require2FA, async (req, res) => {
     return;
   }
 
+  const needsMvn = /\bmvnDb\b/.test(code);
+  let MVNDB = null;
+
   try {
     const MAX_RESULTS = 5000;
+
+    if (needsMvn) {
+      MVNDB = await openMvnConnection();
+    }
+    const mvnDb = MVNDB ? buildMvnReadOnlyProxy(MVNDB) : undefined;
 
     // Créer un proxy de db qui ajoute automatiquement un limit aux requêtes
     const dbProxy = new Proxy(db, {
@@ -494,10 +580,10 @@ router.post("/execute-code-override", require2FA, async (req, res) => {
 
     const wrappedCode = `${resultsCode}\n${returnCode}`;
 
-    const fn = new AsyncFunction("db", "Op", "dayjs", wrappedCode);
+    const fn = new AsyncFunction("db", "Op", "dayjs", "mvnDb", wrappedCode);
 
-    // Execute the function with db proxy, Op, and dayjs in scope
-    let result = await fn(dbProxy, Op, dayjs);
+    // Execute the function with db proxy, Op, dayjs, and mvnDb in scope
+    let result = await fn(dbProxy, Op, dayjs, mvnDb);
 
     // If result is a Promise, wait for it
     if (result && typeof result.then === "function") {
@@ -524,6 +610,14 @@ router.post("/execute-code-override", require2FA, async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
+  } finally {
+    if (MVNDB) {
+      try {
+        await MVNDB.close();
+      } catch (closeError) {
+        console.error("Error closing MVN connection:", closeError);
+      }
+    }
   }
 });
 
