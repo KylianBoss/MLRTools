@@ -1,7 +1,8 @@
 import dayjs from "dayjs";
 import { Op } from "sequelize";
 
-const GAP_MS = 5 * 60 * 1000; // 5 minutes
+const GAP_MS = 5 * 60 * 1000; // 5 minutes (fallback si AUTO_GROUP_DATASOURCE_GAP_MS absent)
+const MAX_ALARM_DURATION_FOR_DATASOURCE_GROUPING_S = 10 * 60; // 10 minutes, duration en secondes (fallback si AUTO_GROUP_DATASOURCE_MAX_ALARM_DURATION_S absent)
 
 /**
  * Applique les règles de groupement automatique pour une date donnée.
@@ -90,7 +91,7 @@ export const autoGroupAlarms = async (targetDate, db) => {
     return null;
   };
 
-  const buildClusters = (alarmList) => {
+  const buildClusters = (alarmList, gapMs = GAP_MS) => {
     if (alarmList.length < 2) return [];
     const sorted = [...alarmList].sort(
       (a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence)
@@ -104,7 +105,7 @@ export const autoGroupAlarms = async (targetDate, db) => {
       const prevEnd = new Date(prev.timeOfAcknowledge || prev.timeOfOccurence).getTime();
       const currStart = new Date(curr.timeOfOccurence).getTime();
 
-      if (currStart - prevEnd <= GAP_MS) {
+      if (currStart - prevEnd <= gapMs) {
         current.push(curr);
       } else {
         if (current.length >= 2) clusters.push([...current]);
@@ -268,6 +269,91 @@ export const autoGroupAlarms = async (targetDate, db) => {
     }
   }
 
+  // Dernier fallback : groupement temporel par datasource (zone ignorée).
+  // Repêche ce que le fallback par emplacement n'a pas pu regrouper (alarmes
+  // isolées de leur alarmArea mais proches dans le temps d'autres alarmes de
+  // la même dataSource), et étend un groupe déjà existant plutôt que d'en
+  // recréer un si le cluster touche des alarmes déjà x_group-ées du jour.
+  const stillRemaining = candidates.filter((a) => !usedDbIds.has(a.dbId));
+
+  if (stillRemaining.length > 0) {
+    const dataSourceGapMsSetting = await db.models.Settings.getValue("AUTO_GROUP_DATASOURCE_GAP_MS");
+    const dataSourceGapMs = dataSourceGapMsSetting != null ? Number(dataSourceGapMsSetting) : GAP_MS;
+
+    const maxAlarmDurationSetting = await db.models.Settings.getValue(
+      "AUTO_GROUP_DATASOURCE_MAX_ALARM_DURATION_S"
+    );
+    const maxAlarmDurationS =
+      maxAlarmDurationSetting != null
+        ? Number(maxAlarmDurationSetting)
+        : MAX_ALARM_DURATION_FOR_DATASOURCE_GROUPING_S;
+
+    const dataSourcesInPlay = [...new Set(stillRemaining.map((a) => a.dataSource))];
+
+    // Alarmes déjà groupées ce jour-là sur ces mêmes dataSources : pool de
+    // fusion pour détecter une extension de groupe existant.
+    const alreadyGrouped = await db.models.Datalog.findAll({
+      where: {
+        x_group: { [Op.ne]: null },
+        dataSource: dataSourcesInPlay,
+        timeOfOccurence: { [Op.between]: dayRange },
+      },
+      order: [["timeOfOccurence", "ASC"]],
+    });
+
+    // Une alarme dont la durée dépasse le seuil n'est pas un incident
+    // ponctuel : elle ne doit pas servir de pont et fusionner des heures
+    // d'alarmes sans rapport dans un seul groupe. Elle est simplement
+    // exclue du clustering (ni membre, ni pont) et reste traitée par les
+    // étapes précédentes / un prochain run.
+    const isShortEnough = (a) => (a.duration ?? 0) <= maxAlarmDurationS;
+
+    const byDataSource = {};
+    [...stillRemaining, ...alreadyGrouped].filter(isShortEnough).forEach((a) => {
+      if (!byDataSource[a.dataSource]) byDataSource[a.dataSource] = [];
+      byDataSource[a.dataSource].push(a);
+    });
+
+    for (const dsAlarms of Object.values(byDataSource)) {
+      for (const cluster of buildClusters(dsAlarms, dataSourceGapMs)) {
+        // Un cluster mixte (ancien groupe + nouvelles alarmes) doit fusionner
+        // sur le groupe existant le plus ancien plutôt que d'en créer un.
+        const existingGroupIds = [
+          ...new Set(cluster.map((a) => a.x_group).filter((g) => g != null)),
+        ].sort((a, b) => a - b);
+
+        const newAlarms = cluster.filter((a) => !usedDbIds.has(a.dbId) && a.x_group == null);
+
+        if (existingGroupIds.length > 1) {
+          // Le cluster relie plusieurs groupes déjà existants (ex: deux
+          // groupes "zone" séparés) : tout fusionner sur le plus ancien.
+          const targetGroupId = existingGroupIds[0];
+          const otherGroupsAlarms = cluster.filter(
+            (a) => a.x_group != null && a.x_group !== targetGroupId
+          );
+          newAlarms.forEach((a) => usedDbIds.add(a.dbId));
+          proposals.push({
+            type: "extend",
+            groupId: targetGroupId,
+            alarms: [...newAlarms, ...otherGroupsAlarms],
+          });
+        } else if (newAlarms.length === 0) {
+          continue; // groupe déjà existant, rien de nouveau à ajouter
+        } else if (existingGroupIds.length === 1) {
+          newAlarms.forEach((a) => usedDbIds.add(a.dbId));
+          proposals.push({
+            type: "extend",
+            groupId: existingGroupIds[0],
+            alarms: newAlarms,
+          });
+        } else if (cluster.length >= 2) {
+          cluster.forEach((a) => usedDbIds.add(a.dbId));
+          proposals.push({ type: "group", alarms: cluster, comment: resolveComment(cluster) });
+        }
+      }
+    }
+  }
+
   // 4. Appliquer les proposals en DB
   let created = 0;
   let failed = 0;
@@ -282,6 +368,15 @@ export const autoGroupAlarms = async (targetDate, db) => {
           }
         }
         await db.models.Datalog.update({ x_treated: true }, { where: { dbId: dbIds } });
+        created++;
+      } else if (proposal.type === "extend") {
+        // Étend un groupe existant : seules les alarmes nouvelles (non
+        // encore membres du groupe) sont mises à jour, le commentaire du
+        // groupe existant n'est pas touché.
+        await db.models.Datalog.update(
+          { x_group: proposal.groupId, x_state: "unplanned", x_treated: true },
+          { where: { dbId: dbIds } }
+        );
         created++;
       } else {
         // type === "group"
