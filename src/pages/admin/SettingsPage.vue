@@ -14,34 +14,7 @@
     >
       <template v-slot:body-cell-value="props">
         <q-td :props="props">
-          <q-input
-            v-if="editing === props.row.key"
-            v-model="editValue"
-            dense
-            autofocus
-            @keyup.enter="saveEdit(props.row)"
-            @keyup.escape="cancelEdit"
-          >
-            <template v-slot:append>
-              <q-btn
-                flat
-                dense
-                round
-                icon="mdi-check"
-                color="positive"
-                @click="saveEdit(props.row)"
-              />
-              <q-btn
-                flat
-                dense
-                round
-                icon="mdi-close"
-                color="negative"
-                @click="cancelEdit"
-              />
-            </template>
-          </q-input>
-          <span v-else>{{ props.row.value }}</span>
+          <span>{{ truncateValue(props.row.value) }}</span>
         </q-td>
       </template>
 
@@ -53,7 +26,6 @@
             round
             icon="mdi-pencil-outline"
             @click="startEdit(props.row)"
-            v-if="editing !== props.row.key"
           />
         </q-td>
       </template>
@@ -64,6 +36,32 @@
         </q-td>
       </template>
     </q-table>
+
+    <q-dialog v-model="editDialogOpen" @hide="cancelEdit">
+      <q-card style="min-width: 400px">
+        <q-card-section>
+          <div class="text-h6">{{ editingRow?.key }}</div>
+          <div v-if="editingRow?.description" class="text-caption text-grey">
+            {{ editingRow.description }}
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-input
+            v-model="editValue"
+            dense
+            autofocus
+            autogrow
+            @keyup.enter.ctrl="saveEdit(editingRow)"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Annuler" @click="editDialogOpen = false" />
+          <q-btn flat label="Enregistrer" color="positive" @click="saveEdit(editingRow)" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -72,11 +70,22 @@ import { ref, onMounted } from "vue";
 import { useQuasar } from "quasar";
 import { api } from "boot/axios";
 
+const VALUE_DISPLAY_MAX_LENGTH = 20;
+
 const $q = useQuasar();
 const settings = ref([]);
 const loading = ref(false);
-const editing = ref(null);
+const editDialogOpen = ref(false);
+const editingRow = ref(null);
 const editValue = ref("");
+
+const truncateValue = (value) => {
+  if (value == null) return "";
+  const text = String(value);
+  return text.length > VALUE_DISPLAY_MAX_LENGTH
+    ? `${text.slice(0, VALUE_DISPLAY_MAX_LENGTH)}…`
+    : text;
+};
 
 const columns = [
   {
@@ -126,16 +135,19 @@ const fetchSettings = async () => {
 };
 
 const startEdit = (row) => {
-  editing.value = row.key;
+  editingRow.value = row;
   editValue.value = row.value;
+  editDialogOpen.value = true;
 };
 
 const cancelEdit = () => {
-  editing.value = null;
+  editDialogOpen.value = false;
+  editingRow.value = null;
   editValue.value = "";
 };
 
 const saveEdit = async (row) => {
+  if (!row) return;
   if (editValue.value === row.value) {
     cancelEdit();
     return;

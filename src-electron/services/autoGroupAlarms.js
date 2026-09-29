@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
 import { Op } from "sequelize";
+import { getDurationSetting } from "./settingsDuration.js";
 
-const GAP_MS = 5 * 60 * 1000; // 5 minutes (fallback si AUTO_GROUP_DATASOURCE_GAP_MS absent)
-const MAX_ALARM_DURATION_FOR_DATASOURCE_GROUPING_S = 10 * 60; // 10 minutes, duration en secondes (fallback si AUTO_GROUP_DATASOURCE_MAX_ALARM_DURATION_S absent)
+const GAP_MS = 5 * 60 * 1000; // 5 minutes (fallback si AUTO_GROUP_DATASOURCE_GAP absent)
+const MAX_ALARM_DURATION_FOR_DATASOURCE_GROUPING_S = 10 * 60; // 10 minutes, duration en secondes (fallback si AUTO_GROUP_DATASOURCE_MAX_ALARM_DURATION absent)
 
 /**
  * Applique les règles de groupement automatique pour une date donnée.
@@ -277,16 +278,20 @@ export const autoGroupAlarms = async (targetDate, db) => {
   const stillRemaining = candidates.filter((a) => !usedDbIds.has(a.dbId));
 
   if (stillRemaining.length > 0) {
-    const dataSourceGapMsSetting = await db.models.Settings.getValue("AUTO_GROUP_DATASOURCE_GAP_MS");
-    const dataSourceGapMs = dataSourceGapMsSetting != null ? Number(dataSourceGapMsSetting) : GAP_MS;
+    const dataSourceGapMs = await getDurationSetting(db, "AUTO_GROUP_DATASOURCE_GAP", "ms", {
+      legacyUnit: "ms", // ancienne clé AUTO_GROUP_DATASOURCE_GAP_MS stockait un nombre brut en ms
+      fallback: GAP_MS,
+    });
 
-    const maxAlarmDurationSetting = await db.models.Settings.getValue(
-      "AUTO_GROUP_DATASOURCE_MAX_ALARM_DURATION_S"
+    const maxAlarmDurationS = await getDurationSetting(
+      db,
+      "AUTO_GROUP_DATASOURCE_MAX_ALARM_DURATION",
+      "s",
+      {
+        legacyUnit: "s", // ancienne clé AUTO_GROUP_DATASOURCE_MAX_ALARM_DURATION_S stockait un nombre brut en secondes
+        fallback: MAX_ALARM_DURATION_FOR_DATASOURCE_GROUPING_S,
+      }
     );
-    const maxAlarmDurationS =
-      maxAlarmDurationSetting != null
-        ? Number(maxAlarmDurationSetting)
-        : MAX_ALARM_DURATION_FOR_DATASOURCE_GROUPING_S;
 
     const dataSourcesInPlay = [...new Set(stillRemaining.map((a) => a.dataSource))];
 
