@@ -27,7 +27,7 @@ export const autoGroupAlarms = async (targetDate, db) => {
     attributes: ["alarmId"],
   }).then((rows) => rows.map((a) => a.alarmId));
 
-  const MIN_ALARM_DURATION = await db.models.Settings.getValue("MIN_ALARM_DURATION");
+  const MIN_ALARM_DURATION = await getDurationSetting(db, "MIN_ALARM_DURATION", "s", { legacyUnit: "s" });
 
   const dayRange = [
     targetDate.startOf("day").format("YYYY-MM-DD HH:mm:ss"),

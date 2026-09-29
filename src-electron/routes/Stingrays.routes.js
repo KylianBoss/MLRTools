@@ -4,6 +4,7 @@ import { Op } from "sequelize";
 import { getDB } from "../database.js";
 import { requirePermission } from "../middlewares/permissions.js";
 import { applyStingrayStateChange } from "../services/stingrayState.js";
+import { getDurationSetting, formatNumberAsDurationText } from "../services/settingsDuration.js";
 
 const router = Router();
 
@@ -56,15 +57,16 @@ async function getPrimaryAlarmIds(db) {
 async function computeAlarmLevels(db) {
   const [windowDays, warnThreshold, criticalThreshold, primaryAlarmIds] =
     await Promise.all([
-      db.models.Settings.getValue("STINGRAY_ALARM_WINDOW_DAYS"),
+      getDurationSetting(db, "STINGRAY_ALARM_WINDOW_DAYS", "days", {
+        legacyUnit: "days",
+        fallback: 30,
+      }),
       db.models.Settings.getValue("STINGRAY_ALARM_WARN_THRESHOLD"),
       db.models.Settings.getValue("STINGRAY_ALARM_CRITICAL_THRESHOLD"),
       getPrimaryAlarmIds(db),
     ]);
 
-  const since = dayjs()
-    .subtract(Number(windowDays) || 30, "day")
-    .toDate();
+  const since = dayjs().subtract(windowDays, "day").toDate();
 
   const rows = await db.models.Datalog.findAll({
     where: {
@@ -103,12 +105,13 @@ async function computeAlarmLevels(db) {
  */
 async function getRecentAlarmsForStingray(db, number) {
   const [windowDays, primaryAlarmIds] = await Promise.all([
-    db.models.Settings.getValue("STINGRAY_ALARM_WINDOW_DAYS"),
+    getDurationSetting(db, "STINGRAY_ALARM_WINDOW_DAYS", "days", {
+      legacyUnit: "days",
+      fallback: 30,
+    }),
     getPrimaryAlarmIds(db),
   ]);
-  const since = dayjs()
-    .subtract(Number(windowDays) || 30, "day")
-    .toDate();
+  const since = dayjs().subtract(windowDays, "day").toDate();
 
   const rows = await db.models.Datalog.findAll({
     where: {
@@ -241,12 +244,15 @@ router.get(
     const db = getDB();
     try {
       const [windowDays, warnThreshold, criticalThreshold] = await Promise.all([
-        db.models.Settings.getValue("STINGRAY_ALARM_WINDOW_DAYS"),
+        getDurationSetting(db, "STINGRAY_ALARM_WINDOW_DAYS", "days", {
+          legacyUnit: "days",
+          fallback: 30,
+        }),
         db.models.Settings.getValue("STINGRAY_ALARM_WARN_THRESHOLD"),
         db.models.Settings.getValue("STINGRAY_ALARM_CRITICAL_THRESHOLD"),
       ]);
       res.json({
-        windowDays: Number(windowDays) || 30,
+        windowDays,
         warnThreshold: Number(warnThreshold) || 5,
         criticalThreshold: Number(criticalThreshold) || 15,
       });
@@ -266,10 +272,13 @@ router.patch(
     const { windowDays, warnThreshold, criticalThreshold } = req.body;
     try {
       const updates = [
-        ["STINGRAY_ALARM_WINDOW_DAYS", windowDays],
+        [
+          "STINGRAY_ALARM_WINDOW_DAYS",
+          windowDays != null ? formatNumberAsDurationText(Number(windowDays), "days") : null,
+        ],
         ["STINGRAY_ALARM_WARN_THRESHOLD", warnThreshold],
         ["STINGRAY_ALARM_CRITICAL_THRESHOLD", criticalThreshold],
-      ].filter(([, value]) => value !== undefined && value !== null);
+      ].filter(([, value]) => value !== undefined && value !== null && value !== "");
 
       for (const [key, value] of updates) {
         await db.models.Settings.upsert({

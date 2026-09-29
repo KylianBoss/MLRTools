@@ -10,6 +10,7 @@ import nodemailer from "nodemailer";
 import minMax from "dayjs/plugin/minMax.js";
 import { generateKPIPDF, closePuppeteerBrowser } from "../cron/SendKPI.js";
 import { requirePermission } from "../middlewares/permissions.js";
+import { getDurationSetting } from "../services/settingsDuration.js";
 
 dayjs.extend(minMax);
 
@@ -281,16 +282,16 @@ router.get("/charts/global-last-7-days/top-10", async (req, res) => {
 });
 router.get("/charts/alarms-by-group/:groupName", async (req, res) => {
   const db = getDB();
-  const MOVING_AVERAGE_WINDOW = await db.models.Settings.getValue(
-    "MOVING_AVERAGE_WINDOW"
-  );
-  const GRAPH_TABLE_WINDOW = await db.models.Settings.getValue(
-    "GRAPH_TABLE_WINDOW"
-  );
+  const MOVING_AVERAGE_WINDOW = await getDurationSetting(db, "MOVING_AVERAGE_WINDOW", "days", {
+    legacyUnit: "days",
+  });
+  const GRAPH_TABLE_WINDOW = await getDurationSetting(db, "GRAPH_TABLE_WINDOW", "days", {
+    legacyUnit: "days",
+  });
   const MIN_PROD_TO_TAKE = await db.models.Settings.getValue(
     "MIN_PROD_TO_TAKE"
   );
-  const WINDOW = await db.models.Settings.getValue("GRAPH_WINDOW");
+  const WINDOW = await getDurationSetting(db, "GRAPH_WINDOW", "days", { legacyUnit: "days" });
   const CHART_X_TICK_AMOUNT = await db.models.Settings.getValue(
     "CHART_X_TICK_AMOUNT"
   );
@@ -394,19 +395,19 @@ router.get("/charts/custom/:chartId", async (req, res) => {
   const db = getDB();
   const { chartId } = req.params;
 
-  const MOVING_AVERAGE_WINDOW = await db.models.Settings.getValue(
-    "MOVING_AVERAGE_WINDOW"
-  );
-  const CUSTOM_CHART_WINDOW = await db.models.Settings.getValue(
-    "CUSTOM_CHART_WINDOW"
-  );
-  const GRAPH_TABLE_WINDOW = await db.models.Settings.getValue(
-    "GRAPH_TABLE_WINDOW"
-  );
+  const MOVING_AVERAGE_WINDOW = await getDurationSetting(db, "MOVING_AVERAGE_WINDOW", "days", {
+    legacyUnit: "days",
+  });
+  const CUSTOM_CHART_WINDOW = await getDurationSetting(db, "CUSTOM_CHART_WINDOW", "days", {
+    legacyUnit: "days",
+  });
+  const GRAPH_TABLE_WINDOW = await getDurationSetting(db, "GRAPH_TABLE_WINDOW", "days", {
+    legacyUnit: "days",
+  });
   const MIN_DATE = await db.models.Settings.getValue("MIN_DATE");
-  const MIN_ALARM_DURATION = await db.models.Settings.getValue(
-    "MIN_ALARM_DURATION"
-  );
+  const MIN_ALARM_DURATION = await getDurationSetting(db, "MIN_ALARM_DURATION", "s", {
+    legacyUnit: "s",
+  });
   const CHART_X_TICK_AMOUNT = await db.models.Settings.getValue(
     "CHART_X_TICK_AMOUNT"
   );

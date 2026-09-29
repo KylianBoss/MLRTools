@@ -87,6 +87,25 @@ export const formatDurationMs = (ms) => {
   return `${ms} ms`;
 };
 
+// Libellé pluriel pour construire un texte à partir d'un nombre + unité
+const UNIT_LABELS = { ms: "ms", s: "sec", min: "min", h: "heure", days: "jour" };
+
+/**
+ * Construit un texte de durée lisible à partir d'un nombre et d'une unité,
+ * ex: (30, 'days') -> "30 jours". Utile côté écriture quand un call-site a
+ * son propre contrat API en nombre (ex: un formulaire dédié) et doit
+ * convertir vers le texte stocké en DB.
+ * @param {number} amount
+ * @param {'ms'|'s'|'min'|'h'|'days'} unit
+ * @returns {string}
+ */
+export const formatNumberAsDurationText = (amount, unit) => {
+  const label = UNIT_LABELS[unit];
+  if (!label || !Number.isFinite(amount)) return "";
+  if (unit === "ms" || unit === "s") return `${amount} ${label}`;
+  return `${amount} ${label}${Math.abs(amount) > 1 ? "s" : ""}`;
+};
+
 /**
  * Convertit une durée textuelle ("5 min") vers l'unité de sortie demandée.
  * @param {string} text

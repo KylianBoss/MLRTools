@@ -8,6 +8,7 @@ import csv from "csv-parser";
 import { Readable } from "stream";
 import { requireAnyPermission, requirePermission } from "../middlewares/permissions.js";
 import { computeAlarmReportData } from "../cron/SendAlarmReport.js";
+import { getDurationSetting } from "../services/settingsDuration.js";
 
 dayjs.extend(customParseFormat);
 dayjs.locale("fr");
@@ -863,9 +864,9 @@ router.get("/daily-analysis", async (req, res) => {
       ? dayjs(req.query.date)
       : dayjs().subtract(1, "day");
 
-    const MIN_ALARM_DURATION = await db.models.Settings.getValue(
-      "MIN_ALARM_DURATION"
-    );
+    const MIN_ALARM_DURATION = await getDurationSetting(db, "MIN_ALARM_DURATION", "s", {
+      legacyUnit: "s",
+    });
 
     const primaryAlarms = await db.models.Alarms.findAll({
       where: {

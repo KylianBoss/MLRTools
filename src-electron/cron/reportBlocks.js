@@ -1,6 +1,7 @@
 import { updateJob } from "./utils.js";
 import dayjs from "dayjs";
 import puppeteer from "puppeteer";
+import { getDurationSetting } from "../services/settingsDuration.js";
 
 const jobName = "sendKPI";
 
@@ -1213,11 +1214,10 @@ export async function renderCaseCrashesBlock(doc, db, ctx) {
     "X104",
   ];
 
-  const caseCrashesReportDaysSetting = await db.models.Settings.getValue(
-    "CASE_CRASHES_REPORT_DAYS"
-  );
-  const caseCrashesReportDays =
-    parseInt(caseCrashesReportDaysSetting, 10) || 30;
+  const caseCrashesReportDays = await getDurationSetting(db, "CASE_CRASHES_REPORT_DAYS", "days", {
+    legacyUnit: "days",
+    fallback: 30,
+  });
 
   const caseCrashesSince = dayjs()
     .subtract(caseCrashesReportDays, "day")

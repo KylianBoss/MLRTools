@@ -14,7 +14,7 @@
     >
       <template v-slot:body-cell-value="props">
         <q-td :props="props">
-          <span>{{ truncateValue(props.row.value) }}</span>
+          <span>{{ displayValue(props.row) }}</span>
         </q-td>
       </template>
 
@@ -51,14 +51,31 @@
             v-model="editValue"
             dense
             autofocus
-            autogrow
+            :autogrow="editingRow?.type !== 'secret'"
+            :type="editingRow?.type === 'secret' && !secretRevealed ? 'password' : 'text'"
+            :rules="activeValidator ? [activeValidator.rule] : []"
+            :hint="activeValidator?.hint ?? ''"
             @keyup.enter.ctrl="saveEdit(editingRow)"
-          />
+          >
+            <template v-if="editingRow?.type === 'secret'" v-slot:append>
+              <q-icon
+                :name="secretRevealed ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
+                class="cursor-pointer"
+                @click="secretRevealed = !secretRevealed"
+              />
+            </template>
+          </q-input>
         </q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat label="Annuler" @click="editDialogOpen = false" />
-          <q-btn flat label="Enregistrer" color="positive" @click="saveEdit(editingRow)" />
+          <q-btn
+            flat
+            label="Enregistrer"
+            color="positive"
+            :disable="!isEditValueValid"
+            @click="saveEdit(editingRow)"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -66,11 +83,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useQuasar } from "quasar";
 import { api } from "boot/axios";
+import { SETTING_TYPE_VALIDATORS } from "src/utils/settingsValidation";
 
 const VALUE_DISPLAY_MAX_LENGTH = 20;
+const SECRET_MASK = "••••••••";
 
 const $q = useQuasar();
 const settings = ref([]);
@@ -78,6 +97,11 @@ const loading = ref(false);
 const editDialogOpen = ref(false);
 const editingRow = ref(null);
 const editValue = ref("");
+const secretRevealed = ref(false);
+
+const activeValidator = computed(() => SETTING_TYPE_VALIDATORS[editingRow.value?.type] ?? null);
+
+const isEditValueValid = computed(() => activeValidator.value?.validate(editValue.value) ?? true);
 
 const truncateValue = (value) => {
   if (value == null) return "";
@@ -86,6 +110,8 @@ const truncateValue = (value) => {
     ? `${text.slice(0, VALUE_DISPLAY_MAX_LENGTH)}…`
     : text;
 };
+
+const displayValue = (row) => (row.type === "secret" ? SECRET_MASK : truncateValue(row.value));
 
 const columns = [
   {
@@ -137,6 +163,7 @@ const fetchSettings = async () => {
 const startEdit = (row) => {
   editingRow.value = row;
   editValue.value = row.value;
+  secretRevealed.value = false;
   editDialogOpen.value = true;
 };
 
@@ -144,10 +171,11 @@ const cancelEdit = () => {
   editDialogOpen.value = false;
   editingRow.value = null;
   editValue.value = "";
+  secretRevealed.value = false;
 };
 
 const saveEdit = async (row) => {
-  if (!row) return;
+  if (!row || !isEditValueValid.value) return;
   if (editValue.value === row.value) {
     cancelEdit();
     return;
