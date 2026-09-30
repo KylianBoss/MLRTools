@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getDB } from "../database.js";
 import dayjs from "dayjs";
+import { getDurationSetting } from "../services/settingsDuration.js";
 
 const router = Router();
 
@@ -61,9 +62,9 @@ router.post("/custom-charts/:id/recalculate", async (req, res) => {
     res.json({ started: true });
 
     const MIN_DATE = await db.models.Settings.getValue("MIN_DATE");
-    const MIN_ALARM_DURATION = await db.models.Settings.getValue(
-      "MIN_ALARM_DURATION"
-    );
+    const MIN_ALARM_DURATION = await getDurationSetting(db, "MIN_ALARM_DURATION", "s", {
+      legacyUnit: "s",
+    });
 
     const startDate = dayjs(MIN_DATE).startOf("day");
     const endDate = dayjs().subtract(1, "day").startOf("day");

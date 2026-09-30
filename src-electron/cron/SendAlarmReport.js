@@ -4,6 +4,7 @@ import path from "path";
 import nodemailer from "nodemailer";
 import { getDB } from "../database.js";
 import { updateJob } from "./utils.js";
+import { getDurationSetting } from "../services/settingsDuration.js";
 
 const jobName = "sendAlarmReport";
 const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
@@ -35,8 +36,10 @@ export const computeAlarmReportData = async (targetDate) => {
     return null;
   }
 
-  const minDurationSetting = await db.models.Settings.findByPk("MIN_ALARM_DURATION");
-  const minDuration = minDurationSetting ? parseInt(minDurationSetting.value) || 0 : 0;
+  const minDuration = await getDurationSetting(db, "MIN_ALARM_DURATION", "s", {
+    legacyUnit: "s",
+    fallback: 0,
+  });
 
   // Récupérer séparément les alarmId de type "primary" et non classifiés (null)
   const alarmTypes = await db.models.Alarms.findAll({

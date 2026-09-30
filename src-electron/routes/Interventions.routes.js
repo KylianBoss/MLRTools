@@ -5,6 +5,7 @@ import { requirePermission } from "../middlewares/permissions.js";
 import { Op } from "sequelize";
 import isBetween from "dayjs/plugin/isBetween.js";
 import { applyStingrayStateChange } from "../services/stingrayState.js";
+import { getDurationSetting } from "../services/settingsDuration.js";
 
 const router = Router();
 dayjs.extend(isBetween);
@@ -281,9 +282,9 @@ router.post(
         .toISOString();
 
       // Get all alarms for the day
-      const MIN_ALARM_DURATION = await db.models.Settings.getValue(
-        "MIN_ALARM_DURATION"
-      );
+      const MIN_ALARM_DURATION = await getDurationSetting(db, "MIN_ALARM_DURATION", "s", {
+        legacyUnit: "s",
+      });
 
       const primaryAlarms = await db.models.Alarms.findAll({
         where: {

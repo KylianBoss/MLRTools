@@ -42,3 +42,7 @@ storage/*
 !storage/migrations/
 
 *.md
+
+# Outillage local agents IA (config par poste, pas applicatif)
+.claude/
+.gstack/

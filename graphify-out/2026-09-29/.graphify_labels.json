@@ -88,7 +88,7 @@
   "86": "primeTriggerAlarmOptions",
   "87": "eslint",
   "88": "eslint-config-prettier",
-  "89": "prettier",
+  "89": "eslint-plugin-vue",
   "90": "eventsource",
   "91": "express",
   "92": "html2pdf.js",

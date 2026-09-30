@@ -3189,7 +3189,7 @@
       "file_type": "code",
       "norm_label": "formatsevendaystabledata()",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L803"
+      "source_location": "L781"
     },
     {
       "id": "src_electron_cron_reportblocks_formatswissnumber",
@@ -3213,7 +3213,7 @@
       "file_type": "code",
       "norm_label": "generatecasecrashestable()",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1076"
+      "source_location": "L1054"
     },
     {
       "id": "src_electron_cron_reportblocks_generatecustomchartimage",
@@ -3261,7 +3261,7 @@
       "file_type": "code",
       "norm_label": "generatetable()",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L920"
+      "source_location": "L898"
     },
     {
       "id": "src_electron_cron_reportblocks_getbrowser",
@@ -3285,7 +3285,7 @@
       "file_type": "code",
       "norm_label": "notifyorphanblock()",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1198"
+      "source_location": "L1176"
     },
     {
       "id": "src_electron_cron_reportblocks_rendercasecrashesblock",
@@ -3297,7 +3297,7 @@
       "file_type": "code",
       "norm_label": "rendercasecrashesblock()",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1218"
+      "source_location": "L1196"
     },
     {
       "id": "src_electron_cron_reportblocks_rendercustomchartblock",
@@ -3309,7 +3309,7 @@
       "file_type": "code",
       "norm_label": "rendercustomchartblock()",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1444"
+      "source_location": "L1422"
     },
     {
       "id": "src_electron_cron_reportblocks_renderplannedinterventionsblock",
@@ -3321,7 +3321,7 @@
       "file_type": "code",
       "norm_label": "renderplannedinterventionsblock()",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1517"
+      "source_location": "L1495"
     },
     {
       "id": "src_electron_cron_reportblocks_rendersevendaysaverageblock",
@@ -3333,7 +3333,7 @@
       "file_type": "code",
       "norm_label": "rendersevendaysaverageblock()",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1326"
+      "source_location": "L1304"
     },
     {
       "id": "src_electron_cron_reportblocks_renderunplannedinterventionsblock",
@@ -3345,7 +3345,7 @@
       "file_type": "code",
       "norm_label": "renderunplannedinterventionsblock()",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1641"
+      "source_location": "L1619"
     },
     {
       "id": "src_electron_cron_reportblocks_renderzonegroupblock",
@@ -3357,7 +3357,7 @@
       "file_type": "code",
       "norm_label": "renderzonegroupblock()",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1379"
+      "source_location": "L1357"
     },
     {
       "id": "src_pages_searchmessages_onrequest",
@@ -10644,17 +10644,6 @@
       "source_location": "L68"
     },
     {
-      "id": "package_devdependencies_eslint_plugin_vue",
-      "label": "eslint-plugin-vue",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "eslint-plugin-vue",
-      "source_file": "package.json",
-      "source_location": "L78"
-    },
-    {
       "id": "package_devdependencies_intlify_vite_plugin_vue_i18n",
       "label": "@intlify/vite-plugin-vue-i18n",
       "_origin": "ast",
@@ -10664,6 +10653,17 @@
       "norm_label": "@intlify/vite-plugin-vue-i18n",
       "source_file": "package.json",
       "source_location": "L69"
+    },
+    {
+      "id": "package_devdependencies_prettier",
+      "label": "prettier",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "prettier",
+      "source_file": "package.json",
+      "source_location": "L80"
     },
     {
       "id": "package_devdependencies_sequelize_cli",
@@ -10721,17 +10721,6 @@
       "source_location": "L68"
     },
     {
-      "id": "eslint_plugin_vue",
-      "label": "eslint-plugin-vue",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "eslint-plugin-vue",
-      "source_file": "package.json",
-      "source_location": "L78"
-    },
-    {
       "id": "intlify_vite_plugin_vue_i18n",
       "label": "@intlify/vite-plugin-vue-i18n",
       "_origin": "ast",
@@ -10741,6 +10730,17 @@
       "norm_label": "@intlify/vite-plugin-vue-i18n",
       "source_file": "package.json",
       "source_location": "L69"
+    },
+    {
+      "id": "prettier",
+      "label": "prettier",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "devDependencies",
+      "file_type": "concept",
+      "norm_label": "prettier",
+      "source_file": "package.json",
+      "source_location": "L80"
     },
     {
       "id": "sequelize_cli",
@@ -11719,10 +11719,10 @@
       "file_type": "code",
       "norm_label": "block_renderers",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1765"
+      "source_location": "L1743"
     },
     {
-      "id": "src_electron_cron_reportblocks_rationale_1397",
+      "id": "src_electron_cron_reportblocks_rationale_1375",
       "label": "NOTE: la cl\u00e9 ignore block.config (r\u00e9serv\u00e9, non utilis\u00e9 au lancement) \u2014",
       "_origin": "ast",
       "community": 33,
@@ -11730,10 +11730,10 @@
       "file_type": "rationale",
       "norm_label": "note: la cle ignore block.config (reserve, non utilise au lancement) \u2014",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1397"
+      "source_location": "L1375"
     },
     {
-      "id": "src_electron_cron_reportblocks_rationale_1462",
+      "id": "src_electron_cron_reportblocks_rationale_1440",
       "label": "NOTE: voir la m\u00eame remarque dans renderZoneGroupBlock sur block.config.",
       "_origin": "ast",
       "community": 33,
@@ -11741,7 +11741,7 @@
       "file_type": "rationale",
       "norm_label": "note: voir la meme remarque dans renderzonegroupblock sur block.config.",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1462"
+      "source_location": "L1440"
     },
     {
       "id": "src_pages_searchmessages",
@@ -16001,26 +16001,26 @@
       "source_location": "L77"
     },
     {
-      "id": "package_devdependencies_prettier",
-      "label": "prettier",
+      "id": "package_devdependencies_eslint_plugin_vue",
+      "label": "eslint-plugin-vue",
       "_origin": "ast",
       "community": 89,
-      "community_name": "prettier",
+      "community_name": "eslint-plugin-vue",
       "file_type": "code",
-      "norm_label": "prettier",
+      "norm_label": "eslint-plugin-vue",
       "source_file": "package.json",
-      "source_location": "L80"
+      "source_location": "L78"
     },
     {
-      "id": "prettier",
-      "label": "prettier",
+      "id": "eslint_plugin_vue",
+      "label": "eslint-plugin-vue",
       "_origin": "ast",
       "community": 89,
-      "community_name": "prettier",
+      "community_name": "eslint-plugin-vue",
       "file_type": "concept",
-      "norm_label": "prettier",
+      "norm_label": "eslint-plugin-vue",
       "source_file": "package.json",
-      "source_location": "L80"
+      "source_location": "L78"
     },
     {
       "id": "src_pages_maintenance_stingraydetails",
@@ -17900,7 +17900,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L688",
+      "source_location": "L692",
       "weight": 1.0
     },
     {
@@ -17912,7 +17912,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1221",
+      "source_location": "L1199",
       "weight": 1.0
     },
     {
@@ -17924,7 +17924,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1239",
+      "source_location": "L1217",
       "weight": 1.0
     },
     {
@@ -17936,7 +17936,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1300",
+      "source_location": "L1278",
       "weight": 1.0
     },
     {
@@ -17948,7 +17948,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1450",
+      "source_location": "L1428",
       "weight": 1.0
     },
     {
@@ -17960,7 +17960,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1455",
+      "source_location": "L1433",
       "weight": 1.0
     },
     {
@@ -17972,7 +17972,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1466",
+      "source_location": "L1444",
       "weight": 1.0
     },
     {
@@ -17984,7 +17984,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1480",
+      "source_location": "L1458",
       "weight": 1.0
     },
     {
@@ -17996,7 +17996,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1481",
+      "source_location": "L1459",
       "weight": 1.0
     },
     {
@@ -18008,7 +18008,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1504",
+      "source_location": "L1482",
       "weight": 1.0
     },
     {
@@ -18020,7 +18020,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1520",
+      "source_location": "L1498",
       "weight": 1.0
     },
     {
@@ -18032,7 +18032,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1329",
+      "source_location": "L1307",
       "weight": 1.0
     },
     {
@@ -18044,7 +18044,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1334",
+      "source_location": "L1312",
       "weight": 1.0
     },
     {
@@ -18056,7 +18056,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1349",
+      "source_location": "L1327",
       "weight": 1.0
     },
     {
@@ -18068,7 +18068,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1354",
+      "source_location": "L1332",
       "weight": 1.0
     },
     {
@@ -18080,7 +18080,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1364",
+      "source_location": "L1342",
       "weight": 1.0
     },
     {
@@ -18092,7 +18092,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1367",
+      "source_location": "L1345",
       "weight": 1.0
     },
     {
@@ -18104,7 +18104,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1644",
+      "source_location": "L1622",
       "weight": 1.0
     },
     {
@@ -18116,7 +18116,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1385",
+      "source_location": "L1363",
       "weight": 1.0
     },
     {
@@ -18128,7 +18128,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1390",
+      "source_location": "L1368",
       "weight": 1.0
     },
     {
@@ -18140,7 +18140,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1404",
+      "source_location": "L1382",
       "weight": 1.0
     },
     {
@@ -18152,7 +18152,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1407",
+      "source_location": "L1385",
       "weight": 1.0
     },
     {
@@ -18164,7 +18164,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1408",
+      "source_location": "L1386",
       "weight": 1.0
     },
     {
@@ -18176,7 +18176,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1433",
+      "source_location": "L1411",
       "weight": 1.0
     },
     {
@@ -30529,7 +30529,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1076",
+      "source_location": "L1054",
       "weight": 1.0
     },
     {
@@ -30540,7 +30540,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1198",
+      "source_location": "L1176",
       "weight": 1.0
     },
     {
@@ -30551,7 +30551,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1765",
+      "source_location": "L1743",
       "weight": 1.0
     },
     {
@@ -30661,7 +30661,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L803",
+      "source_location": "L781",
       "weight": 1.0
     },
     {
@@ -30672,7 +30672,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L920",
+      "source_location": "L898",
       "weight": 1.0
     },
     {
@@ -39965,25 +39965,25 @@
       "weight": 1.0
     },
     {
-      "source": "src_electron_cron_reportblocks_rationale_1397",
+      "source": "src_electron_cron_reportblocks_rationale_1375",
       "target": "src_electron_cron_reportblocks",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1397",
+      "source_location": "L1375",
       "weight": 1.0
     },
     {
-      "source": "src_electron_cron_reportblocks_rationale_1462",
+      "source": "src_electron_cron_reportblocks_rationale_1440",
       "target": "src_electron_cron_reportblocks",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1462",
+      "source_location": "L1440",
       "weight": 1.0
     },
     {
@@ -40163,7 +40163,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1766",
+      "source_location": "L1744",
       "weight": 1.0
     },
     {
@@ -40175,7 +40175,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1767",
+      "source_location": "L1745",
       "weight": 1.0
     },
     {
@@ -40187,7 +40187,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1768",
+      "source_location": "L1746",
       "weight": 1.0
     },
     {
@@ -40199,7 +40199,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1769",
+      "source_location": "L1747",
       "weight": 1.0
     },
     {
@@ -40211,7 +40211,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1770",
+      "source_location": "L1748",
       "weight": 1.0
     },
     {
@@ -40223,7 +40223,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1771",
+      "source_location": "L1749",
       "weight": 1.0
     },
     {
@@ -40276,5 +40276,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b4e6293f33e241cc9d27f587dbb11878c3a92a3b"
+  "built_at_commit": "77424407e1bb1d1a7eba84c4361fb00aac179ae9"
 }

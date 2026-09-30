@@ -1545,6 +1545,13 @@ function initDB(config) {
           allowNull: true,
           comment: "Description of the setting",
         },
+        type: {
+          type: DataTypes.ENUM("text", "number", "date", "duration", "secret"),
+          allowNull: false,
+          defaultValue: "text",
+          comment:
+            "'text' = valeur libre, 'number' = valeur numérique, 'date' = date ISO, 'duration' = valeur textuelle de durée (ex: '5 min', '10 sec', '7 jours') validée par settingsDuration.js, 'secret' = valeur sensible affichée masquée",
+        },
         updatedBy: {
           type: DataTypes.INTEGER.UNSIGNED,
           allowNull: true,
