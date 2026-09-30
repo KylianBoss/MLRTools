@@ -12,6 +12,7 @@ import { cleanDB } from "../cron/CleanDB.js";
 import { autoGroupAlarmsJob } from "../cron/AutoGroupAlarms.js";
 import { sendAlarmReport } from "../cron/SendAlarmReport.js";
 import { startTunnel } from "../cloudflareTunnel.js";
+import { executeMvnSelect } from "../mvn.js";
 
 dayjs.extend(utc);
 
@@ -54,6 +55,12 @@ async function executeJobAction(action, args = {}) {
 
     case "sendAlarmReport":
       return await sendAlarmReport(args.retryCount || 0, args.date || null);
+
+    case "executeMvnQuery":
+      // Exécuté uniquement par le PC BOT (seule instance à avoir accès au
+      // réseau MVN/Oracle) — voir Database.routes.js pour l'enfilage du job
+      // depuis la console DEV et le polling du résultat.
+      return await executeMvnSelect(args.sql);
 
     default:
       throw new Error(`Unknown action: ${action}`);
@@ -103,12 +110,22 @@ async function processJobQueue() {
 
     try {
       // Exécuter le job avec les args (incluant retryCount)
-      await executeJobAction(job.action, job.args || {});
+      const actionResult = await executeJobAction(job.action, job.args || {});
 
-      // Marquer comme complété
+      // Marquer comme complété. Le résultat n'est conservé que pour les
+      // actions qui en produisent un exploitable par l'appelant (ex:
+      // executeMvnQuery) — les autres jobs renvoient undefined et JobQueue.result
+      // reste null, pour ne pas alourdir la table sans raison.
+      const MAX_STORED_RESULTS = 5000;
+      let storedResult = actionResult ?? null;
+      if (Array.isArray(storedResult) && storedResult.length > MAX_STORED_RESULTS) {
+        storedResult = storedResult.slice(0, MAX_STORED_RESULTS);
+      }
+
       await job.update({
         status: "completed",
         completedAt: new Date(),
+        result: storedResult,
       });
 
       console.log(`Job completed: ${job.jobName} (ID: ${job.id})`);

@@ -8,6 +8,74 @@ import path from "path";
 
 const router = Router();
 
+// --- Exécution de requêtes MVN via le PC BOT ---
+// Le serveur qui reçoit /db/execute-code n'a généralement pas d'accès réseau
+// à Oracle/MVN (chaque instance de l'app a son propre serveur local ; seul le
+// PC BOT, qui poll JobQueue, est sur le bon réseau). On délègue donc en
+// enfilant un job "executeMvnQuery" dans JobQueue (voir Cron.routes.js), et on
+// attend son résultat par polling, avec un timeout.
+const MVN_JOB_POLL_INTERVAL_MS = 1000;
+const MVN_JOB_TIMEOUT_MS = 60000; // le bot poll la queue toutes les 15s
+
+async function isBotActive(db) {
+  const INACTIVE_BOT_THRESHOLD_MINUTES = 5;
+  const bot = await db.models.Users.findOne({
+    where: { isBot: true },
+  });
+  if (!bot || !bot.isBotActive) return false;
+  return dayjs(bot.isBotActive).isAfter(
+    dayjs().subtract(INACTIVE_BOT_THRESHOLD_MINUTES, "minutes")
+  );
+}
+
+async function runMvnSelectViaBot(db, sql) {
+  if (typeof sql !== "string" || !/^\s*select/i.test(sql)) {
+    throw new Error(
+      "mvnDb.query: seules les requêtes SELECT sont autorisées."
+    );
+  }
+
+  if (!(await isBotActive(db))) {
+    throw new Error(
+      "mvnDb.query: aucun PC BOT actif pour exécuter la requête MVN (celui-ci a seul l'accès réseau à Oracle)."
+    );
+  }
+
+  const job = await db.models.JobQueue.create({
+    jobName: "Console DEV - requête MVN",
+    action: "executeMvnQuery",
+    args: { sql },
+    requestedBy: null,
+    scheduledFor: null,
+  });
+
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < MVN_JOB_TIMEOUT_MS) {
+    await new Promise((resolve) =>
+      setTimeout(resolve, MVN_JOB_POLL_INTERVAL_MS)
+    );
+    await job.reload();
+    if (job.status === "completed") {
+      return job.result;
+    }
+    if (job.status === "failed") {
+      throw new Error(job.error || "La requête MVN a échoué sur le PC BOT.");
+    }
+  }
+
+  throw new Error(
+    "mvnDb.query: délai dépassé en attendant le résultat du PC BOT."
+  );
+}
+
+// Wrapper en lecture seule exposé dans la console : uniquement des SELECT,
+// délégués au PC BOT via JobQueue (voir runMvnSelectViaBot ci-dessus).
+function buildMvnReadOnlyProxy(db) {
+  return {
+    query: (sql) => runMvnSelectViaBot(db, sql),
+  };
+}
+
 router.post("/sync-models", async (req, res) => {
   const db = getDB();
   const { user } = req.body;
@@ -308,6 +376,11 @@ router.post("/execute-code", async (req, res) => {
   try {
     const MAX_RESULTS = 5000;
 
+    // mvnDb délègue au PC BOT via JobQueue (voir runMvnSelectViaBot) ; pas de
+    // connexion à ouvrir/fermer ici, uniquement si le code y fait référence.
+    const needsMvn = /\bmvnDb\b/.test(code);
+    const mvnDb = needsMvn ? buildMvnReadOnlyProxy(db) : undefined;
+
     // Créer un proxy de db qui ajoute automatiquement un limit aux requêtes
     const dbProxy = new Proxy(db, {
       get(target, prop) {
@@ -367,10 +440,10 @@ router.post("/execute-code", async (req, res) => {
       .join(", ")}];`;
     const wrappedCode = `${resultsCode}\n${returnCode}`;
 
-    const fn = new AsyncFunction("db", "Op", "dayjs", wrappedCode);
+    const fn = new AsyncFunction("db", "Op", "dayjs", "mvnDb", wrappedCode);
 
-    // Execute the function with db proxy, Op, and dayjs in scope
-    let result = await fn(dbProxy, Op, dayjs);
+    // Execute the function with db proxy, Op, dayjs, and mvnDb in scope
+    let result = await fn(dbProxy, Op, dayjs, mvnDb);
 
     // If result is a Promise, wait for it
     if (result && typeof result.then === "function") {
@@ -414,6 +487,7 @@ router.get("/models", async (req, res) => {
 
 // Route protégée par 2FA pour override les forbiddenPatterns
 router.post("/execute-code-override", require2FA, async (req, res) => {
+  const db = getDB();
   const { code } = req.body;
 
   if (!code) {
@@ -423,6 +497,11 @@ router.post("/execute-code-override", require2FA, async (req, res) => {
 
   try {
     const MAX_RESULTS = 5000;
+
+    // mvnDb délègue au PC BOT via JobQueue (voir runMvnSelectViaBot) ; pas de
+    // connexion à ouvrir/fermer ici, uniquement si le code y fait référence.
+    const needsMvn = /\bmvnDb\b/.test(code);
+    const mvnDb = needsMvn ? buildMvnReadOnlyProxy(db) : undefined;
 
     // Créer un proxy de db qui ajoute automatiquement un limit aux requêtes
     const dbProxy = new Proxy(db, {
@@ -494,10 +573,10 @@ router.post("/execute-code-override", require2FA, async (req, res) => {
 
     const wrappedCode = `${resultsCode}\n${returnCode}`;
 
-    const fn = new AsyncFunction("db", "Op", "dayjs", wrappedCode);
+    const fn = new AsyncFunction("db", "Op", "dayjs", "mvnDb", wrappedCode);
 
-    // Execute the function with db proxy, Op, and dayjs in scope
-    let result = await fn(dbProxy, Op, dayjs);
+    // Execute the function with db proxy, Op, dayjs, and mvnDb in scope
+    let result = await fn(dbProxy, Op, dayjs, mvnDb);
 
     // If result is a Promise, wait for it
     if (result && typeof result.then === "function") {
