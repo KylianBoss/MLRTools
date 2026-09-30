@@ -685,13 +685,12 @@ function formatDataForTable(data) {
  * Génère l'image du graphique SevenDaysAverage
  */
 async function generateSevenDaysAverageImage(data) {
-  const max = Math.round(
-    Math.max(data.errors_per_thousand, data.downtime_minutes_per_thousand) * 1.5
-  );
-
   const browser = await getBrowser();
   const page = await browser.newPage();
   await page.setViewport({ width: 900, height: 400, deviceScaleFactor: 2 });
+
+  const maxErrors = Math.round(data.errors_per_thousand * 1.5);
+  const maxDowntime = Math.round(data.downtime_minutes_per_thousand * 1.5);
 
   const configuration = {
     type: "bar",
@@ -706,6 +705,7 @@ async function generateSevenDaysAverageImage(data) {
             },
           ],
           backgroundColor: "#008ffb",
+          yAxisID: "y",
         },
         {
           label: "Temps de pannes [min]",
@@ -716,6 +716,7 @@ async function generateSevenDaysAverageImage(data) {
             },
           ],
           backgroundColor: "#00e396",
+          yAxisID: "y1",
         },
       ],
     },
@@ -729,14 +730,32 @@ async function generateSevenDaysAverageImage(data) {
           font: { size: 18, weight: "bold" },
         },
         legend: { display: true, position: "bottom" },
-        datalabels: { display: false },
+        datalabels: {
+          display: true,
+          anchor: "end",
+          align: "end",
+          font: { weight: "bold" },
+        },
       },
       scales: {
         y: {
+          type: "linear",
+          position: "left",
           beginAtZero: true,
           min: 0,
-          max: max,
-          title: { display: true, text: "Valeur / 1000 trays" },
+          max: maxErrors,
+          title: { display: true, text: "Nombre de pannes / 1000 trays" },
+        },
+        y1: {
+          type: "linear",
+          position: "right",
+          beginAtZero: true,
+          min: 0,
+          max: maxDowntime,
+          title: { display: true, text: "Temps de pannes / 1000 trays (minutes)" },
+          grid: {
+            drawOnChartArea: false,
+          },
         },
       },
     },
@@ -747,6 +766,7 @@ async function generateSevenDaysAverageImage(data) {
     <html>
     <head>
       <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
       <style>
         body { margin: 0; padding: 0; background: white; }
         #chartContainer { width: 100vw; height: 100vh; }
@@ -758,8 +778,10 @@ async function generateSevenDaysAverageImage(data) {
         <canvas id="myChart"></canvas>
       </div>
       <script>
+        Chart.register(ChartDataLabels);
         const ctx = document.getElementById('myChart');
         const config = ${JSON.stringify(configuration)};
+        config.options.plugins.datalabels.formatter = (value) => value.y;
         new Chart(ctx, config);
       </script>
     </body>

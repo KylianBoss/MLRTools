@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1789390723.321031,
-    "seen": 1790659179.7756963,
-    "ast_hash": "d1f3a522585f2cda04c0e53bb6550c14",
+    "mtime": 1788938410.7700498,
+    "seen": 1789038246.4000103,
+    "ast_hash": "437e14950489c179cee18fa6f9530160",
     "semantic_hash": ""
   },
   "postcss.config.cjs": {
@@ -120,20 +120,20 @@
     "semantic_hash": ""
   },
   "src-electron/cron/ExtractWMS.js": {
-    "mtime": 1789390601.5636234,
-    "seen": 1790659179.7801473,
-    "ast_hash": "853fe1f3dfe7f8d579fc8e664dc7ac2c",
+    "mtime": 1776840284.592426,
+    "seen": 1787578878.4240901,
+    "ast_hash": "31e5513adb6d5c010a3ff0700a13c0d4",
     "semantic_hash": ""
   },
   "src-electron/cron/SendAlarmReport.js": {
-    "mtime": 1790661824.6176407,
-    "seen": 1790662612.6306596,
-    "ast_hash": "aa66870117e91280226e932d4e88a5cb",
+    "mtime": 1783576152.359787,
+    "seen": 1787578878.424091,
+    "ast_hash": "c8792906d67665562777cbb6981cbf3d",
     "semantic_hash": ""
   },
   "src-electron/cron/SendKPI.js": {
     "mtime": 1788937751.1335325,
-    "seen": 1790659179.7805562,
+    "seen": 1789038246.4075544,
     "ast_hash": "758ca1c124f09c419c63ba165e187c9c",
     "semantic_hash": ""
   },
@@ -144,9 +144,9 @@
     "semantic_hash": ""
   },
   "src-electron/database.js": {
-    "mtime": 1790661734.2815742,
-    "seen": 1790662612.6313846,
-    "ast_hash": "2283f89ef876efc033777a38fb662df9",
+    "mtime": 1789044063.0949209,
+    "seen": 1789044108.988017,
+    "ast_hash": "8520fa844d674a3e370f2e93bbb232e3",
     "semantic_hash": ""
   },
   "src-electron/electron-flag.d.ts": {
@@ -186,9 +186,9 @@
     "semantic_hash": ""
   },
   "src-electron/routes/Alarms.routes.js": {
-    "mtime": 1790661860.4457393,
-    "seen": 1790662612.6335862,
-    "ast_hash": "ec97c6807536affd0716305f4032fcdd",
+    "mtime": 1789042830.0888302,
+    "seen": 1789043137.1109014,
+    "ast_hash": "995d99584a30dd22dd2722cafaa57374",
     "semantic_hash": ""
   },
   "src-electron/routes/Auth.routes.js": {
@@ -210,9 +210,9 @@
     "semantic_hash": ""
   },
   "src-electron/routes/Charts.routes.js": {
-    "mtime": 1790661841.4350731,
-    "seen": 1790662612.6348968,
-    "ast_hash": "f1cd07f602702a1bcff5a21a768cd863",
+    "mtime": 1788843997.9431374,
+    "seen": 1788844175.748939,
+    "ast_hash": "0f3c9167a1b099007f8866fea512c2b4",
     "semantic_hash": ""
   },
   "src-electron/routes/Config.routes.js": {
@@ -223,13 +223,13 @@
   },
   "src-electron/routes/Cron.routes.js": {
     "mtime": 1788855710.9067137,
-    "seen": 1790659179.7851787,
+    "seen": 1788861213.249695,
     "ast_hash": "b41542d2a5e5ec321cdba714413ca22e",
     "semantic_hash": ""
   },
   "src-electron/routes/Database.routes.js": {
-    "mtime": 1789390723.3220322,
-    "seen": 1790659179.785183,
+    "mtime": 1787230266.1886926,
+    "seen": 1787578878.4241052,
     "ast_hash": "18ed1acb8d2dc9b035793b1695ab0985",
     "semantic_hash": ""
   },
@@ -240,15 +240,15 @@
     "semantic_hash": ""
   },
   "src-electron/routes/Interventions.routes.js": {
-    "mtime": 1790661878.671505,
-    "seen": 1790662612.6362216,
-    "ast_hash": "3df7757caaf31f19d4b54043bf9b3e95",
+    "mtime": 1787217884.7461338,
+    "seen": 1787578878.424107,
+    "ast_hash": "98003ff12a3b7af002f9ef9ee61fa237",
     "semantic_hash": ""
   },
   "src-electron/routes/KPI.routes.js": {
-    "mtime": 1790661914.6573274,
-    "seen": 1790662612.636225,
-    "ast_hash": "74e649f9ab7b8beec33d0cec4d9d513d",
+    "mtime": 1788937760.1924198,
+    "seen": 1789038246.416348,
+    "ast_hash": "4876761222b4329c678e322cbbefe11f",
     "semantic_hash": ""
   },
   "src-electron/routes/Locations.routes.js": {
@@ -270,39 +270,39 @@
     "semantic_hash": ""
   },
   "src-electron/routes/Settings.routes.js": {
-    "mtime": 1790661746.1366303,
-    "seen": 1790662612.637779,
-    "ast_hash": "6db9fad3a56b86ff03424f5253f39d2f",
+    "mtime": 1776842915.4010384,
+    "seen": 1787578878.4241118,
+    "ast_hash": "3ce3be125b4e65bea5192253435b89ea",
     "semantic_hash": ""
   },
   "src-electron/routes/Stingrays.routes.js": {
-    "mtime": 1790662002.050507,
-    "seen": 1790662612.6377828,
-    "ast_hash": "f6f1f31cd3b1a684823590cd0cd38581",
+    "mtime": 1787895667.782055,
+    "seen": 1787901104.7764664,
+    "ast_hash": "176a63164ed8b4f11f184cec560ca427",
     "semantic_hash": ""
   },
   "src-electron/routes/Users.routes.js": {
     "mtime": 1788933308.5456133,
-    "seen": 1790659179.787947,
+    "seen": 1788933371.3072348,
     "ast_hash": "dda0888cca89c78f520b79f78da64db8",
     "semantic_hash": ""
   },
   "src-electron/routes/index.js": {
     "mtime": 1788933308.5476155,
-    "seen": 1790659179.7879505,
+    "seen": 1788933371.3072388,
     "ast_hash": "192b20fa31e5af9ecbd750355b366033",
     "semantic_hash": ""
   },
   "src-electron/server.js": {
     "mtime": 1788855710.9103794,
-    "seen": 1790659179.787954,
+    "seen": 1788861213.249724,
     "ast_hash": "6df7df50a7a957dab6e3ba9fc615c1e9",
     "semantic_hash": ""
   },
   "src-electron/services/autoGroupAlarms.js": {
-    "mtime": 1790661810.6544693,
-    "seen": 1790662612.6388435,
-    "ast_hash": "7fa0c9ca3f003527cdf783080a46fe4b",
+    "mtime": 1789044036.1842365,
+    "seen": 1789044108.9991925,
+    "ast_hash": "09f4aebfc9acadb46eca19c118258e0c",
     "semantic_hash": ""
   },
   "src-electron/services/stingrayState.js": {
@@ -456,8 +456,8 @@
     "semantic_hash": ""
   },
   "src/layouts/MainLayout.vue": {
-    "mtime": 1789390601.5733318,
-    "seen": 1790659179.798461,
+    "mtime": 1788933308.5512464,
+    "seen": 1788933371.3175387,
     "ast_hash": "ba6c421e450578edbd9f8b7969205461",
     "semantic_hash": ""
   },
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "src/pages/KPI/DailyAnalysis.vue": {
-    "mtime": 1789046086.0936947,
-    "seen": 1790659179.7994998,
-    "ast_hash": "bc623a908c9d3fc3cd4311de27583be8",
+    "mtime": 1789044894.0380914,
+    "seen": 1789044911.7205,
+    "ast_hash": "0fa33240fe914d0583a3c412fbb3361a",
     "semantic_hash": ""
   },
   "src/pages/KPI/InterventionJournal.vue": {
@@ -517,7 +517,7 @@
   },
   "src/pages/admin/CronJobsManager.vue": {
     "mtime": 1788933308.553347,
-    "seen": 1790659179.8015373,
+    "seen": 1788933371.3206248,
     "ast_hash": "74247b39d54b55ed0413c8104be6a22c",
     "semantic_hash": ""
   },
@@ -528,9 +528,9 @@
     "semantic_hash": ""
   },
   "src/pages/admin/SettingsPage.vue": {
-    "mtime": 1790661782.3512795,
-    "seen": 1790662612.6566133,
-    "ast_hash": "2e2e95df4447d77a488882a16dae8db7",
+    "mtime": 1776842949.0083184,
+    "seen": 1787578878.424149,
+    "ast_hash": "1b6322594f36127488ed4bdc3f1f4564",
     "semantic_hash": ""
   },
   "src/pages/admin/TwoFactorSetup.vue": {
@@ -541,7 +541,7 @@
   },
   "src/pages/admin/UsersSettings.vue": {
     "mtime": 1788933308.5579746,
-    "seen": 1790659179.802528,
+    "seen": 1788933371.3215897,
     "ast_hash": "4dded4e109f942bc72cff8145dc8ac99",
     "semantic_hash": ""
   },
@@ -576,27 +576,27 @@
     "semantic_hash": ""
   },
   "src/pages/charts/ChartsPage.vue": {
-    "mtime": 1789385450.4745378,
-    "seen": 1790659179.8047106,
+    "mtime": 1751636719.3836677,
+    "seen": 1787578878.4241557,
     "ast_hash": "8ece1f8a2921f20091a8ac1e16e9bacf",
     "semantic_hash": ""
   },
   "src/pages/charts/CustomChartsPage.vue": {
     "mtime": 1788844024.6203027,
-    "seen": 1790659179.8047144,
+    "seen": 1788844175.7490938,
     "ast_hash": "345b13e27ef38e8dfde13563fe3de3b8",
     "semantic_hash": ""
   },
   "src/pages/charts/FailluresChartsPage.vue": {
-    "mtime": 1789384850.0654554,
-    "seen": 1790659179.804718,
+    "mtime": 1775042373.2072368,
+    "seen": 1787578878.4241571,
     "ast_hash": "ba3ebdf5e12b47b5c2258c2fe857549f",
     "semantic_hash": ""
   },
   "src/pages/dev/CommandTool.vue": {
-    "mtime": 1789390723.3230336,
-    "seen": 1790659179.8047214,
-    "ast_hash": "1895c87921bb3431f8f541ce0ce3b70d",
+    "mtime": 1768809178.534688,
+    "seen": 1787578878.4241579,
+    "ast_hash": "ff130563a054eb9415b408c7a36f375c",
     "semantic_hash": ""
   },
   "src/pages/maintenance/MaintenancePlanDetails.vue": {
@@ -702,8 +702,8 @@
     "semantic_hash": ""
   },
   "src/router/routes.js": {
-    "mtime": 1789390601.5747125,
-    "seen": 1790659179.8109589,
+    "mtime": 1788933308.5619755,
+    "seen": 1788933371.330986,
     "ast_hash": "52ece21c5f0243714ea787e7ea22bee6",
     "semantic_hash": ""
   },
@@ -744,9 +744,9 @@
     "semantic_hash": ""
   },
   ".github/workflows/quasar-release.yml": {
-    "mtime": 1789391243.066702,
-    "seen": 1790659179.8132844,
-    "ast_hash": "960da4209126f98640c23f6f415611c8",
+    "mtime": 1770211331.2956064,
+    "seen": 1787578878.4241776,
+    "ast_hash": "4e4817f414ea40917566575ce371fdba",
     "semantic_hash": ""
   },
   "docs/README-DOCUMENTATION.txt": {
@@ -822,177 +822,117 @@
     "semantic_hash": ""
   },
   "src-electron/cron/reportBlocks.js": {
-    "mtime": 1790663261.7578163,
-    "seen": 1790663293.6292443,
-    "ast_hash": "b98d9a89f807cdc817e172e3dd3aac68",
+    "mtime": 1788933308.53628,
+    "seen": 1788933371.2998834,
+    "ast_hash": "36d3a3e86b3f5bac937de4f0f717dbc2",
     "semantic_hash": ""
   },
   "src-electron/routes/Reports.routes.js": {
-    "mtime": 1789390601.5713768,
-    "seen": 1790659179.787242,
+    "mtime": 1788933308.5436144,
+    "seen": 1788933371.306599,
     "ast_hash": "35c79af7bd362c4d285af61b1ff12356",
-    "semantic_hash": ""
-  },
-  "src/components/charts/AlarmsByHourAverageChart.vue": {
-    "mtime": 1789386806.842834,
-    "seen": 1790659179.7913063,
-    "ast_hash": "b877e4ca13d7d397197953e20321cde8",
-    "semantic_hash": ""
-  },
-  "src/components/charts/AlarmsByHourChart.vue": {
-    "mtime": 1789386797.5106964,
-    "seen": 1790659179.7913105,
-    "ast_hash": "e7cd0acd1410e7c142d215bd681af57a",
     "semantic_hash": ""
   },
   "src/components/dialogs/ReportDialog.vue": {
     "mtime": 1788933308.549015,
-    "seen": 1790659179.7957394,
+    "seen": 1788933371.3144586,
     "ast_hash": "26dedc194010948baf4dd3edc5bd7cc9",
     "semantic_hash": ""
   },
   "src/pages/admin/ReportsManager.vue": {
     "mtime": 1788933308.5547845,
-    "seen": 1790659179.8018746,
+    "seen": 1788933371.3209772,
     "ast_hash": "3b40f0b9c314d211c431e40b777a882e",
-    "semantic_hash": ""
-  },
-  "src/pages/charts/AlarmsByHourPage.vue": {
-    "mtime": 1789386816.7350552,
-    "seen": 1790659179.8047054,
-    "ast_hash": "2b7ae6ca5bac841f6b76e3a6242a02fc",
     "semantic_hash": ""
   },
   "src/plugins/useReportDialog.js": {
     "mtime": 1788933308.559976,
-    "seen": 1790659179.8105628,
+    "seen": 1788933371.3306112,
     "ast_hash": "b0986c8e6bb90f0712d0846a61fecf2c",
     "semantic_hash": ""
   },
   "storage/migrations/004_add_alarm_analysis_columns.js": {
     "mtime": 1788933308.569394,
-    "seen": 1790659179.8132427,
+    "seen": 1788933371.3333452,
     "ast_hash": "79e553415e47b1c6e8f60d8b970ee459",
     "semantic_hash": ""
   },
   "storage/migrations/005_create_interventions_table.js": {
     "mtime": 1788933308.5720859,
-    "seen": 1790659179.8132472,
+    "seen": 1788933371.33335,
     "ast_hash": "481e271502dda3f172d074337377a613",
     "semantic_hash": ""
   },
   "storage/migrations/006_update_interventions_user_references.js": {
     "mtime": 1788933308.576103,
-    "seen": 1790659179.81325,
+    "seen": 1788933371.333354,
     "ast_hash": "4be25fa2a70ebe631193babd31f255d3",
     "semantic_hash": ""
   },
   "storage/migrations/008_create_case_crashes_table.js": {
     "mtime": 1788933308.5790741,
-    "seen": 1790659179.8132522,
+    "seen": 1788933371.3333578,
     "ast_hash": "70fce43975f1a35a1aee93100b8e9f0c",
     "semantic_hash": ""
   },
   "storage/migrations/009_seed_case_crashes_report_setting.js": {
     "mtime": 1788933308.5820725,
-    "seen": 1790659179.8132546,
+    "seen": 1788933371.3333616,
     "ast_hash": "2595628c495c25fca6ea0a2ab260c7e0",
     "semantic_hash": ""
   },
   "storage/migrations/010_add_updated_at_to_custom_charts.js": {
     "mtime": 1788933308.584602,
-    "seen": 1790659179.8132572,
+    "seen": 1788933371.3333645,
     "ast_hash": "bd062ebc32c5a12156c23c6398e040d0",
     "semantic_hash": ""
   },
   "storage/migrations/011_create_stingrays_tables.js": {
     "mtime": 1788933308.587114,
-    "seen": 1790659179.8132598,
+    "seen": 1788933371.3333678,
     "ast_hash": "952e138fb223c9d11a5c77c3a96c5f36",
     "semantic_hash": ""
   },
   "storage/migrations/012_add_stingray_link_to_interventions.js": {
     "mtime": 1788933308.5908115,
-    "seen": 1790659179.8132617,
+    "seen": 1788933371.333371,
     "ast_hash": "7c8fe1ef6737931d4d236eeaf6b1805f",
     "semantic_hash": ""
   },
   "storage/migrations/013_rename_aisles_to_w_format.js": {
     "mtime": 1788933308.5933273,
-    "seen": 1790659179.8132646,
+    "seen": 1788933371.3333738,
     "ast_hash": "3d0aa94a4541611aaaf32993502c4e80",
     "semantic_hash": ""
   },
   "storage/migrations/014_add_current_location_label_to_stingrays.js": {
     "mtime": 1788933308.5956964,
-    "seen": 1790659179.813267,
+    "seen": 1788933371.333379,
     "ast_hash": "5d3ae0b3ab099a08eab2979ca173ba7f",
     "semantic_hash": ""
   },
   "storage/migrations/015_add_visible_to_custom_charts.js": {
     "mtime": 1788933308.5992317,
-    "seen": 1790659179.8132691,
+    "seen": 1788933371.333385,
     "ast_hash": "3f28eba81830089bce2b4e1f7d9037db",
     "semantic_hash": ""
   },
   "storage/migrations/016_create_reports_tables.js": {
     "mtime": 1788933308.6023366,
-    "seen": 1790659179.8132722,
+    "seen": 1788933371.333391,
     "ast_hash": "4b3d9790a81fc17f1d30559cdec0238e",
     "semantic_hash": ""
   },
   "storage/migrations/017_seed_default_report.js": {
     "mtime": 1788933308.6054876,
-    "seen": 1790659179.8132749,
+    "seen": 1788933371.3333962,
     "ast_hash": "5932458a8aa8082ce162d49ca69aa776",
     "semantic_hash": ""
   },
   "storage/migrations/018_add_trigger_action_to_auto_group_rules.js": {
-    "mtime": 1789046086.095245,
-    "seen": 1790659179.8132775,
-    "ast_hash": "9325f418de82c2578627c04b8cb3ecf6",
-    "semantic_hash": ""
-  },
-  "storage/migrations/019_add_alarms_by_hour_block_type.js": {
-    "mtime": 1789383575.0225806,
-    "seen": 1790659179.8132803,
-    "ast_hash": "f428becf2b3e3d877cb6efabc8446513",
-    "semantic_hash": ""
-  },
-  "storage/migrations/020_seed_datasource_grouping_settings.js": {
-    "mtime": 1790659529.4028478,
-    "seen": 1790659690.9146237,
-    "ast_hash": "b9f45e1416bb6389f07d343dc22ab6b2",
-    "semantic_hash": ""
-  },
-  "src-electron/services/settingsDuration.js": {
-    "mtime": 1790661974.0197961,
-    "seen": 1790662612.638848,
-    "ast_hash": "7bf9bdaa850fb32fc967e6ea14151834",
-    "semantic_hash": ""
-  },
-  "storage/migrations/021_rename_datasource_grouping_settings_to_harmonized_duration.js": {
-    "mtime": 1790660547.2875118,
-    "seen": 1790661119.3737423,
-    "ast_hash": "a5fe0d74f4beb6e42ae29d1c7b13de5f",
-    "semantic_hash": ""
-  },
-  "src/utils/settingsValidation.js": {
-    "mtime": 1790661764.4434547,
-    "seen": 1790662612.6716986,
-    "ast_hash": "455b139643015d4f1a4f4534a57faad7",
-    "semantic_hash": ""
-  },
-  "storage/migrations/022_add_type_to_settings.js": {
-    "mtime": 1790662383.215623,
-    "seen": 1790662612.678143,
-    "ast_hash": "ce6d63b8c396058ceee1b95e031b241a",
-    "semantic_hash": ""
-  },
-  "storage/migrations/023_fix_datasource_grouping_settings_type.js": {
-    "mtime": 1790662517.9204688,
-    "seen": 1790662612.6781468,
-    "ast_hash": "81ddb07d5af34a215ab802b59b0ee3aa",
+    "mtime": 1789042997.7059236,
+    "seen": 1789043137.1509814,
+    "ast_hash": "6bec55b21bda0aaaa06ad4c9e48e7ae7",
     "semantic_hash": ""
   }
 }
