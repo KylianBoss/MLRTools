@@ -2276,7 +2276,12 @@ const buildClusters = (alarmList, gapMs = 5 * 60 * 1000) => {
 };
 
 const computeAutoGroups = () => {
-  const candidates = alarms.value.filter((a) => !a.x_group && !a.x_treated);
+  // Clone chaque alarme : le fallback datasource pose un x_group "pendant"
+  // (synthétique, négatif) directement sur ces objets pour détecter les
+  // ponts de fusion (cf registerGroupProposal). Sans clone, ça muterait les
+  // objets réactifs d'alarms.value et ferait apparaître ces faux numéros de
+  // groupe négatifs dans le tableau avant même toute validation.
+  const candidates = alarms.value.filter((a) => !a.x_group && !a.x_treated).map((a) => ({ ...a }));
 
   const proposals = [];
   const usedDbIds = new Set();
