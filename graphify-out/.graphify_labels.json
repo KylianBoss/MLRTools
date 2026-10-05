@@ -86,7 +86,7 @@
   "84": "csv-parser",
   "85": "022_add_type_to_settings.js",
   "86": "primeTriggerAlarmOptions",
-  "87": "eslint",
+  "87": "prettier",
   "88": "eslint-config-prettier",
   "89": "cors",
   "90": "eventsource",

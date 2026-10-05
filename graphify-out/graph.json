@@ -249,7 +249,7 @@
       "file_type": "code",
       "norm_label": "toggleautogroupalarm()",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2611"
+      "source_location": "L2616"
     },
     {
       "id": "src_pages_kpi_dailyanalysis_ungroupalarm",
@@ -285,7 +285,7 @@
       "file_type": "code",
       "norm_label": "validateallautogroups()",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2755"
+      "source_location": "L2760"
     },
     {
       "id": "src_pages_kpi_dailyanalysis_viewdetails",
@@ -5025,7 +5025,7 @@
       "file_type": "code",
       "norm_label": "openautogroupdialog()",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2588"
+      "source_location": "L2593"
     },
     {
       "id": "src_pages_kpi_dailyanalysis_resolveautogroupcomment",
@@ -5553,7 +5553,7 @@
       "file_type": "code",
       "norm_label": "handlekeyboardshortcuts()",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2870"
+      "source_location": "L2875"
     },
     {
       "id": "src_pages_kpi_dailyanalysis_markastreated",
@@ -5577,7 +5577,7 @@
       "file_type": "code",
       "norm_label": "movetonextautogroup()",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2853"
+      "source_location": "L2858"
     },
     {
       "id": "src_pages_kpi_dailyanalysis_skipautogroup",
@@ -5589,7 +5589,7 @@
       "file_type": "code",
       "norm_label": "skipautogroup()",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2751"
+      "source_location": "L2756"
     },
     {
       "id": "src_pages_kpi_dailyanalysis_validateautogroup",
@@ -5601,7 +5601,7 @@
       "file_type": "code",
       "norm_label": "validateautogroup()",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2620"
+      "source_location": "L2625"
     },
     {
       "id": "src_stores_stingrays_errormessage",
@@ -10873,6 +10873,17 @@
       "source_location": "L68"
     },
     {
+      "id": "package_devdependencies_eslint",
+      "label": "eslint",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "eslint",
+      "source_file": "package.json",
+      "source_location": "L76"
+    },
+    {
       "id": "package_devdependencies_intlify_vite_plugin_vue_i18n",
       "label": "@intlify/vite-plugin-vue-i18n",
       "_origin": "ast",
@@ -10882,17 +10893,6 @@
       "norm_label": "@intlify/vite-plugin-vue-i18n",
       "source_file": "package.json",
       "source_location": "L69"
-    },
-    {
-      "id": "package_devdependencies_prettier",
-      "label": "prettier",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "prettier",
-      "source_file": "package.json",
-      "source_location": "L80"
     },
     {
       "id": "package_devdependencies_sequelize_cli",
@@ -10950,6 +10950,17 @@
       "source_location": "L68"
     },
     {
+      "id": "eslint",
+      "label": "eslint",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "devDependencies",
+      "file_type": "concept",
+      "norm_label": "eslint",
+      "source_file": "package.json",
+      "source_location": "L76"
+    },
+    {
       "id": "intlify_vite_plugin_vue_i18n",
       "label": "@intlify/vite-plugin-vue-i18n",
       "_origin": "ast",
@@ -10959,17 +10970,6 @@
       "norm_label": "@intlify/vite-plugin-vue-i18n",
       "source_file": "package.json",
       "source_location": "L69"
-    },
-    {
-      "id": "prettier",
-      "label": "prettier",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "prettier",
-      "source_file": "package.json",
-      "source_location": "L80"
     },
     {
       "id": "sequelize_cli",
@@ -16175,26 +16175,26 @@
       "source_location": "L59"
     },
     {
-      "id": "package_devdependencies_eslint",
-      "label": "eslint",
+      "id": "package_devdependencies_prettier",
+      "label": "prettier",
       "_origin": "ast",
       "community": 87,
-      "community_name": "eslint",
+      "community_name": "prettier",
       "file_type": "code",
-      "norm_label": "eslint",
+      "norm_label": "prettier",
       "source_file": "package.json",
-      "source_location": "L76"
+      "source_location": "L80"
     },
     {
-      "id": "eslint",
-      "label": "eslint",
+      "id": "prettier",
+      "label": "prettier",
       "_origin": "ast",
       "community": 87,
-      "community_name": "eslint",
+      "community_name": "prettier",
       "file_type": "concept",
-      "norm_label": "eslint",
+      "norm_label": "prettier",
       "source_file": "package.json",
-      "source_location": "L76"
+      "source_location": "L80"
     },
     {
       "id": "package_devdependencies_eslint_config_prettier",
@@ -19489,7 +19489,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2289",
+      "source_location": "L2294",
       "weight": 1.0
     },
     {
@@ -19501,7 +19501,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2401",
+      "source_location": "L2406",
       "weight": 1.0
     },
     {
@@ -19513,7 +19513,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2479",
+      "source_location": "L2484",
       "weight": 1.0
     },
     {
@@ -19549,7 +19549,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2882",
+      "source_location": "L2887",
       "weight": 1.0
     },
     {
@@ -19561,7 +19561,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2892",
+      "source_location": "L2897",
       "weight": 1.0
     },
     {
@@ -19621,7 +19621,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2589",
+      "source_location": "L2594",
       "weight": 1.0
     },
     {
@@ -19705,7 +19705,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2752",
+      "source_location": "L2757",
       "weight": 1.0
     },
     {
@@ -19753,7 +19753,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2649",
+      "source_location": "L2654",
       "weight": 1.0
     },
     {
@@ -36353,7 +36353,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2588",
+      "source_location": "L2593",
       "weight": 1.0
     },
     {
@@ -36364,7 +36364,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2611",
+      "source_location": "L2616",
       "weight": 1.0
     },
     {
@@ -36375,7 +36375,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2620",
+      "source_location": "L2625",
       "weight": 1.0
     },
     {
@@ -36386,7 +36386,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2751",
+      "source_location": "L2756",
       "weight": 1.0
     },
     {
@@ -36397,7 +36397,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2755",
+      "source_location": "L2760",
       "weight": 1.0
     },
     {
@@ -36408,7 +36408,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2853",
+      "source_location": "L2858",
       "weight": 1.0
     },
     {
@@ -36419,7 +36419,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
-      "source_location": "L2870",
+      "source_location": "L2875",
       "weight": 1.0
     },
     {
@@ -40699,5 +40699,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "fd3cf1f42a240ba0fd5e90045f9f01e9fee57a8c"
+  "built_at_commit": "041c5e6b00e6e79bd282a4a8eb35bf15537fda8c"
 }
