@@ -2175,6 +2175,55 @@ const loadAutoGroupRules = async () => {
   }
 };
 
+// Paramètres du fallback "groupement temporel par datasource" (dernière
+// étape, zone ignorée) — même système de settings texte libre que le
+// backend (storage/services/settingsDuration.js), dupliqué ici car ce
+// module backend n'est pas importable depuis le bundle frontend.
+const DATASOURCE_GAP_MS_FALLBACK = 5 * 60 * 1000; // 5 minutes
+const DATASOURCE_MAX_ALARM_DURATION_S_FALLBACK = 10 * 60; // 10 minutes
+
+const MS_PER_UNIT = { s: 1000, min: 60 * 1000, h: 60 * 60 * 1000, j: 24 * 60 * 60 * 1000 };
+const UNIT_ALIASES = {
+  s: "s", sec: "s", secs: "s", seconde: "s", secondes: "s",
+  min: "min", mins: "min", minute: "min", minutes: "min",
+  h: "h", hr: "h", hrs: "h", heure: "h", heures: "h",
+  j: "j", jour: "j", jours: "j", d: "j", day: "j", days: "j",
+};
+
+const parseDurationTextMs = (text) => {
+  if (text == null) return null;
+  const match = String(text)
+    .trim()
+    .toLowerCase()
+    .match(/^([0-9]+(?:[.,][0-9]+)?)\s*([a-zéû]+)$/i);
+  if (!match) return null;
+  const amount = Number(match[1].replace(",", "."));
+  const unit = UNIT_ALIASES[match[2]];
+  if (!Number.isFinite(amount) || !unit) return null;
+  return amount * MS_PER_UNIT[unit];
+};
+
+const autoGroupDataSourceGapMs = ref(DATASOURCE_GAP_MS_FALLBACK);
+const autoGroupDataSourceMaxAlarmDurationS = ref(DATASOURCE_MAX_ALARM_DURATION_S_FALLBACK);
+
+const loadAutoGroupDataSourceSettings = async () => {
+  try {
+    const response = await api.get("/settings");
+    const settings = response.data;
+
+    const gap = settings.find((s) => s.key === "AUTO_GROUP_DATASOURCE_GAP");
+    const gapMs = parseDurationTextMs(gap?.value);
+    autoGroupDataSourceGapMs.value = gapMs ?? DATASOURCE_GAP_MS_FALLBACK;
+
+    const maxDuration = settings.find((s) => s.key === "AUTO_GROUP_DATASOURCE_MAX_ALARM_DURATION");
+    const maxDurationMs = parseDurationTextMs(maxDuration?.value);
+    autoGroupDataSourceMaxAlarmDurationS.value =
+      maxDurationMs != null ? maxDurationMs / 1000 : DATASOURCE_MAX_ALARM_DURATION_S_FALLBACK;
+  } catch (e) {
+    console.error("Erreur chargement settings auto-group datasource:", e);
+  }
+};
+
 const normalizeRegex = (pattern) => pattern.replace(/\\d/g, "[0-9]");
 
 const matchesRule = (alarm, rule) => {
@@ -2203,8 +2252,7 @@ const currentAutoGroup = computed(() => {
   return autoGroupProposals.value[currentAutoGroupIndex.value] || null;
 });
 
-const buildClusters = (alarmList) => {
-  const GAP_MS = 5 * 60 * 1000;
+const buildClusters = (alarmList, gapMs = 5 * 60 * 1000) => {
   if (alarmList.length < 2) return [];
   const sorted = [...alarmList].sort(
     (a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence)
@@ -2216,7 +2264,7 @@ const buildClusters = (alarmList) => {
     const curr = sorted[i];
     const prevEnd = new Date(prev.timeOfAcknowledge || prev.timeOfOccurence).getTime();
     const currStart = new Date(curr.timeOfOccurence).getTime();
-    if (currStart - prevEnd <= GAP_MS) {
+    if (currStart - prevEnd <= gapMs) {
       current.push(curr);
     } else {
       if (current.length >= 2) clusters.push([...current]);
@@ -2406,9 +2454,25 @@ const computeAutoGroups = () => {
     byLocation[key].push(a);
   });
 
+  // Correspondance id synthétique -> proposal "group" de ce run, pour que le
+  // dernier fallback (datasource) ci-dessous puisse fusionner avec un groupe
+  // que le fallback "emplacement" vient de proposer, pas encore validé par
+  // l'utilisateur (donc pas encore de vrai x_group en DB à ce stade).
+  let nextPendingGroupId = -1;
+  const pendingGroupsById = new Map();
+  const registerGroupProposal = (proposal) => {
+    const pendingId = nextPendingGroupId--;
+    pendingGroupsById.set(pendingId, proposal);
+    proposal.alarms.forEach((a) => {
+      a.x_group = pendingId;
+    });
+    proposals.push(proposal);
+  };
+
   Object.entries(byLocation).forEach(([location, locationAlarms]) => {
     for (const cluster of buildClusters(locationAlarms)) {
-      proposals.push({
+      cluster.forEach((a) => usedDbIds.add(a.dbId));
+      registerGroupProposal({
         type: "group",
         location,
         alarms: cluster,
@@ -2417,7 +2481,108 @@ const computeAutoGroups = () => {
     }
   });
 
-  return proposals;
+  // --- Dernier fallback : groupement temporel par datasource (zone
+  // ignorée). Repêche ce que le fallback par emplacement n'a pas pu
+  // regrouper (alarmes isolées de leur alarmArea mais proches dans le temps
+  // d'autres alarmes de la même dataSource), et étend un groupe déjà
+  // existant (en DB ou proposé juste au-dessus) plutôt que d'en recréer un.
+  const stillRemaining = candidates.filter((a) => !usedDbIds.has(a.dbId));
+
+  if (stillRemaining.length > 0) {
+    const dataSourceGapMs = autoGroupDataSourceGapMs.value;
+    const maxAlarmDurationS = autoGroupDataSourceMaxAlarmDurationS.value;
+    const isShortEnough = (a) => (a.duration ?? 0) <= maxAlarmDurationS;
+
+    const dataSourcesInPlay = new Set(stillRemaining.map((a) => a.dataSource));
+
+    // Alarmes déjà groupées (jours précédents ou étapes précédentes de ce
+    // même calcul) sur ces dataSources : pool de fusion pour détecter une
+    // extension de groupe existant. alarms.value contient tout le jour,
+    // x_group compris, donc pas besoin de requête séparée ici.
+    const alreadyGrouped = alarms.value.filter(
+      (a) => a.x_group != null && !usedDbIds.has(a.dbId) && dataSourcesInPlay.has(a.dataSource)
+    );
+
+    const byDataSource = {};
+    [...stillRemaining, ...alreadyGrouped].filter(isShortEnough).forEach((a) => {
+      if (!byDataSource[a.dataSource]) byDataSource[a.dataSource] = [];
+      byDataSource[a.dataSource].push(a);
+    });
+
+    for (const dsAlarms of Object.values(byDataSource)) {
+      for (const cluster of buildClusters(dsAlarms, dataSourceGapMs)) {
+        // Un id négatif référence un proposal "group" de ce run (pas encore
+        // en DB) ; un id positif référence un vrai groupe DB existant.
+        const existingGroupIds = [...new Set(cluster.map((a) => a.x_group).filter((g) => g != null))];
+        const newAlarms = cluster.filter((a) => !usedDbIds.has(a.dbId) && a.x_group == null);
+
+        const realGroupIds = existingGroupIds.filter((g) => g > 0).sort((a, b) => a - b);
+        const pendingIds = existingGroupIds.filter((g) => g < 0);
+
+        if (existingGroupIds.length === 0) {
+          if (cluster.length >= 2) {
+            cluster.forEach((a) => usedDbIds.add(a.dbId));
+            registerGroupProposal({ type: "group", alarms: cluster, comment: resolveAutoGroupComment(cluster) });
+          }
+          continue;
+        }
+
+        if (newAlarms.length === 0 && realGroupIds.length + pendingIds.length <= 1) {
+          continue; // groupe déjà existant, rien de nouveau à ajouter
+        }
+
+        if (realGroupIds.length > 0) {
+          // Fusionne sur le groupe DB réel le plus ancien. Les proposals
+          // pendants rencontrés sont vidés : leurs alarmes rejoignent ce
+          // groupe réel via une proposal "extend" séparée au lieu d'être
+          // écrites deux fois.
+          const targetGroupId = realGroupIds[0];
+          const otherAlarms = cluster.filter((a) => a.x_group != null && a.x_group !== targetGroupId);
+          for (const pid of pendingIds) {
+            const absorbed = pendingGroupsById.get(pid);
+            if (absorbed) {
+              absorbed.alarms = absorbed.alarms.filter((a) => a.x_group !== pid);
+              pendingGroupsById.delete(pid);
+            }
+          }
+          newAlarms.forEach((a) => usedDbIds.add(a.dbId));
+          proposals.push({ type: "extend", groupId: targetGroupId, alarms: [...newAlarms, ...otherAlarms] });
+        } else {
+          // Que des groupes pendants : tout absorber dans le premier
+          // rencontré plutôt que créer une proposal avec un groupId
+          // négatif, qui n'existe pas en DB.
+          const targetId = pendingIds[0];
+          const targetProposal = pendingGroupsById.get(targetId);
+          for (const pid of pendingIds.slice(1)) {
+            const absorbed = pendingGroupsById.get(pid);
+            if (!absorbed) continue;
+            absorbed.alarms.forEach((a) => {
+              a.x_group = targetId;
+            });
+            targetProposal.alarms.push(...absorbed.alarms);
+            pendingGroupsById.delete(pid);
+          }
+          newAlarms.forEach((a) => {
+            a.x_group = targetId;
+            usedDbIds.add(a.dbId);
+            targetProposal.alarms.push(a);
+          });
+        }
+      }
+    }
+  }
+
+  // Un proposal "group" pendant entièrement absorbé par un groupe réel
+  // (fusion ci-dessus) peut se retrouver vide : ne pas le proposer. Les
+  // alarmes ajoutées après coup à un groupe pendant ne sont plus forcément
+  // en ordre chronologique : re-trier pour que l'affichage et le
+  // commentaire par défaut utilisent bien la première alarme dans le temps.
+  return proposals
+    .filter((p) => p.alarms.length > 0)
+    .map((p) => ({
+      ...p,
+      alarms: [...p.alarms].sort((a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence)),
+    }));
 };
 
 const openAutoGroupDialog = () => {
@@ -2492,6 +2657,46 @@ const validateAutoGroup = async () => {
     return;
   }
 
+  if (proposal.type === "extend") {
+    if (selectedAutoGroupAlarms.value.length === 0) {
+      $q.notify({ type: "warning", message: "Veuillez sélectionner au moins une alarme" });
+      return;
+    }
+    try {
+      autoGroupLoading.value = true;
+
+      await api.post("/alarms/group-alarms", {
+        dbIds: selectedAutoGroupAlarms.value,
+        existingGroupId: proposal.groupId,
+      });
+
+      const existingAlarm = alarms.value.find((a) => a.x_group === proposal.groupId);
+
+      selectedAutoGroupAlarms.value.forEach((dbId) => {
+        const alarm = alarms.value.find((a) => a.dbId === dbId);
+        if (alarm) {
+          alarm.x_group = proposal.groupId;
+          alarm.x_treated = existingAlarm?.x_treated ?? true;
+          alarm.x_state = existingAlarm?.x_state ?? alarm.x_state;
+          if (existingAlarm?.x_comment) alarm.x_comment = existingAlarm.x_comment;
+        }
+      });
+
+      $q.notify({
+        type: "positive",
+        message: `${selectedAutoGroupAlarms.value.length} alarme(s) ajoutée(s) au groupe ${proposal.groupId}`,
+      });
+      moveToNextAutoGroup();
+    } catch (error) {
+      console.error("Error extending auto-group:", error);
+      $q.notify({ type: "negative", message: "Erreur lors de l'extension du groupe", caption: error.message });
+    } finally {
+      autoGroupLoading.value = false;
+      autoGroupValidatingAll.value = false;
+    }
+    return;
+  }
+
   // type === "group"
   if (selectedAutoGroupAlarms.value.length < 2) {
     $q.notify({ type: "warning", message: "Veuillez sélectionner au moins 2 alarmes pour créer un groupe" });
@@ -2550,6 +2755,7 @@ const skipAutoGroup = () => {
 const validateAllAutoGroups = async () => {
   const remaining = autoGroupProposals.value.slice(currentAutoGroupIndex.value);
   let groupsCreated = 0;
+  let groupsExtended = 0;
   let treated = 0;
   let failed = 0;
 
@@ -2576,6 +2782,22 @@ const validateAllAutoGroups = async () => {
             }
           });
           treated += dbIds.length;
+        } else if (proposal.type === "extend") {
+          if (dbIds.length === 0) continue;
+
+          await api.post("/alarms/group-alarms", { dbIds, existingGroupId: proposal.groupId });
+
+          const existingAlarm = alarms.value.find((a) => a.x_group === proposal.groupId);
+          dbIds.forEach((dbId) => {
+            const alarm = alarms.value.find((a) => a.dbId === dbId);
+            if (alarm) {
+              alarm.x_group = proposal.groupId;
+              alarm.x_treated = existingAlarm?.x_treated ?? true;
+              alarm.x_state = existingAlarm?.x_state ?? alarm.x_state;
+              if (existingAlarm?.x_comment) alarm.x_comment = existingAlarm.x_comment;
+            }
+          });
+          groupsExtended++;
         } else {
           // type === "group"
           if (dbIds.length < 2) continue;
@@ -2616,6 +2838,7 @@ const validateAllAutoGroups = async () => {
 
     const parts = [];
     if (groupsCreated > 0) parts.push(`${groupsCreated} groupe(s) créé(s)`);
+    if (groupsExtended > 0) parts.push(`${groupsExtended} groupe(s) étendu(s)`);
     if (treated > 0) parts.push(`${treated} alarme(s) traitée(s)`);
 
     $q.notify({
@@ -2682,7 +2905,14 @@ watch(selectedDate, async (val) => {
 });
 
 onMounted(async () => {
-  await Promise.all([loadAlarms(), loadTriggerAlarmsPool(), loadPendingInterventions(), loadAutoGroupRules(), loadDailyDoneStatus()]);
+  await Promise.all([
+    loadAlarms(),
+    loadTriggerAlarmsPool(),
+    loadPendingInterventions(),
+    loadAutoGroupRules(),
+    loadDailyDoneStatus(),
+    loadAutoGroupDataSourceSettings(),
+  ]);
   window.addEventListener("keydown", handleKeyboardShortcuts);
 });
 

@@ -1077,10 +1077,14 @@ router.post(
       const db = getDB();
       const { dbIds, existingGroupId } = req.body;
 
-      if (!dbIds || !Array.isArray(dbIds) || dbIds.length < 2) {
+      // Créer un nouveau groupe nécessite au moins 2 alarmes ; étendre un
+      // groupe existant (existingGroupId) peut se faire avec une seule
+      // alarme nouvelle (ex: fallback de groupement temporel par datasource).
+      const minDbIds = existingGroupId ? 1 : 2;
+      if (!dbIds || !Array.isArray(dbIds) || dbIds.length < minDbIds) {
         return res
           .status(400)
-          .json({ error: "At least 2 dbIds are required to group" });
+          .json({ error: `At least ${minDbIds} dbId(s) required` });
       }
 
       let groupId;
