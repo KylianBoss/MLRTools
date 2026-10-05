@@ -174,9 +174,9 @@
     "semantic_hash": ""
   },
   "src-electron/routes/Alarms.routes.js": {
-    "mtime": 1791177106.0490048,
-    "seen": 1791177329.7206223,
-    "ast_hash": "bede0a95ad72bcbf568a004de658250d",
+    "mtime": 1790757914.4639268,
+    "seen": 1791176369.2984524,
+    "ast_hash": "ec97c6807536affd0716305f4032fcdd",
     "semantic_hash": ""
   },
   "src-electron/routes/Auth.routes.js": {
@@ -468,9 +468,9 @@
     "semantic_hash": ""
   },
   "src/pages/KPI/DailyAnalysis.vue": {
-    "mtime": 1791177258.3368835,
-    "seen": 1791177329.7416236,
-    "ast_hash": "69ad79372f060a9e8070836f24548959",
+    "mtime": 1791176343.2463064,
+    "seen": 1791176369.3151982,
+    "ast_hash": "bde554c860b091e1594ef94a512e0adc",
     "semantic_hash": ""
   },
   "src/pages/KPI/InterventionJournal.vue": {

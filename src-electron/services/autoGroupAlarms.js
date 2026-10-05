@@ -68,6 +68,21 @@ export const autoGroupAlarms = async (targetDate, db) => {
   const proposals = [];
   const usedDbIds = new Set();
 
+  // Correspondance id synthétique -> proposal "group" de ce run, pour que le
+  // dernier fallback (datasource) puisse fusionner avec un groupe que les
+  // étapes précédentes viennent de proposer en mémoire mais qui n'est pas
+  // encore écrit en DB (x_group réel pas encore attribué à ce stade).
+  let nextPendingGroupId = -1;
+  const pendingGroupsById = new Map();
+  const registerGroupProposal = (proposal) => {
+    const pendingId = nextPendingGroupId--;
+    pendingGroupsById.set(pendingId, proposal);
+    proposal.alarms.forEach((a) => {
+      a.x_group = pendingId;
+    });
+    proposals.push(proposal);
+  };
+
   const normalizeRegex = (pattern) => pattern.replace(/\\d/g, "[0-9]");
 
   const matchesRule = (alarm, rule) => {
@@ -266,7 +281,8 @@ export const autoGroupAlarms = async (targetDate, db) => {
 
   for (const locationAlarms of Object.values(byLocation)) {
     for (const cluster of buildClusters(locationAlarms)) {
-      proposals.push({ type: "group", alarms: cluster, comment: resolveComment(cluster) });
+      cluster.forEach((a) => usedDbIds.add(a.dbId));
+      registerGroupProposal({ type: "group", alarms: cluster, comment: resolveComment(cluster) });
     }
   }
 
@@ -306,6 +322,15 @@ export const autoGroupAlarms = async (targetDate, db) => {
       order: [["timeOfOccurence", "ASC"]],
     });
 
+    // Alarmes groupées PENDANT ce run (ex: fallback par emplacement juste
+    // au-dessus) : pas encore écrites en DB à ce stade (l'écriture se fait à
+    // l'étape 4), donc invisibles pour la requête ci-dessus. Sans ce pool,
+    // une alarme isolée de sa zone mais proche dans le temps d'un groupe que
+    // ce même run vient de créer ne trouve jamais de pont pour le rejoindre.
+    const pendingGroupedThisRun = [...pendingGroupsById.values()]
+      .flatMap((p) => p.alarms)
+      .filter((a) => dataSourcesInPlay.includes(a.dataSource));
+
     // Une alarme dont la durée dépasse le seuil n'est pas un incident
     // ponctuel : elle ne doit pas servir de pont et fusionner des heures
     // d'alarmes sans rapport dans un seul groupe. Elle est simplement
@@ -314,7 +339,7 @@ export const autoGroupAlarms = async (targetDate, db) => {
     const isShortEnough = (a) => (a.duration ?? 0) <= maxAlarmDurationS;
 
     const byDataSource = {};
-    [...stillRemaining, ...alreadyGrouped].filter(isShortEnough).forEach((a) => {
+    [...stillRemaining, ...alreadyGrouped, ...pendingGroupedThisRun].filter(isShortEnough).forEach((a) => {
       if (!byDataSource[a.dataSource]) byDataSource[a.dataSource] = [];
       byDataSource[a.dataSource].push(a);
     });
@@ -322,48 +347,94 @@ export const autoGroupAlarms = async (targetDate, db) => {
     for (const dsAlarms of Object.values(byDataSource)) {
       for (const cluster of buildClusters(dsAlarms, dataSourceGapMs)) {
         // Un cluster mixte (ancien groupe + nouvelles alarmes) doit fusionner
-        // sur le groupe existant le plus ancien plutôt que d'en créer un.
+        // sur le groupe existant le plus ancien plutôt que d'en créer un. Un
+        // id négatif référence un proposal "group" déjà construit PENDANT ce
+        // run (pas encore en DB, cf registerGroupProposal) : il est toujours
+        // trié avant les id DB réels (positifs) par Math.min, donc ce
+        // classement n'est pas la vraie ancienneté temporelle, mais un groupe
+        // DB réel (déjà appliqué lors d'un run précédent) est préféré de
+        // toute façon via le filtre ci-dessous.
         const existingGroupIds = [
           ...new Set(cluster.map((a) => a.x_group).filter((g) => g != null)),
-        ].sort((a, b) => a - b);
+        ];
 
         const newAlarms = cluster.filter((a) => !usedDbIds.has(a.dbId) && a.x_group == null);
 
-        if (existingGroupIds.length > 1) {
-          // Le cluster relie plusieurs groupes déjà existants (ex: deux
-          // groupes "zone" séparés) : tout fusionner sur le plus ancien.
-          const targetGroupId = existingGroupIds[0];
-          const otherGroupsAlarms = cluster.filter(
+        // Fusionner sur un groupe DB réel en priorité (son id a un sens
+        // d'ancienneté stable) ; sinon, sur le groupe pendant de ce run.
+        const realGroupIds = existingGroupIds.filter((g) => g > 0).sort((a, b) => a - b);
+        const pendingIds = existingGroupIds.filter((g) => g < 0);
+
+        if (existingGroupIds.length === 0) {
+          if (cluster.length >= 2) {
+            cluster.forEach((a) => usedDbIds.add(a.dbId));
+            registerGroupProposal({ type: "group", alarms: cluster, comment: resolveComment(cluster) });
+          }
+          continue;
+        }
+
+        if (newAlarms.length === 0 && realGroupIds.length + pendingIds.length <= 1) {
+          continue; // groupe déjà existant, rien de nouveau à ajouter
+        }
+
+        if (realGroupIds.length > 0) {
+          // Au moins un groupe DB réel : tout fusionne sur le plus ancien
+          // d'entre eux. Les alarmes des autres groupes réels ET des
+          // proposals pendants rencontrés sont rattachées au même groupe.
+          const targetGroupId = realGroupIds[0];
+          const otherAlarms = cluster.filter(
             (a) => a.x_group != null && a.x_group !== targetGroupId
           );
+          // Les proposals pendants absorbés sont vidés : leurs alarmes
+          // rejoignent targetGroupId, elles ne doivent plus être écrites
+          // deux fois par leur proposal "group" d'origine.
+          for (const pid of pendingIds) {
+            const absorbed = pendingGroupsById.get(pid);
+            if (absorbed) {
+              absorbed.alarms = absorbed.alarms.filter((a) => a.x_group !== pid);
+              pendingGroupsById.delete(pid);
+            }
+          }
           newAlarms.forEach((a) => usedDbIds.add(a.dbId));
           proposals.push({
             type: "extend",
             groupId: targetGroupId,
-            alarms: [...newAlarms, ...otherGroupsAlarms],
+            alarms: [...newAlarms, ...otherAlarms],
           });
-        } else if (newAlarms.length === 0) {
-          continue; // groupe déjà existant, rien de nouveau à ajouter
-        } else if (existingGroupIds.length === 1) {
-          newAlarms.forEach((a) => usedDbIds.add(a.dbId));
-          proposals.push({
-            type: "extend",
-            groupId: existingGroupIds[0],
-            alarms: newAlarms,
+        } else {
+          // Que des groupes pendants (aucun DB réel) : tout absorber dans le
+          // premier proposal pendant rencontré plutôt que créer une
+          // proposal "extend" avec un groupId négatif inutilisable en DB.
+          const targetId = pendingIds[0];
+          const targetProposal = pendingGroupsById.get(targetId);
+          for (const pid of pendingIds.slice(1)) {
+            const absorbed = pendingGroupsById.get(pid);
+            if (!absorbed) continue;
+            absorbed.alarms.forEach((a) => {
+              a.x_group = targetId;
+            });
+            targetProposal.alarms.push(...absorbed.alarms);
+            pendingGroupsById.delete(pid);
+          }
+          newAlarms.forEach((a) => {
+            a.x_group = targetId;
+            usedDbIds.add(a.dbId);
+            targetProposal.alarms.push(a);
           });
-        } else if (cluster.length >= 2) {
-          cluster.forEach((a) => usedDbIds.add(a.dbId));
-          proposals.push({ type: "group", alarms: cluster, comment: resolveComment(cluster) });
         }
       }
     }
   }
 
   // 4. Appliquer les proposals en DB
+  // Un proposal "group" pendant entièrement absorbé par un autre groupe
+  // (cf fusion dans le dernier fallback datasource) peut se retrouver vide.
+  const nonEmptyProposals = proposals.filter((p) => p.alarms.length > 0);
+
   let created = 0;
   let failed = 0;
 
-  for (const proposal of proposals) {
+  for (const proposal of nonEmptyProposals) {
     const dbIds = proposal.alarms.map((a) => a.dbId);
     try {
       if (proposal.type === "treat") {
@@ -390,9 +461,19 @@ export const autoGroupAlarms = async (targetDate, db) => {
 
         await db.models.Datalog.update({ x_group: groupId }, { where: { dbId: dbIds } });
 
-        const effectiveComment = proposal.comment || proposal.alarms[0]?.alarmText || null;
+        // Un groupe pendant absorbé par le fallback datasource peut avoir
+        // reçu des alarmes ajoutées après coup (pas forcément en ordre
+        // chronologique) : re-trier pour que ce soit bien la première
+        // alarme dans le temps qui fournisse le commentaire par défaut.
+        const sortedAlarms = [...proposal.alarms].sort(
+          (a, b) => new Date(a.timeOfOccurence) - new Date(b.timeOfOccurence)
+        );
+        const effectiveComment = proposal.comment || sortedAlarms[0]?.alarmText || null;
         if (effectiveComment) {
-          await db.models.Datalog.update({ x_comment: effectiveComment }, { where: { dbId: dbIds[0] } });
+          await db.models.Datalog.update(
+            { x_comment: effectiveComment },
+            { where: { dbId: sortedAlarms[0].dbId } }
+          );
         }
 
         await db.models.Datalog.update({ x_state: "unplanned", x_treated: true }, { where: { dbId: dbIds } });
