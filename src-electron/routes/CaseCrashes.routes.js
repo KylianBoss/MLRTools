@@ -389,7 +389,19 @@ router.get("/:id/photos/:filename", photoReadGuard, async (req, res) => {
     res.send(Buffer.from(upstreamResponse.data));
   } catch (error) {
     console.error("Error proxying case crash photo:", error);
-    res.status(502).json({ error: "Error fetching photo from bot machine" });
+    // DIAGNOSTIC TEMPORAIRE 2026-10-07 : expose le détail de l'erreur réseau
+    // dans la réponse pour pouvoir diagnostiquer via les DevTools (Network)
+    // sans accès aux logs serveur. À retirer une fois le vrai problème cerné.
+    res.status(502).json({
+      error: "Error fetching photo from bot machine",
+      diagnosticCode: error.code,
+      diagnosticMessage: error.message,
+      diagnosticResponseStatus: error.response?.status,
+      diagnosticResponseData:
+        error.response?.data && Buffer.isBuffer(error.response.data)
+          ? error.response.data.toString("utf-8").slice(0, 500)
+          : error.response?.data,
+    });
   }
 });
 
@@ -428,11 +440,9 @@ router.patch(
       }
 
       if (crash.createdBy !== req.userId && !req.user.isAdmin) {
-        return res
-          .status(403)
-          .json({
-            error: "Only the creator or an admin can modify this entry",
-          });
+        return res.status(403).json({
+          error: "Only the creator or an admin can modify this entry",
+        });
       }
 
       const t = await db.transaction();
@@ -503,11 +513,9 @@ router.delete(
       }
 
       if (crash.createdBy !== req.userId && !req.user.isAdmin) {
-        return res
-          .status(403)
-          .json({
-            error: "Only the creator or an admin can delete this entry",
-          });
+        return res.status(403).json({
+          error: "Only the creator or an admin can delete this entry",
+        });
       }
 
       await crash.destroy();
