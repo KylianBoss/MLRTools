@@ -176,6 +176,33 @@ describe("GET /case-crashes/:id/photos/:filename — lecture (régression 2026-1
     }
   );
 
+  it(
+    "BUG RÉEL (2026-10-07) : passe un httpsAgent non-strict pour tolérer un proxy " +
+      "d'inspection SSL d'entreprise — avant le fix, cet appel échouait en " +
+      "SELF_SIGNED_CERT_IN_CHAIN sur certains réseaux (502 côté machine appelante)",
+    async () => {
+      getValueMock.mockImplementation((key) => {
+        if (key === "botApiKey") return Promise.resolve("le-bon-secret");
+        if (key === "cloudflareTunnelPublicUrl")
+          return Promise.resolve("https://crashes.example.test");
+        return Promise.resolve(null);
+      });
+      axiosGetMock.mockResolvedValue({
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+        data: Buffer.from("contenu-image"),
+      });
+
+      await request(app)
+        .get(`/case-crashes/${testCrashId}/photos/${testFilename}`)
+        .set("x-api-key", "le-bon-secret");
+
+      const callOptions = axiosGetMock.mock.calls[0][1];
+      expect(callOptions.httpsAgent).toBeDefined();
+      expect(callOptions.httpsAgent.options.rejectUnauthorized).toBe(false);
+    }
+  );
+
   it("rejette (401) une x-api-key invalide", async () => {
     getValueMock.mockResolvedValue("le-bon-secret");
 

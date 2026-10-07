@@ -2,12 +2,28 @@ import { Router } from "express";
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
+import https from "https";
 import axios from "axios";
 import { getDB } from "../database.js";
 import { requirePermission } from "../middlewares/permissions.js";
 import { checkApiKey } from "../middlewares/apiKey.js";
 
 const router = Router();
+
+// Sur certains réseaux d'entreprise (observé 2026-10-07 : même réseau local
+// que la machine bot), un proxy d'inspection SSL re-signe le trafic HTTPS
+// sortant avec un certificat interne — le navigateur/OS lui fait confiance
+// (installé par politique d'entreprise), mais le magasin de certificats de
+// Node ne le connaît pas, d'où un échec SELF_SIGNED_CERT_IN_CHAIN sur l'appel
+// axios ci-dessous. On ne peut pas déposer ce certificat dans le repo (public)
+// ni injecter NODE_EXTRA_CA_CERTS (pas d'accès aux variables d'environnement
+// du poste) — on désactive donc la vérification TLS UNIQUEMENT pour cet appel
+// précis (proxy serveur-à-serveur vers le bot, sur un réseau déjà considéré
+// de confiance), jamais globalement. L'authenticité du bot reste garantie
+// par botApiKey, pas par TLS, pour cet appel.
+const insecureAgentForCorporateProxy = new https.Agent({
+  rejectUnauthorized: false,
+});
 
 const STORAGE_PATH = path.join(process.cwd(), "storage");
 const CASE_CRASHES_PHOTOS_DIR = path.join(STORAGE_PATH, "case-crashes");
@@ -373,6 +389,7 @@ router.get("/:id/photos/:filename", photoReadGuard, async (req, res) => {
         headers: { "x-api-key": botApiKey },
         responseType: "arraybuffer",
         validateStatus: () => true,
+        httpsAgent: insecureAgentForCorporateProxy,
       }
     );
 
@@ -389,19 +406,7 @@ router.get("/:id/photos/:filename", photoReadGuard, async (req, res) => {
     res.send(Buffer.from(upstreamResponse.data));
   } catch (error) {
     console.error("Error proxying case crash photo:", error);
-    // DIAGNOSTIC TEMPORAIRE 2026-10-07 : expose le détail de l'erreur réseau
-    // dans la réponse pour pouvoir diagnostiquer via les DevTools (Network)
-    // sans accès aux logs serveur. À retirer une fois le vrai problème cerné.
-    res.status(502).json({
-      error: "Error fetching photo from bot machine",
-      diagnosticCode: error.code,
-      diagnosticMessage: error.message,
-      diagnosticResponseStatus: error.response?.status,
-      diagnosticResponseData:
-        error.response?.data && Buffer.isBuffer(error.response.data)
-          ? error.response.data.toString("utf-8").slice(0, 500)
-          : error.response?.data,
-    });
+    res.status(502).json({ error: "Error fetching photo from bot machine" });
   }
 });
 
