@@ -140,7 +140,10 @@ router.get(
             attributes: ["filename"],
           },
         ],
-        order: [["crashDate", "DESC"]],
+        order: [
+          ["crashDate", "DESC"],
+          ["id", "DESC"],
+        ],
       });
 
       const formatted = crashes.map((crash) => {
