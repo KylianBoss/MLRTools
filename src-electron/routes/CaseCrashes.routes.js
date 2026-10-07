@@ -40,16 +40,7 @@ function savePhotoToDisk(caseCrashId, base64Payload) {
   return filename;
 }
 
-const ZONES = [
-  "F013",
-  "X001",
-  "X002",
-  "X003",
-  "X101",
-  "X102",
-  "X103",
-  "X104",
-];
+const ZONES = ["F013", "X001", "X002", "X003", "X101", "X102", "X103", "X104"];
 
 const CASE_TYPES = ["A", "B", "C", "E", "H", "U"];
 
@@ -115,55 +106,51 @@ async function createCaseCrash(db, { crashDate, zone, caseTypes, createdBy }) {
 }
 
 // Get all case crashes (with their case types)
-router.get(
-  "/",
-  requirePermission("canAccessCaseCrashes"),
-  async (req, res) => {
-    const db = getDB();
+router.get("/", requirePermission("canAccessCaseCrashes"), async (req, res) => {
+  const db = getDB();
 
-    try {
-      const crashes = await db.models.CaseCrash.findAll({
-        include: [
-          {
-            model: db.models.CaseCrashType,
-            as: "caseTypes",
-            attributes: ["caseType"],
-          },
-          {
-            model: db.models.Users,
-            as: "creator",
-            attributes: ["fullname"],
-          },
-          {
-            model: db.models.CaseCrashPhoto,
-            as: "photos",
-            attributes: ["filename"],
-          },
-        ],
-        order: [
-          ["crashDate", "DESC"],
-          ["id", "DESC"],
-        ],
-      });
+  try {
+    const crashes = await db.models.CaseCrash.findAll({
+      include: [
+        {
+          model: db.models.CaseCrashType,
+          as: "caseTypes",
+          attributes: ["caseType"],
+        },
+        {
+          model: db.models.Users,
+          as: "creator",
+          attributes: ["fullname"],
+        },
+        {
+          model: db.models.CaseCrashPhoto,
+          as: "photos",
+          attributes: ["filename"],
+        },
+      ],
+      order: [
+        ["crashDate", "DESC"],
+        ["id", "DESC"],
+      ],
+    });
 
-      const formatted = crashes.map((crash) => {
-        const data = crash.toJSON();
-        return {
-          ...data,
-          caseTypes: data.caseTypes.map((t) => t.caseType),
-          creatorFullname: data.creator?.fullname || data.createdBy,
-          creator: undefined,
-          photos: data.photos.map((p) => p.filename),
-        };
-      });
+    const formatted = crashes.map((crash) => {
+      const data = crash.toJSON();
+      return {
+        ...data,
+        caseTypes: data.caseTypes.map((t) => t.caseType),
+        creatorFullname: data.creator?.fullname || data.createdBy,
+        creator: undefined,
+        photos: data.photos.map((p) => p.filename),
+      };
+    });
 
-      res.json(formatted);
-    } catch (error) {
-      console.error("Error fetching case crashes:", error);
-      res.status(500).json({ error: error.message });
-    }
+    res.json(formatted);
+  } catch (error) {
+    console.error("Error fetching case crashes:", error);
+    res.status(500).json({ error: error.message });
   }
-);
+});
 
 // Get the pivot table (dates x zones -> count)
 router.get(
@@ -320,6 +307,31 @@ router.post("/bot/:id/photo", checkApiKey, async (req, res) => {
   }
 });
 
+// Garde combinée pour la lecture d'une photo : deux appelants légitimes
+// très différents utilisent la même route.
+// - Un utilisateur humain, via le frontend de SA machine (session normale,
+//   requirePermission).
+// - Le serveur d'une AUTRE machine qui relaie la requête vers le bot (proxy
+//   serveur-à-serveur, voir plus bas) — pas de session utilisateur, juste
+//   x-api-key. Bug corrigé le 2026-10-07 : la route n'acceptait QUE
+//   requirePermission, donc le proxy recevait "Username is required" au
+//   lieu de la photo — observé en prod via un 502 côté machine appelante.
+// Si x-api-key est présent et correct, on fait confiance directement (c'est
+// le proxy) sans jamais appeler requirePermission. Sinon on retombe sur
+// l'authentification normale par permission utilisateur.
+async function photoReadGuard(req, res, next) {
+  const apiKey = req.headers["x-api-key"];
+  if (apiKey) {
+    const db = getDB();
+    const botApiKey = await db.models.Settings.getValue("botApiKey");
+    if (botApiKey && apiKey === botApiKey) {
+      return next();
+    }
+    return res.status(401).json({ error: "Invalid API key" });
+  }
+  return requirePermission("canAccessCaseCrashes")(req, res, next);
+}
+
 // Lecture d'une photo de chute. Deux cas :
 // - cette machine EST le bot (le fichier est sur son propre disque) : on le
 //   lit directement ;
@@ -327,59 +339,59 @@ router.post("/bot/:id/photo", checkApiKey, async (req, res) => {
 //   Cloudflare, en Settings) avec le botApiKey lu côté serveur — jamais
 //   exposé au frontend. Voir plan de sécurisation 2026-10-07 (proxy
 //   serveur-à-serveur, pas de secret côté client).
-router.get(
-  "/:id/photos/:filename",
-  requirePermission("canAccessCaseCrashes"),
-  async (req, res) => {
-    const db = getDB();
-    const { id, filename } = req.params;
+router.get("/:id/photos/:filename", photoReadGuard, async (req, res) => {
+  const db = getDB();
+  const { id, filename } = req.params;
 
-    if (!isSafeFilename(filename)) {
-      return res.status(400).json({ error: "Invalid filename" });
-    }
-
-    const localFilePath = path.join(CASE_CRASHES_PHOTOS_DIR, String(id), filename);
-
-    if (fs.existsSync(localFilePath)) {
-      return res.sendFile(localFilePath);
-    }
-
-    try {
-      const publicUrl = await db.models.Settings.getValue(
-        "cloudflareTunnelPublicUrl"
-      );
-      const botApiKey = await db.models.Settings.getValue("botApiKey");
-
-      if (!publicUrl || !botApiKey) {
-        return res.status(404).json({ error: "Photo not found on this machine" });
-      }
-
-      const upstreamResponse = await axios.get(
-        `${publicUrl}/case-crashes/${id}/photos/${filename}`,
-        {
-          headers: { "x-api-key": botApiKey },
-          responseType: "arraybuffer",
-          validateStatus: () => true,
-        }
-      );
-
-      if (upstreamResponse.status !== 200) {
-        return res.status(upstreamResponse.status).json({
-          error: "Photo not found on the bot machine",
-        });
-      }
-
-      res.set(
-        "Content-Type",
-        upstreamResponse.headers["content-type"] || "image/jpeg"
-      );
-      res.send(Buffer.from(upstreamResponse.data));
-    } catch (error) {
-      console.error("Error proxying case crash photo:", error);
-      res.status(502).json({ error: "Error fetching photo from bot machine" });
-    }
+  if (!isSafeFilename(filename)) {
+    return res.status(400).json({ error: "Invalid filename" });
   }
-);
+
+  const localFilePath = path.join(
+    CASE_CRASHES_PHOTOS_DIR,
+    String(id),
+    filename
+  );
+
+  if (fs.existsSync(localFilePath)) {
+    return res.sendFile(localFilePath);
+  }
+
+  try {
+    const publicUrl = await db.models.Settings.getValue(
+      "cloudflareTunnelPublicUrl"
+    );
+    const botApiKey = await db.models.Settings.getValue("botApiKey");
+
+    if (!publicUrl || !botApiKey) {
+      return res.status(404).json({ error: "Photo not found on this machine" });
+    }
+
+    const upstreamResponse = await axios.get(
+      `${publicUrl}/case-crashes/${id}/photos/${filename}`,
+      {
+        headers: { "x-api-key": botApiKey },
+        responseType: "arraybuffer",
+        validateStatus: () => true,
+      }
+    );
+
+    if (upstreamResponse.status !== 200) {
+      return res.status(upstreamResponse.status).json({
+        error: "Photo not found on the bot machine",
+      });
+    }
+
+    res.set(
+      "Content-Type",
+      upstreamResponse.headers["content-type"] || "image/jpeg"
+    );
+    res.send(Buffer.from(upstreamResponse.data));
+  } catch (error) {
+    console.error("Error proxying case crash photo:", error);
+    res.status(502).json({ error: "Error fetching photo from bot machine" });
+  }
+});
 
 // Update a case crash (only by its creator, or an admin)
 router.patch(
@@ -418,7 +430,9 @@ router.patch(
       if (crash.createdBy !== req.userId && !req.user.isAdmin) {
         return res
           .status(403)
-          .json({ error: "Only the creator or an admin can modify this entry" });
+          .json({
+            error: "Only the creator or an admin can modify this entry",
+          });
       }
 
       const t = await db.transaction();
@@ -491,7 +505,9 @@ router.delete(
       if (crash.createdBy !== req.userId && !req.user.isAdmin) {
         return res
           .status(403)
-          .json({ error: "Only the creator or an admin can delete this entry" });
+          .json({
+            error: "Only the creator or an admin can delete this entry",
+          });
       }
 
       await crash.destroy();
@@ -505,4 +521,8 @@ router.delete(
 );
 
 export default router;
-export const __internal = { isSafeFilename, savePhotoToDisk, CASE_CRASHES_PHOTOS_DIR };
+export const __internal = {
+  isSafeFilename,
+  savePhotoToDisk,
+  CASE_CRASHES_PHOTOS_DIR,
+};
