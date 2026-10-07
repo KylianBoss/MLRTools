@@ -1464,16 +1464,28 @@
       "source_location": "L22"
     },
     {
-      "id": "src_pages_maintenance_maintenancereports_gotoreportdetails",
-      "label": "goToReportDetails()",
+      "id": "src_pages_maintenance_maintenancereportdetails_goodanswerdata",
+      "label": "goodAnswerData()",
       "_callable": true,
       "_origin": "ast",
       "community": 143,
       "community_name": "routes.js",
       "file_type": "code",
-      "norm_label": "gotoreportdetails()",
-      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
-      "source_location": "L78"
+      "norm_label": "goodanswerdata()",
+      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
+      "source_location": "L203"
+    },
+    {
+      "id": "src_pages_maintenance_maintenancereportdetails_printreport",
+      "label": "printReport()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 143,
+      "community_name": "routes.js",
+      "file_type": "code",
+      "norm_label": "printreport()",
+      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
+      "source_location": "L214"
     },
     {
       "id": "storage_migrations_020_seed_datasource_grouping_settings_down",
@@ -1524,6 +1536,102 @@
       "source_location": "L20"
     },
     {
+      "id": "src_electron_backup_backupdatabase",
+      "label": "backupDatabase()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 151,
+      "community_name": "backup.js",
+      "file_type": "code",
+      "norm_label": "backupdatabase()",
+      "source_file": "src-electron/backup.js",
+      "source_location": "L330"
+    },
+    {
+      "id": "src_electron_backup_cleanoldbackups",
+      "label": "cleanOldBackups()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 151,
+      "community_name": "backup.js",
+      "file_type": "code",
+      "norm_label": "cleanoldbackups()",
+      "source_file": "src-electron/backup.js",
+      "source_location": "L431"
+    },
+    {
+      "id": "src_electron_backup_exportdatabasesql",
+      "label": "exportDatabaseSQL()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 151,
+      "community_name": "backup.js",
+      "file_type": "code",
+      "norm_label": "exportdatabasesql()",
+      "source_file": "src-electron/backup.js",
+      "source_location": "L84"
+    },
+    {
+      "id": "src_electron_backup_getsimplenumericprimarykey",
+      "label": "getSimpleNumericPrimaryKey()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 151,
+      "community_name": "backup.js",
+      "file_type": "code",
+      "norm_label": "getsimplenumericprimarykey()",
+      "source_file": "src-electron/backup.js",
+      "source_location": "L53"
+    },
+    {
+      "id": "src_electron_backup_listbackups",
+      "label": "listBackups()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 151,
+      "community_name": "backup.js",
+      "file_type": "code",
+      "norm_label": "listbackups()",
+      "source_file": "src-electron/backup.js",
+      "source_location": "L465"
+    },
+    {
+      "id": "src_electron_backup_restoredatabase",
+      "label": "restoreDatabase()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 151,
+      "community_name": "backup.js",
+      "file_type": "code",
+      "norm_label": "restoredatabase()",
+      "source_file": "src-electron/backup.js",
+      "source_location": "L393"
+    },
+    {
+      "id": "src_electron_backup_sqlliteral",
+      "label": "sqlLiteral()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 151,
+      "community_name": "backup.js",
+      "file_type": "code",
+      "norm_label": "sqlliteral()",
+      "source_file": "src-electron/backup.js",
+      "source_location": "L19"
+    },
+    {
+      "id": "src_components_charts_errorsperzonecount_getdata",
+      "label": "getData()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 152,
+      "community_name": "ErrorsPerZoneCount.vue",
+      "file_type": "code",
+      "norm_label": "getdata()",
+      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
+      "source_location": "L77"
+    },
+    {
       "id": "src_pages_kpi_dailyanalysis_loadautogroupdatasourcesettings",
       "label": "loadAutoGroupDataSourceSettings()",
       "_callable": true,
@@ -1548,136 +1656,88 @@
       "source_location": "L2193"
     },
     {
-      "id": "src_electron_middlewares_externalguard_externalguard",
-      "label": "externalGuard()",
+      "id": "src_components_dialogs_interventioneditdialog_applylocationmatch",
+      "label": "applyLocationMatch()",
       "_callable": true,
       "_origin": "ast",
       "community": 16,
-      "community_name": "externalGuard.js",
+      "community_name": "InterventionEditDialog.vue",
       "file_type": "code",
-      "norm_label": "externalguard()",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L145"
+      "norm_label": "applylocationmatch()",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L240"
     },
     {
-      "id": "src_electron_middlewares_externalguard_ipv4tolong",
-      "label": "ipv4ToLong()",
+      "id": "src_components_dialogs_interventioneditdialog_buildlocationvalue",
+      "label": "buildLocationValue()",
       "_callable": true,
       "_origin": "ast",
       "community": 16,
-      "community_name": "externalGuard.js",
+      "community_name": "InterventionEditDialog.vue",
       "file_type": "code",
-      "norm_label": "ipv4tolong()",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L46"
+      "norm_label": "buildlocationvalue()",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L116"
     },
     {
-      "id": "src_electron_middlewares_externalguard_ipv6tobigint",
-      "label": "ipv6ToBigInt()",
+      "id": "src_components_dialogs_interventioneditdialog_findlocationbyinput",
+      "label": "findLocationByInput()",
       "_callable": true,
       "_origin": "ast",
       "community": 16,
-      "community_name": "externalGuard.js",
+      "community_name": "InterventionEditDialog.vue",
       "file_type": "code",
-      "norm_label": "ipv6tobigint()",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L64"
+      "norm_label": "findlocationbyinput()",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L225"
     },
     {
-      "id": "src_electron_middlewares_externalguard_iscloudflareip",
-      "label": "isCloudflareIp()",
+      "id": "src_components_dialogs_interventioneditdialog_getdisplayalarmcode",
+      "label": "getDisplayAlarmCode()",
       "_callable": true,
       "_origin": "ast",
       "community": 16,
-      "community_name": "externalGuard.js",
+      "community_name": "InterventionEditDialog.vue",
       "file_type": "code",
-      "norm_label": "iscloudflareip()",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L110"
+      "norm_label": "getdisplayalarmcode()",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L143"
     },
     {
-      "id": "src_electron_middlewares_externalguard_isipv4incidr",
-      "label": "isIpv4InCidr()",
+      "id": "src_components_dialogs_interventioneditdialog_onlocationfilter",
+      "label": "onLocationFilter()",
       "_callable": true,
       "_origin": "ast",
       "community": 16,
-      "community_name": "externalGuard.js",
+      "community_name": "InterventionEditDialog.vue",
       "file_type": "code",
-      "norm_label": "isipv4incidr()",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L54"
+      "norm_label": "onlocationfilter()",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L253"
     },
     {
-      "id": "src_electron_middlewares_externalguard_isipv6incidr",
-      "label": "isIpv6InCidr()",
+      "id": "src_components_dialogs_interventioneditdialog_onsave",
+      "label": "onSave()",
       "_callable": true,
       "_origin": "ast",
       "community": 16,
-      "community_name": "externalGuard.js",
+      "community_name": "InterventionEditDialog.vue",
       "file_type": "code",
-      "norm_label": "isipv6incidr()",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L83"
+      "norm_label": "onsave()",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L301"
     },
     {
-      "id": "src_electron_middlewares_externalguard_iswhitelisted",
-      "label": "isWhitelisted()",
+      "id": "src_components_dialogs_interventioneditdialog_tryautoselectfrominput",
+      "label": "tryAutoSelectFromInput()",
       "_callable": true,
       "_origin": "ast",
       "community": 16,
-      "community_name": "externalGuard.js",
+      "community_name": "InterventionEditDialog.vue",
       "file_type": "code",
-      "norm_label": "iswhitelisted()",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L131"
-    },
-    {
-      "id": "src_electron_middlewares_externalguard_normalizeipv6",
-      "label": "normalizeIpv6()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 16,
-      "community_name": "externalGuard.js",
-      "file_type": "code",
-      "norm_label": "normalizeipv6()",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L70"
-    },
-    {
-      "id": "src_electron_middlewares_externalguard_normalizeremoteaddress",
-      "label": "normalizeRemoteAddress()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 16,
-      "community_name": "externalGuard.js",
-      "file_type": "code",
-      "norm_label": "normalizeremoteaddress()",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L96"
-    },
-    {
-      "id": "src_electron_middlewares_tests_externalguard_test_buildreq",
-      "label": "buildReq()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 16,
-      "community_name": "externalGuard.js",
-      "file_type": "code",
-      "norm_label": "buildreq()",
-      "source_file": "src-electron/middlewares/__tests__/externalGuard.test.js",
-      "source_location": "L54"
-    },
-    {
-      "id": "src_electron_middlewares_tests_externalguard_test_buildres",
-      "label": "buildRes()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 16,
-      "community_name": "externalGuard.js",
-      "file_type": "code",
-      "norm_label": "buildres()",
-      "source_file": "src-electron/middlewares/__tests__/externalGuard.test.js",
-      "source_location": "L63"
+      "norm_label": "tryautoselectfrominput()",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L277"
     },
     {
       "id": "src_pages_admin_databasesettings_applyexportevent",
@@ -1884,18 +1944,6 @@
       "source_location": "L291"
     },
     {
-      "id": "src_plugins_useproductiondatadialog_useproductiondatadialog",
-      "label": "useProductionDataDialog()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "ProductionData.vue",
-      "file_type": "code",
-      "norm_label": "useproductiondatadialog()",
-      "source_file": "src/plugins/useProductionDataDialog.js",
-      "source_location": "L4"
-    },
-    {
       "id": "src_pages_maintenance_maintenanceplandetails_addstep",
       "label": "addStep()",
       "_callable": true,
@@ -2004,64 +2052,28 @@
       "source_location": "L542"
     },
     {
-      "id": "src_components_dialogs_interventioneditdialog_applylocationmatch",
-      "label": "applyLocationMatch()",
+      "id": "src_components_dialogs_confirmmaintenancedialog_cancel",
+      "label": "cancel()",
       "_callable": true,
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
-      "norm_label": "applylocationmatch()",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L240"
+      "norm_label": "cancel()",
+      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
+      "source_location": "L67"
     },
     {
-      "id": "src_components_dialogs_interventioneditdialog_buildlocationvalue",
-      "label": "buildLocationValue()",
+      "id": "src_components_dialogs_confirmmaintenancedialog_confirm",
+      "label": "confirm()",
       "_callable": true,
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
-      "norm_label": "buildlocationvalue()",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L116"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_findlocationbyinput",
-      "label": "findLocationByInput()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "findlocationbyinput()",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L225"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_getdisplayalarmcode",
-      "label": "getDisplayAlarmCode()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "getdisplayalarmcode()",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L143"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_onlocationfilter",
-      "label": "onLocationFilter()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "onlocationfilter()",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L253"
+      "norm_label": "confirm()",
+      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
+      "source_location": "L60"
     },
     {
       "id": "src_components_dialogs_interventioneditdialog_onlocationnewvalue",
@@ -2069,35 +2081,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "onlocationnewvalue()",
       "source_file": "src/components/dialogs/InterventionEditDialog.vue",
       "source_location": "L260"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_onsave",
-      "label": "onSave()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "onsave()",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L301"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_tryautoselectfrominput",
-      "label": "tryAutoSelectFromInput()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "tryautoselectfrominput()",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L277"
     },
     {
       "id": "src_components_dialogs_interventiontimerstopdialog_onlocationnewvalue",
@@ -2105,7 +2093,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "onlocationnewvalue()",
       "source_file": "src/components/dialogs/InterventionTimerStopDialog.vue",
@@ -2117,7 +2105,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "back()",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -2129,7 +2117,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "next()",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -2141,11 +2129,59 @@
       "_callable": true,
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "onlocationnewvalue()",
       "source_file": "src/pages/KPI/InterventionJournal.vue",
       "source_location": "L449"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_confirm",
+      "label": "confirm()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "confirm()",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L104"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_nextstep",
+      "label": "nextStep()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "nextstep()",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L95"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_save",
+      "label": "save()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "save()",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L131"
+    },
+    {
+      "id": "src_plugins_useconfirmmaintenancedialog_useconfirmmaintenancedialog",
+      "label": "useConfirmMaintenanceDialog()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "useconfirmmaintenancedialog()",
+      "source_file": "src/plugins/useConfirmMaintenanceDialog.js",
+      "source_location": "L4"
     },
     {
       "id": "src_layouts_mainlayout_closedrawers",
@@ -2361,7 +2397,7 @@
       "file_type": "code",
       "norm_label": "startserver()",
       "source_file": "src-electron/server.js",
-      "source_location": "L362"
+      "source_location": "L347"
     },
     {
       "id": "src_electron_cron_sendalarmreport_buildemailhtml",
@@ -2580,28 +2616,16 @@
       "source_location": "L205"
     },
     {
-      "id": "src_pages_maintenance_maintenancereportdetails_goodanswerdata",
-      "label": "goodAnswerData()",
+      "id": "src_pages_maintenance_maintenancereports_gotoreportdetails",
+      "label": "goToReportDetails()",
       "_callable": true,
       "_origin": "ast",
       "community": 26,
       "community_name": "axios.js",
       "file_type": "code",
-      "norm_label": "goodanswerdata()",
-      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
-      "source_location": "L203"
-    },
-    {
-      "id": "src_pages_maintenance_maintenancereportdetails_printreport",
-      "label": "printReport()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 26,
-      "community_name": "axios.js",
-      "file_type": "code",
-      "norm_label": "printreport()",
-      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
-      "source_location": "L214"
+      "norm_label": "gotoreportdetails()",
+      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
+      "source_location": "L78"
     },
     {
       "id": "src_plugins_useconfigurationdialog_useconfigurationdialog",
@@ -2616,24 +2640,12 @@
       "source_location": "L4"
     },
     {
-      "id": "src_components_charts_errorsperzonecount_getdata",
-      "label": "getData()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "getdata()",
-      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
-      "source_location": "L77"
-    },
-    {
       "id": "src_components_charts_messagesbyday_getdata",
       "label": "getData()",
       "_callable": true,
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "getdata()",
       "source_file": "src/components/charts/MessagesByDay.vue",
@@ -2645,7 +2657,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "getdata()",
       "source_file": "src/components/charts/ProductionVolume.vue",
@@ -3408,18 +3420,6 @@
       "source_location": "L1444"
     },
     {
-      "id": "src_electron_cron_reportblocks_renderplannedinterventionsblock",
-      "label": "renderPlannedInterventionsBlock()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "reportBlocks.js",
-      "file_type": "code",
-      "norm_label": "renderplannedinterventionsblock()",
-      "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1517"
-    },
-    {
       "id": "src_electron_cron_reportblocks_rendersevendaysaverageblock",
       "label": "renderSevenDaysAverageBlock()",
       "_callable": true,
@@ -3430,18 +3430,6 @@
       "norm_label": "rendersevendaysaverageblock()",
       "source_file": "src-electron/cron/reportBlocks.js",
       "source_location": "L1326"
-    },
-    {
-      "id": "src_electron_cron_reportblocks_renderunplannedinterventionsblock",
-      "label": "renderUnplannedInterventionsBlock()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "reportBlocks.js",
-      "file_type": "code",
-      "norm_label": "renderunplannedinterventionsblock()",
-      "source_file": "src-electron/cron/reportBlocks.js",
-      "source_location": "L1641"
     },
     {
       "id": "src_electron_cron_reportblocks_renderzonegroupblock",
@@ -3466,114 +3454,6 @@
       "norm_label": "onrequest()",
       "source_file": "src/pages/SearchMessages.vue",
       "source_location": "L192"
-    },
-    {
-      "id": "src_electron_cron_extracttrayamount_clearinput",
-      "label": "clearInput()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "server.js",
-      "file_type": "code",
-      "norm_label": "clearinput()",
-      "source_file": "src-electron/cron/ExtractTrayAmount.js",
-      "source_location": "L574"
-    },
-    {
-      "id": "src_electron_cron_extracttrayamount_extracttrayamount",
-      "label": "extractTrayAmount()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "server.js",
-      "file_type": "code",
-      "norm_label": "extracttrayamount()",
-      "source_file": "src-electron/cron/ExtractTrayAmount.js",
-      "source_location": "L13"
-    },
-    {
-      "id": "src_electron_cron_extracttrayamount_extracttrayamount_download",
-      "label": "download()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "server.js",
-      "file_type": "code",
-      "norm_label": "download()",
-      "source_file": "src-electron/cron/ExtractTrayAmount.js",
-      "source_location": "L226"
-    },
-    {
-      "id": "src_electron_cron_extracttrayamount_filename",
-      "label": "FILENAME()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "server.js",
-      "file_type": "code",
-      "norm_label": "filename()",
-      "source_file": "src-electron/cron/ExtractTrayAmount.js",
-      "source_location": "L10"
-    },
-    {
-      "id": "src_electron_cron_extracttrayamount_sleep",
-      "label": "sleep()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "server.js",
-      "file_type": "code",
-      "norm_label": "sleep()",
-      "source_file": "src-electron/cron/ExtractTrayAmount.js",
-      "source_location": "L570"
-    },
-    {
-      "id": "src_electron_database_isdbinitialized",
-      "label": "isDBInitialized()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "server.js",
-      "file_type": "code",
-      "norm_label": "isdbinitialized()",
-      "source_file": "src-electron/database.js",
-      "source_location": "L22"
-    },
-    {
-      "id": "src_electron_server_closeserver",
-      "label": "closeServer()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "server.js",
-      "file_type": "code",
-      "norm_label": "closeserver()",
-      "source_file": "src-electron/server.js",
-      "source_location": "L377"
-    },
-    {
-      "id": "src_electron_server_sendcommandtofrontend",
-      "label": "sendCommandToFrontend()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "server.js",
-      "file_type": "code",
-      "norm_label": "sendcommandtofrontend()",
-      "source_file": "src-electron/server.js",
-      "source_location": "L96"
-    },
-    {
-      "id": "src_electron_server_sendnotificationtoelectron",
-      "label": "sendNotificationToElectron()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "server.js",
-      "file_type": "code",
-      "norm_label": "sendnotificationtoelectron()",
-      "source_file": "src-electron/server.js",
-      "source_location": "L79"
     },
     {
       "id": "src_components_updatechecker_checkforupdates",
@@ -4020,88 +3900,16 @@
       "source_location": "L48"
     },
     {
-      "id": "src_electron_backup_backupdatabase",
-      "label": "backupDatabase()",
+      "id": "src_electron_routes_auth_routes_require2fa",
+      "label": "require2FA()",
       "_callable": true,
       "_origin": "ast",
       "community": 43,
       "community_name": "Database.routes.js",
       "file_type": "code",
-      "norm_label": "backupdatabase()",
-      "source_file": "src-electron/backup.js",
-      "source_location": "L330"
-    },
-    {
-      "id": "src_electron_backup_cleanoldbackups",
-      "label": "cleanOldBackups()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "Database.routes.js",
-      "file_type": "code",
-      "norm_label": "cleanoldbackups()",
-      "source_file": "src-electron/backup.js",
-      "source_location": "L431"
-    },
-    {
-      "id": "src_electron_backup_exportdatabasesql",
-      "label": "exportDatabaseSQL()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "Database.routes.js",
-      "file_type": "code",
-      "norm_label": "exportdatabasesql()",
-      "source_file": "src-electron/backup.js",
-      "source_location": "L84"
-    },
-    {
-      "id": "src_electron_backup_getsimplenumericprimarykey",
-      "label": "getSimpleNumericPrimaryKey()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "Database.routes.js",
-      "file_type": "code",
-      "norm_label": "getsimplenumericprimarykey()",
-      "source_file": "src-electron/backup.js",
-      "source_location": "L53"
-    },
-    {
-      "id": "src_electron_backup_listbackups",
-      "label": "listBackups()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "Database.routes.js",
-      "file_type": "code",
-      "norm_label": "listbackups()",
-      "source_file": "src-electron/backup.js",
-      "source_location": "L465"
-    },
-    {
-      "id": "src_electron_backup_restoredatabase",
-      "label": "restoreDatabase()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "Database.routes.js",
-      "file_type": "code",
-      "norm_label": "restoredatabase()",
-      "source_file": "src-electron/backup.js",
-      "source_location": "L393"
-    },
-    {
-      "id": "src_electron_backup_sqlliteral",
-      "label": "sqlLiteral()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "Database.routes.js",
-      "file_type": "code",
-      "norm_label": "sqlliteral()",
-      "source_file": "src-electron/backup.js",
-      "source_location": "L19"
+      "norm_label": "require2fa()",
+      "source_file": "src-electron/routes/Auth.routes.js",
+      "source_location": "L51"
     },
     {
       "id": "src_electron_routes_database_routes_buildmvnreadonlyproxy",
@@ -4125,7 +3933,7 @@
       "file_type": "code",
       "norm_label": "checkadminaccess()",
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L150"
+      "source_location": "L146"
     },
     {
       "id": "src_electron_routes_database_routes_endexportstream",
@@ -4137,7 +3945,7 @@
       "file_type": "code",
       "norm_label": "endexportstream()",
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L142"
+      "source_location": "L138"
     },
     {
       "id": "src_electron_routes_database_routes_get",
@@ -4149,7 +3957,7 @@
       "file_type": "code",
       "norm_label": "get()",
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L402"
+      "source_location": "L386"
     },
     {
       "id": "src_electron_routes_database_routes_isbotactive",
@@ -4173,7 +3981,7 @@
       "file_type": "code",
       "norm_label": "pushexportprogress()",
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L135"
+      "source_location": "L131"
     },
     {
       "id": "src_electron_routes_database_routes_runmvnselectviabot",
@@ -4402,42 +4210,6 @@
       "norm_label": "gotoplandetails()",
       "source_file": "src/pages/maintenance/MaintenancePlans.vue",
       "source_location": "L112"
-    },
-    {
-      "id": "src_components_dialogs_confirmmaintenancedialog_cancel",
-      "label": "cancel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": ".quasar",
-      "file_type": "code",
-      "norm_label": "cancel()",
-      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
-      "source_location": "L67"
-    },
-    {
-      "id": "src_components_dialogs_confirmmaintenancedialog_confirm",
-      "label": "confirm()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": ".quasar",
-      "file_type": "code",
-      "norm_label": "confirm()",
-      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
-      "source_location": "L60"
-    },
-    {
-      "id": "src_plugins_useconfirmmaintenancedialog_useconfirmmaintenancedialog",
-      "label": "useConfirmMaintenanceDialog()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": ".quasar",
-      "file_type": "code",
-      "norm_label": "useconfirmmaintenancedialog()",
-      "source_file": "src/plugins/useConfirmMaintenanceDialog.js",
-      "source_location": "L4"
     },
     {
       "id": "src_components_alarms_alarmgroupview_calculaterealduration",
@@ -4800,12 +4572,36 @@
       "source_location": "L17"
     },
     {
+      "id": "src_electron_database_getdb",
+      "label": "getDB()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "getDB",
+      "file_type": "code",
+      "norm_label": "getdb()",
+      "source_file": "src-electron/database.js",
+      "source_location": "L14"
+    },
+    {
+      "id": "src_electron_middlewares_apikey_checkapikey",
+      "label": "checkApiKey()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "getDB",
+      "file_type": "code",
+      "norm_label": "checkapikey()",
+      "source_file": "src-electron/middlewares/apiKey.js",
+      "source_location": "L6"
+    },
+    {
       "id": "src_electron_middlewares_permissions_requireanypermission",
       "label": "requireAnyPermission()",
       "_callable": true,
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "requireanypermission()",
       "source_file": "src-electron/middlewares/permissions.js",
@@ -4817,7 +4613,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "requirepermission()",
       "source_file": "src-electron/middlewares/permissions.js",
@@ -4829,7 +4625,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "endimportstream()",
       "source_file": "src-electron/routes/Alarms.routes.js",
@@ -4841,11 +4637,35 @@
       "_callable": true,
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "pushimportlog()",
       "source_file": "src-electron/routes/Alarms.routes.js",
       "source_location": "L23"
+    },
+    {
+      "id": "src_electron_routes_casecrashes_routes_createcasecrash",
+      "label": "createCaseCrash()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "getDB",
+      "file_type": "code",
+      "norm_label": "createcasecrash()",
+      "source_file": "src-electron/routes/CaseCrashes.routes.js",
+      "source_location": "L39"
+    },
+    {
+      "id": "src_electron_routes_casecrashes_routes_validatecasecrashpayload",
+      "label": "validateCaseCrashPayload()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "getDB",
+      "file_type": "code",
+      "norm_label": "validatecasecrashpayload()",
+      "source_file": "src-electron/routes/CaseCrashes.routes.js",
+      "source_location": "L22"
     },
     {
       "id": "src_electron_routes_reports_routes_generateuniqueslug",
@@ -4853,7 +4673,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "generateuniqueslug()",
       "source_file": "src-electron/routes/Reports.routes.js",
@@ -4865,7 +4685,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "slugify()",
       "source_file": "src-electron/routes/Reports.routes.js",
@@ -4877,11 +4697,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 55,
-      "community_name": "ProductionDataDialog.vue",
+      "community_name": ".quasar",
       "file_type": "code",
       "norm_label": "onok()",
       "source_file": "src/components/dialogs/ProductionDataDialog.vue",
       "source_location": "L87"
+    },
+    {
+      "id": "src_plugins_useproductiondatadialog_useproductiondatadialog",
+      "label": "useProductionDataDialog()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 55,
+      "community_name": ".quasar",
+      "file_type": "code",
+      "norm_label": "useproductiondatadialog()",
+      "source_file": "src/plugins/useProductionDataDialog.js",
+      "source_location": "L4"
     },
     {
       "id": "storage_migrations_021_rename_datasource_grouping_settings_to_harmonized_duration_down",
@@ -5064,16 +4896,16 @@
       "source_location": "L26"
     },
     {
-      "id": "src_electron_routes_auth_routes_require2fa",
-      "label": "require2FA()",
+      "id": "src_electron_database_isdbinitialized",
+      "label": "isDBInitialized()",
       "_callable": true,
       "_origin": "ast",
       "community": 6,
       "community_name": "routes/index.js",
       "file_type": "code",
-      "norm_label": "require2fa()",
-      "source_file": "src-electron/routes/Auth.routes.js",
-      "source_location": "L51"
+      "norm_label": "isdbinitialized()",
+      "source_file": "src-electron/database.js",
+      "source_location": "L22"
     },
     {
       "id": "src_electron_routes_charts_routes_endrecalcstream",
@@ -5098,6 +4930,42 @@
       "norm_label": "pushrecalcevent()",
       "source_file": "src-electron/routes/Charts.routes.js",
       "source_location": "L14"
+    },
+    {
+      "id": "src_electron_server_closeserver",
+      "label": "closeServer()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "routes/index.js",
+      "file_type": "code",
+      "norm_label": "closeserver()",
+      "source_file": "src-electron/server.js",
+      "source_location": "L362"
+    },
+    {
+      "id": "src_electron_server_sendcommandtofrontend",
+      "label": "sendCommandToFrontend()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "routes/index.js",
+      "file_type": "code",
+      "norm_label": "sendcommandtofrontend()",
+      "source_file": "src-electron/server.js",
+      "source_location": "L81"
+    },
+    {
+      "id": "src_electron_server_sendnotificationtoelectron",
+      "label": "sendNotificationToElectron()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "routes/index.js",
+      "file_type": "code",
+      "norm_label": "sendnotificationtoelectron()",
+      "source_file": "src-electron/server.js",
+      "source_location": "L64"
     },
     {
       "id": "src_pages_kpi_dailyanalysis_buildclusters",
@@ -5400,42 +5268,6 @@
       "source_location": "L489"
     },
     {
-      "id": "src_pages_maintenance_maintenanceview_confirm",
-      "label": "confirm()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 67,
-      "community_name": "MaintenanceView.vue",
-      "file_type": "code",
-      "norm_label": "confirm()",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
-      "source_location": "L104"
-    },
-    {
-      "id": "src_pages_maintenance_maintenanceview_nextstep",
-      "label": "nextStep()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 67,
-      "community_name": "MaintenanceView.vue",
-      "file_type": "code",
-      "norm_label": "nextstep()",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
-      "source_location": "L95"
-    },
-    {
-      "id": "src_pages_maintenance_maintenanceview_save",
-      "label": "save()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 67,
-      "community_name": "MaintenanceView.vue",
-      "file_type": "code",
-      "norm_label": "save()",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
-      "source_location": "L131"
-    },
-    {
       "id": "src_pages_maintenance_stingrayslist_positioncompare",
       "label": "positionCompare()",
       "_callable": true,
@@ -5465,7 +5297,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "autogroupalarmsjob()",
       "source_file": "src-electron/cron/AutoGroupAlarms.js",
@@ -5477,7 +5309,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "cleandb()",
       "source_file": "src-electron/cron/CleanDB.js",
@@ -5489,11 +5321,71 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "extractsav()",
       "source_file": "src-electron/cron/ExtractSAV.js",
       "source_location": "L17"
+    },
+    {
+      "id": "src_electron_cron_extracttrayamount_clearinput",
+      "label": "clearInput()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "Cron.routes.js",
+      "file_type": "code",
+      "norm_label": "clearinput()",
+      "source_file": "src-electron/cron/ExtractTrayAmount.js",
+      "source_location": "L574"
+    },
+    {
+      "id": "src_electron_cron_extracttrayamount_extracttrayamount",
+      "label": "extractTrayAmount()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "Cron.routes.js",
+      "file_type": "code",
+      "norm_label": "extracttrayamount()",
+      "source_file": "src-electron/cron/ExtractTrayAmount.js",
+      "source_location": "L13"
+    },
+    {
+      "id": "src_electron_cron_extracttrayamount_extracttrayamount_download",
+      "label": "download()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "Cron.routes.js",
+      "file_type": "code",
+      "norm_label": "download()",
+      "source_file": "src-electron/cron/ExtractTrayAmount.js",
+      "source_location": "L226"
+    },
+    {
+      "id": "src_electron_cron_extracttrayamount_filename",
+      "label": "FILENAME()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "Cron.routes.js",
+      "file_type": "code",
+      "norm_label": "filename()",
+      "source_file": "src-electron/cron/ExtractTrayAmount.js",
+      "source_location": "L10"
+    },
+    {
+      "id": "src_electron_cron_extracttrayamount_sleep",
+      "label": "sleep()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "Cron.routes.js",
+      "file_type": "code",
+      "norm_label": "sleep()",
+      "source_file": "src-electron/cron/ExtractTrayAmount.js",
+      "source_location": "L570"
     },
     {
       "id": "src_electron_cron_extractwms_extractwms",
@@ -5501,7 +5393,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "extractwms()",
       "source_file": "src-electron/cron/ExtractWMS.js",
@@ -5513,11 +5405,35 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "getdatesindb()",
       "source_file": "src-electron/cron/ExtractWMS.js",
       "source_location": "L19"
+    },
+    {
+      "id": "src_electron_cron_reportblocks_renderplannedinterventionsblock",
+      "label": "renderPlannedInterventionsBlock()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "Cron.routes.js",
+      "file_type": "code",
+      "norm_label": "renderplannedinterventionsblock()",
+      "source_file": "src-electron/cron/reportBlocks.js",
+      "source_location": "L1517"
+    },
+    {
+      "id": "src_electron_cron_reportblocks_renderunplannedinterventionsblock",
+      "label": "renderUnplannedInterventionsBlock()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "Cron.routes.js",
+      "file_type": "code",
+      "norm_label": "renderunplannedinterventionsblock()",
+      "source_file": "src-electron/cron/reportBlocks.js",
+      "source_location": "L1641"
     },
     {
       "id": "src_electron_cron_utils_updatejob",
@@ -5525,23 +5441,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "updatejob()",
       "source_file": "src-electron/cron/utils.js",
       "source_location": "L3"
-    },
-    {
-      "id": "src_electron_database_getdb",
-      "label": "getDB()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "getDB",
-      "file_type": "code",
-      "norm_label": "getdb()",
-      "source_file": "src-electron/database.js",
-      "source_location": "L14"
     },
     {
       "id": "src_electron_mvn_executemvnselect",
@@ -5549,7 +5453,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "executemvnselect()",
       "source_file": "src-electron/mvn.js",
@@ -5561,7 +5465,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "openmvnconnection()",
       "source_file": "src-electron/mvn.js",
@@ -5573,7 +5477,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "executejobaction()",
       "source_file": "src-electron/routes/Cron.routes.js",
@@ -5585,7 +5489,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "getlasttriggertoday()",
       "source_file": "src-electron/routes/Cron.routes.js",
@@ -5597,7 +5501,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "parsejobargs()",
       "source_file": "src-electron/routes/Cron.routes.js",
@@ -5609,7 +5513,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "processjobqueue()",
       "source_file": "src-electron/routes/Cron.routes.js",
@@ -5621,7 +5525,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "autogroupalarms()",
       "source_file": "src-electron/services/autoGroupAlarms.js",
@@ -6178,54 +6082,6 @@
       "norm_label": "primetriggeralarmoptions()",
       "source_file": "src/pages/KPI/DailyAnalysis.vue",
       "source_location": "L2006"
-    },
-    {
-      "id": "src_electron_middlewares_apikey_checkapikey",
-      "label": "checkApiKey()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 87,
-      "community_name": "CaseCrashes.routes.js",
-      "file_type": "code",
-      "norm_label": "checkapikey()",
-      "source_file": "src-electron/middlewares/apiKey.js",
-      "source_location": "L6"
-    },
-    {
-      "id": "src_electron_middlewares_tests_apikey_test_buildres",
-      "label": "buildRes()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 87,
-      "community_name": "CaseCrashes.routes.js",
-      "file_type": "code",
-      "norm_label": "buildres()",
-      "source_file": "src-electron/middlewares/__tests__/apiKey.test.js",
-      "source_location": "L18"
-    },
-    {
-      "id": "src_electron_routes_casecrashes_routes_createcasecrash",
-      "label": "createCaseCrash()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 87,
-      "community_name": "CaseCrashes.routes.js",
-      "file_type": "code",
-      "norm_label": "createcasecrash()",
-      "source_file": "src-electron/routes/CaseCrashes.routes.js",
-      "source_location": "L39"
-    },
-    {
-      "id": "src_electron_routes_casecrashes_routes_validatecasecrashpayload",
-      "label": "validateCaseCrashPayload()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 87,
-      "community_name": "CaseCrashes.routes.js",
-      "file_type": "code",
-      "norm_label": "validatecasecrashpayload()",
-      "source_file": "src-electron/routes/CaseCrashes.routes.js",
-      "source_location": "L22"
     },
     {
       "id": "src_pages_maintenance_stingraydetails_addintervention",
@@ -8190,6 +8046,94 @@
       "source_location": "L63"
     },
     {
+      "id": "package_devdependencies_postcss",
+      "label": "postcss",
+      "_origin": "ast",
+      "community": 116,
+      "community_name": "postcss",
+      "file_type": "code",
+      "norm_label": "postcss",
+      "source_file": "package.json",
+      "source_location": "L79"
+    },
+    {
+      "id": "postcss",
+      "label": "postcss",
+      "_origin": "ast",
+      "community": 116,
+      "community_name": "postcss",
+      "file_type": "concept",
+      "norm_label": "postcss",
+      "source_file": "package.json",
+      "source_location": "L79"
+    },
+    {
+      "id": "package_devdependencies_quasar_app_vite",
+      "label": "@quasar/app-vite",
+      "_origin": "ast",
+      "community": 117,
+      "community_name": "@quasar/app-vite",
+      "file_type": "code",
+      "norm_label": "@quasar/app-vite",
+      "source_file": "package.json",
+      "source_location": "L70"
+    },
+    {
+      "id": "quasar_app_vite",
+      "label": "@quasar/app-vite",
+      "_origin": "ast",
+      "community": 117,
+      "community_name": "@quasar/app-vite",
+      "file_type": "concept",
+      "norm_label": "@quasar/app-vite",
+      "source_file": "package.json",
+      "source_location": "L70"
+    },
+    {
+      "id": "package_devdependencies_quasar_cli",
+      "label": "@quasar/cli",
+      "_origin": "ast",
+      "community": 118,
+      "community_name": "@quasar/cli",
+      "file_type": "code",
+      "norm_label": "@quasar/cli",
+      "source_file": "package.json",
+      "source_location": "L71"
+    },
+    {
+      "id": "quasar_cli",
+      "label": "@quasar/cli",
+      "_origin": "ast",
+      "community": 118,
+      "community_name": "@quasar/cli",
+      "file_type": "concept",
+      "norm_label": "@quasar/cli",
+      "source_file": "package.json",
+      "source_location": "L71"
+    },
+    {
+      "id": "package_devdependencies_vite_plugin_checker",
+      "label": "vite-plugin-checker",
+      "_origin": "ast",
+      "community": 119,
+      "community_name": "vite-plugin-checker",
+      "file_type": "code",
+      "norm_label": "vite-plugin-checker",
+      "source_file": "package.json",
+      "source_location": "L82"
+    },
+    {
+      "id": "vite_plugin_checker",
+      "label": "vite-plugin-checker",
+      "_origin": "ast",
+      "community": 119,
+      "community_name": "vite-plugin-checker",
+      "file_type": "concept",
+      "norm_label": "vite-plugin-checker",
+      "source_file": "package.json",
+      "source_location": "L82"
+    },
+    {
       "id": "src_components_dialogs_chartdialog",
       "label": "ChartDialog.vue",
       "_origin": "ast",
@@ -8454,6 +8398,28 @@
       "source_location": "L1"
     },
     {
+      "id": "package_devdependencies_vue_devtools",
+      "label": "@vue/devtools",
+      "_origin": "ast",
+      "community": 120,
+      "community_name": "@vue/devtools",
+      "file_type": "code",
+      "norm_label": "@vue/devtools",
+      "source_file": "package.json",
+      "source_location": "L72"
+    },
+    {
+      "id": "vue_devtools",
+      "label": "@vue/devtools",
+      "_origin": "ast",
+      "community": 120,
+      "community_name": "@vue/devtools",
+      "file_type": "concept",
+      "norm_label": "@vue/devtools",
+      "source_file": "package.json",
+      "source_location": "L72"
+    },
+    {
       "id": "src_electron_add_drop_procedure",
       "label": "add-drop-procedure.js",
       "_origin": "ast",
@@ -8619,6 +8585,17 @@
       "source_location": "L19"
     },
     {
+      "id": "src_electron_routes_kpi_routes_router",
+      "label": "router",
+      "_origin": "ast",
+      "community": 13,
+      "community_name": "SendKPI.js",
+      "file_type": "code",
+      "norm_label": "router",
+      "source_file": "src-electron/routes/KPI.routes.js",
+      "source_location": "L17"
+    },
+    {
       "id": "src_electron_routes_kpi_routes_storage_path",
       "label": "STORAGE_PATH",
       "_origin": "ast",
@@ -8628,6 +8605,28 @@
       "norm_label": "storage_path",
       "source_file": "src-electron/routes/KPI.routes.js",
       "source_location": "L18"
+    },
+    {
+      "id": "package_devdependencies_electron_packager",
+      "label": "@electron/packager",
+      "_origin": "ast",
+      "community": 130,
+      "community_name": "@electron/packager",
+      "file_type": "code",
+      "norm_label": "@electron/packager",
+      "source_file": "package.json",
+      "source_location": "L67"
+    },
+    {
+      "id": "electron_packager",
+      "label": "@electron/packager",
+      "_origin": "ast",
+      "community": 130,
+      "community_name": "@electron/packager",
+      "file_type": "concept",
+      "norm_label": "@electron/packager",
+      "source_file": "package.json",
+      "source_location": "L67"
     },
     {
       "id": "storage_migrations_004_add_alarm_analysis_columns",
@@ -9059,70 +9058,59 @@
       "source_location": "L1"
     },
     {
-      "id": "src_pages_maintenance_maintenancereports",
-      "label": "MaintenanceReports.vue",
+      "id": "src_pages_maintenance_maintenancereportdetails",
+      "label": "MaintenanceReportDetails.vue",
       "_origin": "ast",
       "community": 143,
       "community_name": "routes.js",
       "file_type": "code",
-      "norm_label": "maintenancereports.vue",
-      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
+      "norm_label": "maintenancereportdetails.vue",
+      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
       "source_location": "L1"
     },
     {
-      "id": "src_pages_maintenance_maintenancereports_app",
+      "id": "src_pages_maintenance_maintenancereportdetails_app",
       "label": "App",
       "_origin": "ast",
       "community": 143,
       "community_name": "routes.js",
       "file_type": "code",
       "norm_label": "app",
-      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
-      "source_location": "L40"
+      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
+      "source_location": "L198"
     },
     {
-      "id": "src_pages_maintenance_maintenancereports_columns",
-      "label": "columns",
+      "id": "src_pages_maintenance_maintenancereportdetails_maintenancereport",
+      "label": "maintenanceReport",
       "_origin": "ast",
       "community": 143,
       "community_name": "routes.js",
       "file_type": "code",
-      "norm_label": "columns",
-      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
-      "source_location": "L44"
+      "norm_label": "maintenancereport",
+      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
+      "source_location": "L201"
     },
     {
-      "id": "src_pages_maintenance_maintenancereports_filter",
-      "label": "filter",
+      "id": "src_pages_maintenance_maintenancereportdetails_maintenancereportid",
+      "label": "maintenanceReportId",
       "_origin": "ast",
       "community": 143,
       "community_name": "routes.js",
       "file_type": "code",
-      "norm_label": "filter",
-      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
-      "source_location": "L43"
+      "norm_label": "maintenancereportid",
+      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
+      "source_location": "L200"
     },
     {
-      "id": "src_pages_maintenance_maintenancereports_maintenancereports",
-      "label": "maintenanceReports",
+      "id": "src_pages_maintenance_maintenancereportdetails_route",
+      "label": "route",
       "_origin": "ast",
       "community": 143,
       "community_name": "routes.js",
       "file_type": "code",
-      "norm_label": "maintenancereports",
-      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
-      "source_location": "L42"
-    },
-    {
-      "id": "src_pages_maintenance_maintenancereports_router",
-      "label": "router",
-      "_origin": "ast",
-      "community": 143,
-      "community_name": "routes.js",
-      "file_type": "code",
-      "norm_label": "router",
-      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
-      "source_location": "L41"
+      "norm_label": "route",
+      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
+      "source_location": "L199"
     },
     {
       "id": "src_router_index",
@@ -9543,70 +9531,246 @@
       "source_location": "L14"
     },
     {
-      "id": "src_electron_middlewares_externalguard",
-      "label": "externalGuard.js",
+      "id": "src_electron_backup",
+      "label": "backup.js",
       "_origin": "ast",
-      "community": 16,
-      "community_name": "externalGuard.js",
+      "community": 151,
+      "community_name": "backup.js",
       "file_type": "code",
-      "norm_label": "externalguard.js",
-      "source_file": "src-electron/middlewares/externalGuard.js",
+      "norm_label": "backup.js",
+      "source_file": "src-electron/backup.js",
       "source_location": "L1"
     },
     {
-      "id": "src_electron_middlewares_externalguard_cloudflare_ipv4_ranges",
-      "label": "CLOUDFLARE_IPV4_RANGES",
+      "id": "src_electron_backup_execpromise",
+      "label": "execPromise",
       "_origin": "ast",
-      "community": 16,
-      "community_name": "externalGuard.js",
+      "community": 151,
+      "community_name": "backup.js",
       "file_type": "code",
-      "norm_label": "cloudflare_ipv4_ranges",
-      "source_file": "src-electron/middlewares/externalGuard.js",
+      "norm_label": "execpromise",
+      "source_file": "src-electron/backup.js",
+      "source_location": "L12"
+    },
+    {
+      "id": "src_electron_backup_numeric_pk_types",
+      "label": "NUMERIC_PK_TYPES",
+      "_origin": "ast",
+      "community": 151,
+      "community_name": "backup.js",
+      "file_type": "code",
+      "norm_label": "numeric_pk_types",
+      "source_file": "src-electron/backup.js",
+      "source_location": "L38"
+    },
+    {
+      "id": "src_components_charts_errorsperzonecount",
+      "label": "ErrorsPerZoneCount.vue",
+      "_origin": "ast",
+      "community": 152,
+      "community_name": "ErrorsPerZoneCount.vue",
+      "file_type": "code",
+      "norm_label": "errorsperzonecount.vue",
+      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_charts_errorsperzonecount_chartoptions",
+      "label": "chartOptions",
+      "_origin": "ast",
+      "community": 152,
+      "community_name": "ErrorsPerZoneCount.vue",
+      "file_type": "code",
+      "norm_label": "chartoptions",
+      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
+      "source_location": "L32"
+    },
+    {
+      "id": "src_components_charts_errorsperzonecount_chartseries",
+      "label": "chartSeries",
+      "_origin": "ast",
+      "community": 152,
+      "community_name": "ErrorsPerZoneCount.vue",
+      "file_type": "code",
+      "norm_label": "chartseries",
+      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
+      "source_location": "L74"
+    },
+    {
+      "id": "src_components_charts_errorsperzonecount_chartvisibility",
+      "label": "chartVisibility",
+      "_origin": "ast",
+      "community": 152,
+      "community_name": "ErrorsPerZoneCount.vue",
+      "file_type": "code",
+      "norm_label": "chartvisibility",
+      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
+      "source_location": "L75"
+    },
+    {
+      "id": "src_components_charts_errorsperzonecount_props",
+      "label": "props",
+      "_origin": "ast",
+      "community": 152,
+      "community_name": "ErrorsPerZoneCount.vue",
+      "file_type": "code",
+      "norm_label": "props",
+      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
       "source_location": "L18"
     },
     {
-      "id": "src_electron_middlewares_externalguard_cloudflare_ipv6_ranges",
-      "label": "CLOUDFLARE_IPV6_RANGES",
+      "id": "src_components_dialogs_interventioneditdialog",
+      "label": "InterventionEditDialog.vue",
       "_origin": "ast",
       "community": 16,
-      "community_name": "externalGuard.js",
+      "community_name": "InterventionEditDialog.vue",
       "file_type": "code",
-      "norm_label": "cloudflare_ipv6_ranges",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L36"
-    },
-    {
-      "id": "src_electron_middlewares_externalguard_external_whitelist",
-      "label": "EXTERNAL_WHITELIST",
-      "_origin": "ast",
-      "community": 16,
-      "community_name": "externalGuard.js",
-      "file_type": "code",
-      "norm_label": "external_whitelist",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L129"
-    },
-    {
-      "id": "src_electron_middlewares_externalguard_internal",
-      "label": "__internal",
-      "_origin": "ast",
-      "community": 16,
-      "community_name": "externalGuard.js",
-      "file_type": "code",
-      "norm_label": "__internal",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L162"
-    },
-    {
-      "id": "src_electron_middlewares_tests_externalguard_test",
-      "label": "externalGuard.test.js",
-      "_origin": "ast",
-      "community": 16,
-      "community_name": "externalGuard.js",
-      "file_type": "code",
-      "norm_label": "externalguard.test.js",
-      "source_file": "src-electron/middlewares/__tests__/externalGuard.test.js",
+      "norm_label": "interventioneditdialog.vue",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
       "source_location": "L1"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_customlocationvalues",
+      "label": "customLocationValues",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "customlocationvalues",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L138"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_dialogref_ondialoghide_ondialogok",
+      "label": "{ dialogRef, onDialogHide, onDialogOK }",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "{ dialogref, ondialoghide, ondialogok }",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L299"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_disablesave",
+      "label": "disableSave",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "disablesave",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L213"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_filteredlocationoptions",
+      "label": "filteredLocationOptions",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "filteredlocationoptions",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L188"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_form",
+      "label": "form",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "form",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L105"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_initiallocation",
+      "label": "initialLocation",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "initiallocation",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L125"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_isautoselectinglocation",
+      "label": "isAutoSelectingLocation",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "isautoselectinglocation",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L141"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_locationfilter",
+      "label": "locationFilter",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "locationfilter",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L137"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_locationinput",
+      "label": "locationInput",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "locationinput",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L136"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_locationoptions",
+      "label": "locationOptions",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "locationoptions",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L150"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_props",
+      "label": "props",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "props",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L94"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_selectedlocation",
+      "label": "selectedLocation",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "selectedlocation",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L199"
+    },
+    {
+      "id": "src_components_dialogs_interventioneditdialog_selectedlocationvalue",
+      "label": "selectedLocationValue",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "InterventionEditDialog.vue",
+      "file_type": "code",
+      "norm_label": "selectedlocationvalue",
+      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "source_location": "L129"
     },
     {
       "id": "src_pages_admin_databasesettings",
@@ -9785,17 +9949,6 @@
       "source_location": "L224"
     },
     {
-      "id": "src_plugins_useproductiondatadialog",
-      "label": "useProductionDataDialog.js",
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "ProductionData.vue",
-      "file_type": "code",
-      "norm_label": "useproductiondatadialog.js",
-      "source_file": "src/plugins/useProductionDataDialog.js",
-      "source_location": "L1"
-    },
-    {
       "id": "src_pages_maintenance_maintenanceplandetails",
       "label": "MaintenancePlanDetails.vue",
       "_origin": "ast",
@@ -9917,165 +10070,55 @@
       "source_location": "L327"
     },
     {
-      "id": "src_components_dialogs_interventioneditdialog",
-      "label": "InterventionEditDialog.vue",
+      "id": "src_components_dialogs_confirmmaintenancedialog",
+      "label": "ConfirmMaintenanceDialog.vue",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
-      "norm_label": "interventioneditdialog.vue",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
+      "norm_label": "confirmmaintenancedialog.vue",
+      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
       "source_location": "L1"
     },
     {
-      "id": "src_components_dialogs_interventioneditdialog_customlocationvalues",
-      "label": "customLocationValues",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "customlocationvalues",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L138"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_dialogref_ondialoghide_ondialogok",
+      "id": "src_components_dialogs_confirmmaintenancedialog_dialogref_ondialoghide_ondialogok",
       "label": "{ dialogRef, onDialogHide, onDialogOK }",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "{ dialogref, ondialoghide, ondialogok }",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L299"
+      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
+      "source_location": "L44"
     },
     {
-      "id": "src_components_dialogs_interventioneditdialog_disablesave",
-      "label": "disableSave",
+      "id": "src_components_dialogs_confirmmaintenancedialog_maintenance",
+      "label": "maintenance",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
-      "norm_label": "disablesave",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L213"
+      "norm_label": "maintenance",
+      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
+      "source_location": "L52"
     },
     {
-      "id": "src_components_dialogs_interventioneditdialog_filteredlocationoptions",
-      "label": "filteredLocationOptions",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "filteredlocationoptions",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L188"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_form",
-      "label": "form",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "form",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L105"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_initiallocation",
-      "label": "initialLocation",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "initiallocation",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L125"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_isautoselectinglocation",
-      "label": "isAutoSelectingLocation",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "isautoselectinglocation",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L141"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_locationfilter",
-      "label": "locationFilter",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "locationfilter",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L137"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_locationinput",
-      "label": "locationInput",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "locationinput",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L136"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_locationoptions",
-      "label": "locationOptions",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "locationoptions",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L150"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_props",
+      "id": "src_components_dialogs_confirmmaintenancedialog_props",
       "label": "props",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "props",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L94"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_selectedlocation",
-      "label": "selectedLocation",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "selectedlocation",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L199"
-    },
-    {
-      "id": "src_components_dialogs_interventioneditdialog_selectedlocationvalue",
-      "label": "selectedLocationValue",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "InterventionEditDialog.vue",
-      "file_type": "code",
-      "norm_label": "selectedlocationvalue",
-      "source_file": "src/components/dialogs/InterventionEditDialog.vue",
-      "source_location": "L129"
+      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
+      "source_location": "L46"
     },
     {
       "id": "src_components_maintenance_maintenancestep",
       "label": "MaintenanceStep.vue",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "maintenancestep.vue",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10086,7 +10129,7 @@
       "label": "activityTypeIcon",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "activitytypeicon",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10097,7 +10140,7 @@
       "label": "activityTypeText",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "activitytypetext",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10108,7 +10151,7 @@
       "label": "afterValue",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "aftervalue",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10119,7 +10162,7 @@
       "label": "answer",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "answer",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10130,7 +10173,7 @@
       "label": "beforeValue",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "beforevalue",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10141,7 +10184,7 @@
       "label": "canGoNext",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "cangonext",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10152,7 +10195,7 @@
       "label": "done",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "done",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10163,7 +10206,7 @@
       "label": "emit",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "emit",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10174,7 +10217,7 @@
       "label": "fullStep",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "fullstep",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10185,7 +10228,7 @@
       "label": "goodAnswerData",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "goodanswerdata",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10196,7 +10239,7 @@
       "label": "image",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "image",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10207,7 +10250,7 @@
       "label": "isGoodAnswer",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "isgoodanswer",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10218,7 +10261,7 @@
       "label": "notDone",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "notdone",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10229,7 +10272,7 @@
       "label": "notes",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "notes",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
@@ -10240,11 +10283,121 @@
       "label": "props",
       "_origin": "ast",
       "community": 2,
-      "community_name": "InterventionEditDialog.vue",
+      "community_name": "MaintenanceStep.vue",
       "file_type": "code",
       "norm_label": "props",
       "source_file": "src/components/maintenance/MaintenanceStep.vue",
       "source_location": "L211"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview",
+      "label": "MaintenanceView.vue",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "maintenanceview.vue",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_activestep",
+      "label": "activeStep",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "activestep",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L91"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_app",
+      "label": "App",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "app",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L86"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_askforconfirmation",
+      "label": "{ askForConfirmation }",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "{ askforconfirmation }",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L89"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_maintenance",
+      "label": "maintenance",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "maintenance",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L90"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_report",
+      "label": "report",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "report",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L92"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_route",
+      "label": "route",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "route",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L87"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_router",
+      "label": "router",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "router",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L88"
+    },
+    {
+      "id": "src_pages_maintenance_maintenanceview_terminated",
+      "label": "terminated",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "terminated",
+      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "source_location": "L93"
+    },
+    {
+      "id": "src_plugins_useconfirmmaintenancedialog",
+      "label": "useConfirmMaintenanceDialog.js",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "MaintenanceStep.vue",
+      "file_type": "code",
+      "norm_label": "useconfirmmaintenancedialog.js",
+      "source_file": "src/plugins/useConfirmMaintenanceDialog.js",
+      "source_location": "L1"
     },
     {
       "id": "src_layouts_mainlayout",
@@ -10355,270 +10508,6 @@
       "norm_label": "rightdraweropen",
       "source_file": "src/layouts/MainLayout.vue",
       "source_location": "L485"
-    },
-    {
-      "id": "package",
-      "label": "package.json",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "package.json",
-      "source_file": "package.json",
-      "source_location": "L1"
-    },
-    {
-      "id": "package_author",
-      "label": "author",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "author",
-      "source_file": "package.json",
-      "source_location": "L6"
-    },
-    {
-      "id": "package_description",
-      "label": "description",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "description",
-      "source_file": "package.json",
-      "source_location": "L4"
-    },
-    {
-      "id": "package_engines",
-      "label": "engines",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "engines",
-      "source_file": "package.json",
-      "source_location": "L86"
-    },
-    {
-      "id": "package_engines_node",
-      "label": "node",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "node",
-      "source_file": "package.json",
-      "source_location": "L87"
-    },
-    {
-      "id": "package_engines_npm",
-      "label": "npm",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "npm",
-      "source_file": "package.json",
-      "source_location": "L88"
-    },
-    {
-      "id": "package_engines_yarn",
-      "label": "yarn",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "yarn",
-      "source_file": "package.json",
-      "source_location": "L89"
-    },
-    {
-      "id": "package_name",
-      "label": "name",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "name",
-      "source_file": "package.json",
-      "source_location": "L2"
-    },
-    {
-      "id": "package_private",
-      "label": "private",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "private",
-      "source_file": "package.json",
-      "source_location": "L7"
-    },
-    {
-      "id": "package_productname",
-      "label": "productName",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "productname",
-      "source_file": "package.json",
-      "source_location": "L5"
-    },
-    {
-      "id": "package_repository",
-      "label": "repository",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "repository",
-      "source_file": "package.json",
-      "source_location": "L9"
-    },
-    {
-      "id": "package_repository_type",
-      "label": "type",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "type",
-      "source_file": "package.json",
-      "source_location": "L10"
-    },
-    {
-      "id": "package_repository_url",
-      "label": "url",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "url",
-      "source_file": "package.json",
-      "source_location": "L11"
-    },
-    {
-      "id": "package_scripts",
-      "label": "scripts",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "scripts",
-      "source_file": "package.json",
-      "source_location": "L13"
-    },
-    {
-      "id": "package_scripts_build",
-      "label": "build",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "package.json",
-      "source_location": "L19"
-    },
-    {
-      "id": "package_scripts_build_electron",
-      "label": "build-electron",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "build-electron",
-      "source_file": "package.json",
-      "source_location": "L20"
-    },
-    {
-      "id": "package_scripts_dev",
-      "label": "dev",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "dev",
-      "source_file": "package.json",
-      "source_location": "L17"
-    },
-    {
-      "id": "package_scripts_dev_electron",
-      "label": "dev-electron",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "dev-electron",
-      "source_file": "package.json",
-      "source_location": "L18"
-    },
-    {
-      "id": "package_scripts_format",
-      "label": "format",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "format",
-      "source_file": "package.json",
-      "source_location": "L15"
-    },
-    {
-      "id": "package_scripts_lint",
-      "label": "lint",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "lint",
-      "source_file": "package.json",
-      "source_location": "L14"
-    },
-    {
-      "id": "package_scripts_rebuild",
-      "label": "rebuild",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "rebuild",
-      "source_file": "package.json",
-      "source_location": "L21"
-    },
-    {
-      "id": "package_scripts_test",
-      "label": "test",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "test",
-      "source_file": "package.json",
-      "source_location": "L16"
-    },
-    {
-      "id": "package_type",
-      "label": "type",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "type",
-      "source_file": "package.json",
-      "source_location": "L8"
-    },
-    {
-      "id": "package_version",
-      "label": "version",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "electron-main.js",
-      "file_type": "code",
-      "norm_label": "version",
-      "source_file": "package.json",
-      "source_location": "L3"
     },
     {
       "id": "src_electron_auto_updater",
@@ -10973,17 +10862,6 @@
       "source_location": "L75"
     },
     {
-      "id": "package_devdependencies_electron_packager",
-      "label": "@electron/packager",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "@electron/packager",
-      "source_file": "package.json",
-      "source_location": "L67"
-    },
-    {
       "id": "package_devdependencies_electron_rebuild",
       "label": "@electron/rebuild",
       "_origin": "ast",
@@ -11006,28 +10884,6 @@
       "source_location": "L76"
     },
     {
-      "id": "package_devdependencies_eslint_config_prettier",
-      "label": "eslint-config-prettier",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "eslint-config-prettier",
-      "source_file": "package.json",
-      "source_location": "L77"
-    },
-    {
-      "id": "package_devdependencies_eslint_plugin_vue",
-      "label": "eslint-plugin-vue",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "eslint-plugin-vue",
-      "source_file": "package.json",
-      "source_location": "L78"
-    },
-    {
       "id": "package_devdependencies_intlify_vite_plugin_vue_i18n",
       "label": "@intlify/vite-plugin-vue-i18n",
       "_origin": "ast",
@@ -11039,50 +10895,6 @@
       "source_location": "L69"
     },
     {
-      "id": "package_devdependencies_postcss",
-      "label": "postcss",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "postcss",
-      "source_file": "package.json",
-      "source_location": "L79"
-    },
-    {
-      "id": "package_devdependencies_prettier",
-      "label": "prettier",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "prettier",
-      "source_file": "package.json",
-      "source_location": "L80"
-    },
-    {
-      "id": "package_devdependencies_quasar_app_vite",
-      "label": "@quasar/app-vite",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "@quasar/app-vite",
-      "source_file": "package.json",
-      "source_location": "L70"
-    },
-    {
-      "id": "package_devdependencies_quasar_cli",
-      "label": "@quasar/cli",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "@quasar/cli",
-      "source_file": "package.json",
-      "source_location": "L71"
-    },
-    {
       "id": "package_devdependencies_sequelize_cli",
       "label": "sequelize-cli",
       "_origin": "ast",
@@ -11092,50 +10904,6 @@
       "norm_label": "sequelize-cli",
       "source_file": "package.json",
       "source_location": "L81"
-    },
-    {
-      "id": "package_devdependencies_supertest",
-      "label": "supertest",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "supertest",
-      "source_file": "package.json",
-      "source_location": "L82"
-    },
-    {
-      "id": "package_devdependencies_vite_plugin_checker",
-      "label": "vite-plugin-checker",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "vite-plugin-checker",
-      "source_file": "package.json",
-      "source_location": "L83"
-    },
-    {
-      "id": "package_devdependencies_vitest",
-      "label": "vitest",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "vitest",
-      "source_file": "package.json",
-      "source_location": "L84"
-    },
-    {
-      "id": "package_devdependencies_vue_devtools",
-      "label": "@vue/devtools",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "@vue/devtools",
-      "source_file": "package.json",
-      "source_location": "L72"
     },
     {
       "id": "autoprefixer",
@@ -11171,17 +10939,6 @@
       "source_location": "L75"
     },
     {
-      "id": "electron_packager",
-      "label": "@electron/packager",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "@electron/packager",
-      "source_file": "package.json",
-      "source_location": "L67"
-    },
-    {
       "id": "electron_rebuild",
       "label": "@electron/rebuild",
       "_origin": "ast",
@@ -11204,28 +10961,6 @@
       "source_location": "L76"
     },
     {
-      "id": "eslint_config_prettier",
-      "label": "eslint-config-prettier",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "eslint-config-prettier",
-      "source_file": "package.json",
-      "source_location": "L77"
-    },
-    {
-      "id": "eslint_plugin_vue",
-      "label": "eslint-plugin-vue",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "eslint-plugin-vue",
-      "source_file": "package.json",
-      "source_location": "L78"
-    },
-    {
       "id": "intlify_vite_plugin_vue_i18n",
       "label": "@intlify/vite-plugin-vue-i18n",
       "_origin": "ast",
@@ -11235,50 +10970,6 @@
       "norm_label": "@intlify/vite-plugin-vue-i18n",
       "source_file": "package.json",
       "source_location": "L69"
-    },
-    {
-      "id": "postcss",
-      "label": "postcss",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "postcss",
-      "source_file": "package.json",
-      "source_location": "L79"
-    },
-    {
-      "id": "prettier",
-      "label": "prettier",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "prettier",
-      "source_file": "package.json",
-      "source_location": "L80"
-    },
-    {
-      "id": "quasar_app_vite",
-      "label": "@quasar/app-vite",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "@quasar/app-vite",
-      "source_file": "package.json",
-      "source_location": "L70"
-    },
-    {
-      "id": "quasar_cli",
-      "label": "@quasar/cli",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "@quasar/cli",
-      "source_file": "package.json",
-      "source_location": "L71"
     },
     {
       "id": "sequelize_cli",
@@ -11292,50 +10983,6 @@
       "source_location": "L81"
     },
     {
-      "id": "supertest",
-      "label": "supertest",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "supertest",
-      "source_file": "package.json",
-      "source_location": "L82"
-    },
-    {
-      "id": "vite_plugin_checker",
-      "label": "vite-plugin-checker",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "vite-plugin-checker",
-      "source_file": "package.json",
-      "source_location": "L83"
-    },
-    {
-      "id": "vitest",
-      "label": "vitest",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "vitest",
-      "source_file": "package.json",
-      "source_location": "L84"
-    },
-    {
-      "id": "vue_devtools",
-      "label": "@vue/devtools",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "devDependencies",
-      "file_type": "concept",
-      "norm_label": "@vue/devtools",
-      "source_file": "package.json",
-      "source_location": "L72"
-    },
-    {
       "id": "src_boot_axios",
       "label": "axios.js",
       "_origin": "ast",
@@ -11345,6 +10992,17 @@
       "norm_label": "axios.js",
       "source_file": "src/boot/axios.js",
       "source_location": "L1"
+    },
+    {
+      "id": "src_boot_axios_api",
+      "label": "api",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "axios.js",
+      "file_type": "code",
+      "norm_label": "api",
+      "source_file": "src/boot/axios.js",
+      "source_location": "L11"
     },
     {
       "id": "src_components_navigation_draweritem",
@@ -11380,59 +11038,70 @@
       "source_location": "L20"
     },
     {
-      "id": "src_pages_maintenance_maintenancereportdetails",
-      "label": "MaintenanceReportDetails.vue",
+      "id": "src_pages_maintenance_maintenancereports",
+      "label": "MaintenanceReports.vue",
       "_origin": "ast",
       "community": 26,
       "community_name": "axios.js",
       "file_type": "code",
-      "norm_label": "maintenancereportdetails.vue",
-      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
+      "norm_label": "maintenancereports.vue",
+      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
       "source_location": "L1"
     },
     {
-      "id": "src_pages_maintenance_maintenancereportdetails_app",
+      "id": "src_pages_maintenance_maintenancereports_app",
       "label": "App",
       "_origin": "ast",
       "community": 26,
       "community_name": "axios.js",
       "file_type": "code",
       "norm_label": "app",
-      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
-      "source_location": "L198"
+      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
+      "source_location": "L40"
     },
     {
-      "id": "src_pages_maintenance_maintenancereportdetails_maintenancereport",
-      "label": "maintenanceReport",
+      "id": "src_pages_maintenance_maintenancereports_columns",
+      "label": "columns",
       "_origin": "ast",
       "community": 26,
       "community_name": "axios.js",
       "file_type": "code",
-      "norm_label": "maintenancereport",
-      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
-      "source_location": "L201"
+      "norm_label": "columns",
+      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
+      "source_location": "L44"
     },
     {
-      "id": "src_pages_maintenance_maintenancereportdetails_maintenancereportid",
-      "label": "maintenanceReportId",
+      "id": "src_pages_maintenance_maintenancereports_filter",
+      "label": "filter",
       "_origin": "ast",
       "community": 26,
       "community_name": "axios.js",
       "file_type": "code",
-      "norm_label": "maintenancereportid",
-      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
-      "source_location": "L200"
+      "norm_label": "filter",
+      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
+      "source_location": "L43"
     },
     {
-      "id": "src_pages_maintenance_maintenancereportdetails_route",
-      "label": "route",
+      "id": "src_pages_maintenance_maintenancereports_maintenancereports",
+      "label": "maintenanceReports",
       "_origin": "ast",
       "community": 26,
       "community_name": "axios.js",
       "file_type": "code",
-      "norm_label": "route",
-      "source_file": "src/pages/maintenance/MaintenanceReportDetails.vue",
-      "source_location": "L199"
+      "norm_label": "maintenancereports",
+      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
+      "source_location": "L42"
+    },
+    {
+      "id": "src_pages_maintenance_maintenancereports_router",
+      "label": "router",
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "axios.js",
+      "file_type": "code",
+      "norm_label": "router",
+      "source_file": "src/pages/maintenance/MaintenanceReports.vue",
+      "source_location": "L41"
     },
     {
       "id": "src_plugins_useconfigurationdialog",
@@ -11490,77 +11159,11 @@
       "source_location": "L5"
     },
     {
-      "id": "src_boot_axios_api",
-      "label": "api",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "api",
-      "source_file": "src/boot/axios.js",
-      "source_location": "L11"
-    },
-    {
-      "id": "src_components_charts_errorsperzonecount",
-      "label": "ErrorsPerZoneCount.vue",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "errorsperzonecount.vue",
-      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_components_charts_errorsperzonecount_chartoptions",
-      "label": "chartOptions",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "chartoptions",
-      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
-      "source_location": "L32"
-    },
-    {
-      "id": "src_components_charts_errorsperzonecount_chartseries",
-      "label": "chartSeries",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "chartseries",
-      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
-      "source_location": "L74"
-    },
-    {
-      "id": "src_components_charts_errorsperzonecount_chartvisibility",
-      "label": "chartVisibility",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "chartvisibility",
-      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
-      "source_location": "L75"
-    },
-    {
-      "id": "src_components_charts_errorsperzonecount_props",
-      "label": "props",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "props",
-      "source_file": "src/components/charts/ErrorsPerZoneCount.vue",
-      "source_location": "L18"
-    },
-    {
       "id": "src_components_charts_messagesbyday",
       "label": "MessagesByDay.vue",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "messagesbyday.vue",
       "source_file": "src/components/charts/MessagesByDay.vue",
@@ -11571,7 +11174,7 @@
       "label": "chartOptions",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "chartoptions",
       "source_file": "src/components/charts/MessagesByDay.vue",
@@ -11582,7 +11185,7 @@
       "label": "chartSeries",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "chartseries",
       "source_file": "src/components/charts/MessagesByDay.vue",
@@ -11593,7 +11196,7 @@
       "label": "chartVisibility",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "chartvisibility",
       "source_file": "src/components/charts/MessagesByDay.vue",
@@ -11604,7 +11207,7 @@
       "label": "props",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "props",
       "source_file": "src/components/charts/MessagesByDay.vue",
@@ -11615,7 +11218,7 @@
       "label": "ProductionVolume.vue",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "productionvolume.vue",
       "source_file": "src/components/charts/ProductionVolume.vue",
@@ -11626,7 +11229,7 @@
       "label": "chartOptions",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "chartoptions",
       "source_file": "src/components/charts/ProductionVolume.vue",
@@ -11637,7 +11240,7 @@
       "label": "chartSeries",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "chartseries",
       "source_file": "src/components/charts/ProductionVolume.vue",
@@ -11648,7 +11251,7 @@
       "label": "chartVisibility",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "chartvisibility",
       "source_file": "src/components/charts/ProductionVolume.vue",
@@ -11659,7 +11262,7 @@
       "label": "props",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "props",
       "source_file": "src/components/charts/ProductionVolume.vue",
@@ -11670,7 +11273,7 @@
       "label": "ChartsPage.vue",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "chartspage.vue",
       "source_file": "src/pages/charts/ChartsPage.vue",
@@ -11681,7 +11284,7 @@
       "label": "locale",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "locale",
       "source_file": "src/pages/charts/ChartsPage.vue",
@@ -11692,7 +11295,7 @@
       "label": "period",
       "_origin": "ast",
       "community": 27,
-      "community_name": "api",
+      "community_name": "MessagesByDay.vue",
       "file_type": "code",
       "norm_label": "period",
       "source_file": "src/pages/charts/ChartsPage.vue",
@@ -12557,59 +12160,125 @@
       "source_location": "L43"
     },
     {
-      "id": "src_electron_cron_extracttrayamount",
-      "label": "ExtractTrayAmount.js",
+      "id": "package",
+      "label": "package.json",
       "_origin": "ast",
       "community": 36,
-      "community_name": "server.js",
+      "community_name": "package.json",
       "file_type": "code",
-      "norm_label": "extracttrayamount.js",
-      "source_file": "src-electron/cron/ExtractTrayAmount.js",
+      "norm_label": "package.json",
+      "source_file": "package.json",
       "source_location": "L1"
     },
     {
-      "id": "src_electron_routes_index_router",
-      "label": "router",
+      "id": "package_author",
+      "label": "author",
       "_origin": "ast",
       "community": 36,
-      "community_name": "server.js",
+      "community_name": "package.json",
       "file_type": "code",
-      "norm_label": "router",
-      "source_file": "src-electron/routes/index.js",
-      "source_location": "L25"
+      "norm_label": "author",
+      "source_file": "package.json",
+      "source_location": "L6"
     },
     {
-      "id": "src_electron_server",
-      "label": "server.js",
+      "id": "package_description",
+      "label": "description",
       "_origin": "ast",
       "community": 36,
-      "community_name": "server.js",
+      "community_name": "package.json",
       "file_type": "code",
-      "norm_label": "server.js",
-      "source_file": "src-electron/server.js",
-      "source_location": "L1"
+      "norm_label": "description",
+      "source_file": "package.json",
+      "source_location": "L4"
     },
     {
-      "id": "src_electron_server_app",
-      "label": "app",
+      "id": "package_name",
+      "label": "name",
       "_origin": "ast",
       "community": 36,
-      "community_name": "server.js",
+      "community_name": "package.json",
       "file_type": "code",
-      "norm_label": "app",
-      "source_file": "src-electron/server.js",
-      "source_location": "L13"
+      "norm_label": "name",
+      "source_file": "package.json",
+      "source_location": "L2"
     },
     {
-      "id": "src_electron_server_electronclients",
-      "label": "electronClients",
+      "id": "package_private",
+      "label": "private",
       "_origin": "ast",
       "community": 36,
-      "community_name": "server.js",
+      "community_name": "package.json",
       "file_type": "code",
-      "norm_label": "electronclients",
-      "source_file": "src-electron/server.js",
-      "source_location": "L60"
+      "norm_label": "private",
+      "source_file": "package.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "package_productname",
+      "label": "productName",
+      "_origin": "ast",
+      "community": 36,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "productname",
+      "source_file": "package.json",
+      "source_location": "L5"
+    },
+    {
+      "id": "package_repository",
+      "label": "repository",
+      "_origin": "ast",
+      "community": 36,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "repository",
+      "source_file": "package.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "package_repository_type",
+      "label": "type",
+      "_origin": "ast",
+      "community": 36,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "type",
+      "source_file": "package.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "package_repository_url",
+      "label": "url",
+      "_origin": "ast",
+      "community": 36,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "url",
+      "source_file": "package.json",
+      "source_location": "L11"
+    },
+    {
+      "id": "package_type",
+      "label": "type",
+      "_origin": "ast",
+      "community": 36,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "type",
+      "source_file": "package.json",
+      "source_location": "L8"
+    },
+    {
+      "id": "package_version",
+      "label": "version",
+      "_origin": "ast",
+      "community": 36,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "version",
+      "source_file": "package.json",
+      "source_location": "L3"
     },
     {
       "id": "src_components_updatechecker",
@@ -13470,37 +13139,26 @@
       "source_location": "L30"
     },
     {
-      "id": "src_electron_backup",
-      "label": "backup.js",
+      "id": "src_electron_routes_auth_routes",
+      "label": "Auth.routes.js",
       "_origin": "ast",
       "community": 43,
       "community_name": "Database.routes.js",
       "file_type": "code",
-      "norm_label": "backup.js",
-      "source_file": "src-electron/backup.js",
+      "norm_label": "auth.routes.js",
+      "source_file": "src-electron/routes/Auth.routes.js",
       "source_location": "L1"
     },
     {
-      "id": "src_electron_backup_execpromise",
-      "label": "execPromise",
+      "id": "src_electron_routes_auth_routes_router",
+      "label": "router",
       "_origin": "ast",
       "community": 43,
       "community_name": "Database.routes.js",
       "file_type": "code",
-      "norm_label": "execpromise",
-      "source_file": "src-electron/backup.js",
-      "source_location": "L12"
-    },
-    {
-      "id": "src_electron_backup_numeric_pk_types",
-      "label": "NUMERIC_PK_TYPES",
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "Database.routes.js",
-      "file_type": "code",
-      "norm_label": "numeric_pk_types",
-      "source_file": "src-electron/backup.js",
-      "source_location": "L38"
+      "norm_label": "router",
+      "source_file": "src-electron/routes/Auth.routes.js",
+      "source_location": "L6"
     },
     {
       "id": "src_electron_routes_database_routes",
@@ -13522,7 +13180,7 @@
       "file_type": "code",
       "norm_label": "exportresults",
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L133"
+      "source_location": "L129"
     },
     {
       "id": "src_electron_routes_database_routes_exportstreams",
@@ -13533,7 +13191,7 @@
       "file_type": "code",
       "norm_label": "exportstreams",
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L132"
+      "source_location": "L128"
     },
     {
       "id": "src_electron_routes_database_routes_router",
@@ -13943,103 +13601,103 @@
       "source_location": "L59"
     },
     {
-      "id": "jsconfig_exclude",
-      "label": "exclude",
+      "id": "package_scripts",
+      "label": "scripts",
       "_origin": "ast",
       "community": 48,
-      "community_name": ".quasar",
+      "community_name": "scripts",
       "file_type": "code",
-      "norm_label": "exclude",
-      "source_file": "jsconfig.json",
-      "source_location": "L34"
+      "norm_label": "scripts",
+      "source_file": "package.json",
+      "source_location": "L13"
     },
     {
-      "id": "src_components_dialogs_confirmmaintenancedialog",
-      "label": "ConfirmMaintenanceDialog.vue",
+      "id": "package_scripts_build",
+      "label": "build",
       "_origin": "ast",
       "community": 48,
-      "community_name": ".quasar",
+      "community_name": "scripts",
       "file_type": "code",
-      "norm_label": "confirmmaintenancedialog.vue",
-      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
-      "source_location": "L1"
+      "norm_label": "build",
+      "source_file": "package.json",
+      "source_location": "L19"
     },
     {
-      "id": "src_components_dialogs_confirmmaintenancedialog_dialogref_ondialoghide_ondialogok",
-      "label": "{ dialogRef, onDialogHide, onDialogOK }",
+      "id": "package_scripts_build_electron",
+      "label": "build-electron",
       "_origin": "ast",
       "community": 48,
-      "community_name": ".quasar",
+      "community_name": "scripts",
       "file_type": "code",
-      "norm_label": "{ dialogref, ondialoghide, ondialogok }",
-      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
-      "source_location": "L44"
+      "norm_label": "build-electron",
+      "source_file": "package.json",
+      "source_location": "L20"
     },
     {
-      "id": "src_components_dialogs_confirmmaintenancedialog_maintenance",
-      "label": "maintenance",
+      "id": "package_scripts_dev",
+      "label": "dev",
       "_origin": "ast",
       "community": 48,
-      "community_name": ".quasar",
+      "community_name": "scripts",
       "file_type": "code",
-      "norm_label": "maintenance",
-      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
-      "source_location": "L52"
+      "norm_label": "dev",
+      "source_file": "package.json",
+      "source_location": "L17"
     },
     {
-      "id": "src_components_dialogs_confirmmaintenancedialog_props",
-      "label": "props",
+      "id": "package_scripts_dev_electron",
+      "label": "dev-electron",
       "_origin": "ast",
       "community": 48,
-      "community_name": ".quasar",
+      "community_name": "scripts",
       "file_type": "code",
-      "norm_label": "props",
-      "source_file": "src/components/dialogs/ConfirmMaintenanceDialog.vue",
-      "source_location": "L46"
+      "norm_label": "dev-electron",
+      "source_file": "package.json",
+      "source_location": "L18"
     },
     {
-      "id": "src_plugins_useconfirmmaintenancedialog",
-      "label": "useConfirmMaintenanceDialog.js",
+      "id": "package_scripts_format",
+      "label": "format",
       "_origin": "ast",
       "community": 48,
-      "community_name": ".quasar",
+      "community_name": "scripts",
       "file_type": "code",
-      "norm_label": "useconfirmmaintenancedialog.js",
-      "source_file": "src/plugins/useConfirmMaintenanceDialog.js",
-      "source_location": "L1"
+      "norm_label": "format",
+      "source_file": "package.json",
+      "source_location": "L15"
     },
     {
-      "id": "ref_dist",
-      "label": "dist",
+      "id": "package_scripts_lint",
+      "label": "lint",
       "_origin": "ast",
       "community": 48,
-      "community_name": ".quasar",
-      "file_type": "concept",
-      "norm_label": "dist",
-      "source_file": "jsconfig.json",
-      "source_location": "L34"
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "lint",
+      "source_file": "package.json",
+      "source_location": "L14"
     },
     {
-      "id": "ref_node_modules",
-      "label": "node_modules",
+      "id": "package_scripts_rebuild",
+      "label": "rebuild",
       "_origin": "ast",
       "community": 48,
-      "community_name": ".quasar",
-      "file_type": "concept",
-      "norm_label": "node_modules",
-      "source_file": "jsconfig.json",
-      "source_location": "L34"
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "rebuild",
+      "source_file": "package.json",
+      "source_location": "L21"
     },
     {
-      "id": "ref_quasar",
-      "label": ".quasar",
+      "id": "package_scripts_test",
+      "label": "test",
       "_origin": "ast",
       "community": 48,
-      "community_name": ".quasar",
-      "file_type": "concept",
-      "norm_label": ".quasar",
-      "source_file": "jsconfig.json",
-      "source_location": "L34"
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "test",
+      "source_file": "package.json",
+      "source_location": "L16"
     },
     {
       "id": "src_components_alarms_alarmgroupview",
@@ -14614,6 +14272,39 @@
       "source_location": "L10"
     },
     {
+      "id": "src_electron_routes_settings_routes",
+      "label": "Settings.routes.js",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "settingsDuration.js",
+      "file_type": "code",
+      "norm_label": "settings.routes.js",
+      "source_file": "src-electron/routes/Settings.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_electron_routes_settings_routes_router",
+      "label": "router",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "settingsDuration.js",
+      "file_type": "code",
+      "norm_label": "router",
+      "source_file": "src-electron/routes/Settings.routes.js",
+      "source_location": "L5"
+    },
+    {
+      "id": "src_electron_routes_settings_routes_validators",
+      "label": "VALIDATORS",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "settingsDuration.js",
+      "file_type": "code",
+      "norm_label": "validators",
+      "source_file": "src-electron/routes/Settings.routes.js",
+      "source_location": "L20"
+    },
+    {
       "id": "src_electron_routes_stingrays_routes",
       "label": "Stingrays.routes.js",
       "_origin": "ast",
@@ -14702,11 +14393,22 @@
       "source_location": "L1"
     },
     {
+      "id": "src_electron_middlewares_apikey",
+      "label": "apiKey.js",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "getDB",
+      "file_type": "code",
+      "norm_label": "apikey.js",
+      "source_file": "src-electron/middlewares/apiKey.js",
+      "source_location": "L1"
+    },
+    {
       "id": "src_electron_middlewares_permissions",
       "label": "permissions.js",
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "permissions.js",
       "source_file": "src-electron/middlewares/permissions.js",
@@ -14717,7 +14419,7 @@
       "label": "Alarms.routes.js",
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "alarms.routes.js",
       "source_file": "src-electron/routes/Alarms.routes.js",
@@ -14728,7 +14430,7 @@
       "label": "importStreams",
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "importstreams",
       "source_file": "src-electron/routes/Alarms.routes.js",
@@ -14739,40 +14441,73 @@
       "label": "router",
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "router",
       "source_file": "src-electron/routes/Alarms.routes.js",
       "source_location": "L16"
     },
     {
+      "id": "src_electron_routes_casecrashes_routes",
+      "label": "CaseCrashes.routes.js",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "getDB",
+      "file_type": "code",
+      "norm_label": "casecrashes.routes.js",
+      "source_file": "src-electron/routes/CaseCrashes.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_electron_routes_casecrashes_routes_case_types",
+      "label": "CASE_TYPES",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "getDB",
+      "file_type": "code",
+      "norm_label": "case_types",
+      "source_file": "src-electron/routes/CaseCrashes.routes.js",
+      "source_location": "L20"
+    },
+    {
+      "id": "src_electron_routes_casecrashes_routes_router",
+      "label": "router",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "getDB",
+      "file_type": "code",
+      "norm_label": "router",
+      "source_file": "src-electron/routes/CaseCrashes.routes.js",
+      "source_location": "L7"
+    },
+    {
+      "id": "src_electron_routes_casecrashes_routes_zones",
+      "label": "ZONES",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "getDB",
+      "file_type": "code",
+      "norm_label": "zones",
+      "source_file": "src-electron/routes/CaseCrashes.routes.js",
+      "source_location": "L9"
+    },
+    {
       "id": "src_electron_routes_reports_routes",
       "label": "Reports.routes.js",
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "reports.routes.js",
       "source_file": "src-electron/routes/Reports.routes.js",
       "source_location": "L1"
     },
     {
-      "id": "src_electron_routes_reports_routes_router",
-      "label": "router",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "Alarms.routes.js",
-      "file_type": "code",
-      "norm_label": "router",
-      "source_file": "src-electron/routes/Reports.routes.js",
-      "source_location": "L5"
-    },
-    {
       "id": "src_electron_routes_reports_routes_valid_block_types",
       "label": "VALID_BLOCK_TYPES",
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "valid_block_types",
       "source_file": "src-electron/routes/Reports.routes.js",
@@ -14783,29 +14518,29 @@
       "label": "Users.routes.js",
       "_origin": "ast",
       "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community_name": "getDB",
       "file_type": "code",
       "norm_label": "users.routes.js",
       "source_file": "src-electron/routes/Users.routes.js",
       "source_location": "L1"
     },
     {
-      "id": "src_electron_routes_users_routes_router",
-      "label": "router",
+      "id": "jsconfig_exclude",
+      "label": "exclude",
       "_origin": "ast",
-      "community": 54,
-      "community_name": "Alarms.routes.js",
+      "community": 55,
+      "community_name": ".quasar",
       "file_type": "code",
-      "norm_label": "router",
-      "source_file": "src-electron/routes/Users.routes.js",
-      "source_location": "L5"
+      "norm_label": "exclude",
+      "source_file": "jsconfig.json",
+      "source_location": "L34"
     },
     {
       "id": "src_components_dialogs_productiondatadialog",
       "label": "ProductionDataDialog.vue",
       "_origin": "ast",
       "community": 55,
-      "community_name": "ProductionDataDialog.vue",
+      "community_name": ".quasar",
       "file_type": "code",
       "norm_label": "productiondatadialog.vue",
       "source_file": "src/components/dialogs/ProductionDataDialog.vue",
@@ -14816,7 +14551,7 @@
       "label": "{ dialogRef, onDialogHide, onDialogOK, onDialogCancel }",
       "_origin": "ast",
       "community": 55,
-      "community_name": "ProductionDataDialog.vue",
+      "community_name": ".quasar",
       "file_type": "code",
       "norm_label": "{ dialogref, ondialoghide, ondialogok, ondialogcancel }",
       "source_file": "src/components/dialogs/ProductionDataDialog.vue",
@@ -14827,7 +14562,7 @@
       "label": "isValid",
       "_origin": "ast",
       "community": 55,
-      "community_name": "ProductionDataDialog.vue",
+      "community_name": ".quasar",
       "file_type": "code",
       "norm_label": "isvalid",
       "source_file": "src/components/dialogs/ProductionDataDialog.vue",
@@ -14838,7 +14573,7 @@
       "label": "loading",
       "_origin": "ast",
       "community": 55,
-      "community_name": "ProductionDataDialog.vue",
+      "community_name": ".quasar",
       "file_type": "code",
       "norm_label": "loading",
       "source_file": "src/components/dialogs/ProductionDataDialog.vue",
@@ -14849,11 +14584,55 @@
       "label": "newRow",
       "_origin": "ast",
       "community": 55,
-      "community_name": "ProductionDataDialog.vue",
+      "community_name": ".quasar",
       "file_type": "code",
       "norm_label": "newrow",
       "source_file": "src/components/dialogs/ProductionDataDialog.vue",
       "source_location": "L70"
+    },
+    {
+      "id": "src_plugins_useproductiondatadialog",
+      "label": "useProductionDataDialog.js",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": ".quasar",
+      "file_type": "code",
+      "norm_label": "useproductiondatadialog.js",
+      "source_file": "src/plugins/useProductionDataDialog.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "ref_dist",
+      "label": "dist",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": ".quasar",
+      "file_type": "concept",
+      "norm_label": "dist",
+      "source_file": "jsconfig.json",
+      "source_location": "L34"
+    },
+    {
+      "id": "ref_node_modules",
+      "label": "node_modules",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": ".quasar",
+      "file_type": "concept",
+      "norm_label": "node_modules",
+      "source_file": "jsconfig.json",
+      "source_location": "L34"
+    },
+    {
+      "id": "ref_quasar",
+      "label": ".quasar",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": ".quasar",
+      "file_type": "concept",
+      "norm_label": ".quasar",
+      "source_file": "jsconfig.json",
+      "source_location": "L34"
     },
     {
       "id": "storage_migrations_021_rename_datasource_grouping_settings_to_harmonized_duration",
@@ -15054,28 +14833,6 @@
       "source_location": "L9"
     },
     {
-      "id": "src_electron_routes_auth_routes",
-      "label": "Auth.routes.js",
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "routes/index.js",
-      "file_type": "code",
-      "norm_label": "auth.routes.js",
-      "source_file": "src-electron/routes/Auth.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_electron_routes_auth_routes_router",
-      "label": "router",
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "routes/index.js",
-      "file_type": "code",
-      "norm_label": "router",
-      "source_file": "src-electron/routes/Auth.routes.js",
-      "source_location": "L6"
-    },
-    {
       "id": "src_electron_routes_charts_routes",
       "label": "Charts.routes.js",
       "_origin": "ast",
@@ -15186,15 +14943,15 @@
       "source_location": "L1"
     },
     {
-      "id": "src_electron_routes_kpi_routes_router",
+      "id": "src_electron_routes_index_router",
       "label": "router",
       "_origin": "ast",
       "community": 6,
       "community_name": "routes/index.js",
       "file_type": "code",
       "norm_label": "router",
-      "source_file": "src-electron/routes/KPI.routes.js",
-      "source_location": "L17"
+      "source_file": "src-electron/routes/index.js",
+      "source_location": "L22"
     },
     {
       "id": "src_electron_routes_locations_routes",
@@ -15263,37 +15020,59 @@
       "source_location": "L4"
     },
     {
-      "id": "src_electron_routes_settings_routes",
-      "label": "Settings.routes.js",
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "routes/index.js",
-      "file_type": "code",
-      "norm_label": "settings.routes.js",
-      "source_file": "src-electron/routes/Settings.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_electron_routes_settings_routes_router",
+      "id": "src_electron_routes_reports_routes_router",
       "label": "router",
       "_origin": "ast",
       "community": 6,
       "community_name": "routes/index.js",
       "file_type": "code",
       "norm_label": "router",
-      "source_file": "src-electron/routes/Settings.routes.js",
+      "source_file": "src-electron/routes/Reports.routes.js",
       "source_location": "L5"
     },
     {
-      "id": "src_electron_routes_settings_routes_validators",
-      "label": "VALIDATORS",
+      "id": "src_electron_routes_users_routes_router",
+      "label": "router",
       "_origin": "ast",
       "community": 6,
       "community_name": "routes/index.js",
       "file_type": "code",
-      "norm_label": "validators",
-      "source_file": "src-electron/routes/Settings.routes.js",
-      "source_location": "L20"
+      "norm_label": "router",
+      "source_file": "src-electron/routes/Users.routes.js",
+      "source_location": "L5"
+    },
+    {
+      "id": "src_electron_server",
+      "label": "server.js",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "routes/index.js",
+      "file_type": "code",
+      "norm_label": "server.js",
+      "source_file": "src-electron/server.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_electron_server_app",
+      "label": "app",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "routes/index.js",
+      "file_type": "code",
+      "norm_label": "app",
+      "source_file": "src-electron/server.js",
+      "source_location": "L12"
+    },
+    {
+      "id": "src_electron_server_electronclients",
+      "label": "electronClients",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "routes/index.js",
+      "file_type": "code",
+      "norm_label": "electronclients",
+      "source_file": "src-electron/server.js",
+      "source_location": "L45"
     },
     {
       "id": "src_electron_config_database",
@@ -15406,103 +15185,48 @@
       "source_location": "L35"
     },
     {
-      "id": "src_pages_maintenance_maintenanceview",
-      "label": "MaintenanceView.vue",
+      "id": "package_engines",
+      "label": "engines",
       "_origin": "ast",
       "community": 67,
-      "community_name": "MaintenanceView.vue",
+      "community_name": "engines",
       "file_type": "code",
-      "norm_label": "maintenanceview.vue",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
-      "source_location": "L1"
+      "norm_label": "engines",
+      "source_file": "package.json",
+      "source_location": "L84"
     },
     {
-      "id": "src_pages_maintenance_maintenanceview_activestep",
-      "label": "activeStep",
+      "id": "package_engines_node",
+      "label": "node",
       "_origin": "ast",
       "community": 67,
-      "community_name": "MaintenanceView.vue",
+      "community_name": "engines",
       "file_type": "code",
-      "norm_label": "activestep",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
-      "source_location": "L91"
+      "norm_label": "node",
+      "source_file": "package.json",
+      "source_location": "L85"
     },
     {
-      "id": "src_pages_maintenance_maintenanceview_app",
-      "label": "App",
+      "id": "package_engines_npm",
+      "label": "npm",
       "_origin": "ast",
       "community": 67,
-      "community_name": "MaintenanceView.vue",
+      "community_name": "engines",
       "file_type": "code",
-      "norm_label": "app",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "norm_label": "npm",
+      "source_file": "package.json",
       "source_location": "L86"
     },
     {
-      "id": "src_pages_maintenance_maintenanceview_askforconfirmation",
-      "label": "{ askForConfirmation }",
+      "id": "package_engines_yarn",
+      "label": "yarn",
       "_origin": "ast",
       "community": 67,
-      "community_name": "MaintenanceView.vue",
+      "community_name": "engines",
       "file_type": "code",
-      "norm_label": "{ askforconfirmation }",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
-      "source_location": "L89"
-    },
-    {
-      "id": "src_pages_maintenance_maintenanceview_maintenance",
-      "label": "maintenance",
-      "_origin": "ast",
-      "community": 67,
-      "community_name": "MaintenanceView.vue",
-      "file_type": "code",
-      "norm_label": "maintenance",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
-      "source_location": "L90"
-    },
-    {
-      "id": "src_pages_maintenance_maintenanceview_report",
-      "label": "report",
-      "_origin": "ast",
-      "community": 67,
-      "community_name": "MaintenanceView.vue",
-      "file_type": "code",
-      "norm_label": "report",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
-      "source_location": "L92"
-    },
-    {
-      "id": "src_pages_maintenance_maintenanceview_route",
-      "label": "route",
-      "_origin": "ast",
-      "community": 67,
-      "community_name": "MaintenanceView.vue",
-      "file_type": "code",
-      "norm_label": "route",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
+      "norm_label": "yarn",
+      "source_file": "package.json",
       "source_location": "L87"
-    },
-    {
-      "id": "src_pages_maintenance_maintenanceview_router",
-      "label": "router",
-      "_origin": "ast",
-      "community": 67,
-      "community_name": "MaintenanceView.vue",
-      "file_type": "code",
-      "norm_label": "router",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
-      "source_location": "L88"
-    },
-    {
-      "id": "src_pages_maintenance_maintenanceview_terminated",
-      "label": "terminated",
-      "_origin": "ast",
-      "community": 67,
-      "community_name": "MaintenanceView.vue",
-      "file_type": "code",
-      "norm_label": "terminated",
-      "source_file": "src/pages/maintenance/MaintenanceView.vue",
-      "source_location": "L93"
     },
     {
       "id": "quasar_config",
@@ -15542,7 +15266,7 @@
       "label": "fs",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "confidence": "EXTRACTED",
       "file_type": "code",
       "norm_label": "fs",
@@ -15553,7 +15277,7 @@
       "label": "path",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "confidence": "EXTRACTED",
       "file_type": "code",
       "norm_label": "path",
@@ -15564,7 +15288,7 @@
       "label": "AutoGroupAlarms.js",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "autogroupalarms.js",
       "source_file": "src-electron/cron/AutoGroupAlarms.js",
@@ -15575,7 +15299,7 @@
       "label": "CleanDB.js",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "cleandb.js",
       "source_file": "src-electron/cron/CleanDB.js",
@@ -15586,7 +15310,7 @@
       "label": "ExtractSAV.js",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "extractsav.js",
       "source_file": "src-electron/cron/ExtractSAV.js",
@@ -15597,7 +15321,7 @@
       "label": "ONEDRIVE_BUSINESS_PATH",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "onedrive_business_path",
       "source_file": "src-electron/cron/ExtractSAV.js",
@@ -15608,18 +15332,29 @@
       "label": "SAV_EXPORT_PATH",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "sav_export_path",
       "source_file": "src-electron/cron/ExtractSAV.js",
       "source_location": "L10"
     },
     {
+      "id": "src_electron_cron_extracttrayamount",
+      "label": "ExtractTrayAmount.js",
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "Cron.routes.js",
+      "file_type": "code",
+      "norm_label": "extracttrayamount.js",
+      "source_file": "src-electron/cron/ExtractTrayAmount.js",
+      "source_location": "L1"
+    },
+    {
       "id": "src_electron_cron_extractwms",
       "label": "ExtractWMS.js",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "extractwms.js",
       "source_file": "src-electron/cron/ExtractWMS.js",
@@ -15630,7 +15365,7 @@
       "label": "CONFIG_PATH",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "config_path",
       "source_file": "src-electron/cron/ExtractWMS.js",
@@ -15641,7 +15376,7 @@
       "label": "ONEDRIVE_BUSINESS_PATH",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "onedrive_business_path",
       "source_file": "src-electron/cron/ExtractWMS.js",
@@ -15652,7 +15387,7 @@
       "label": "START_DATE",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "start_date",
       "source_file": "src-electron/cron/ExtractWMS.js",
@@ -15663,7 +15398,7 @@
       "label": "WMS_HISTORY_PATH",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "wms_history_path",
       "source_file": "src-electron/cron/ExtractWMS.js",
@@ -15674,7 +15409,7 @@
       "label": "utils.js",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "utils.js",
       "source_file": "src-electron/cron/utils.js",
@@ -15685,7 +15420,7 @@
       "label": "mvn.js",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "mvn.js",
       "source_file": "src-electron/mvn.js",
@@ -15696,7 +15431,7 @@
       "label": "MVN_CONFIG_PATH",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "mvn_config_path",
       "source_file": "src-electron/mvn.js",
@@ -15707,7 +15442,7 @@
       "label": "Cron.routes.js",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "cron.routes.js",
       "source_file": "src-electron/routes/Cron.routes.js",
@@ -15718,7 +15453,7 @@
       "label": "activeCronJobs",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "activecronjobs",
       "source_file": "src-electron/routes/Cron.routes.js",
@@ -15729,7 +15464,7 @@
       "label": "router",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "router",
       "source_file": "src-electron/routes/Cron.routes.js",
@@ -15740,7 +15475,7 @@
       "label": "autoGroupAlarms.js",
       "_origin": "ast",
       "community": 7,
-      "community_name": "getDB",
+      "community_name": "Cron.routes.js",
       "file_type": "code",
       "norm_label": "autogroupalarms.js",
       "source_file": "src-electron/services/autoGroupAlarms.js",
@@ -16440,81 +16175,48 @@
       "source_location": "L59"
     },
     {
-      "id": "src_electron_middlewares_apikey",
-      "label": "apiKey.js",
+      "id": "package_devdependencies_prettier",
+      "label": "prettier",
       "_origin": "ast",
       "community": 87,
-      "community_name": "CaseCrashes.routes.js",
+      "community_name": "prettier",
       "file_type": "code",
-      "norm_label": "apikey.js",
-      "source_file": "src-electron/middlewares/apiKey.js",
-      "source_location": "L1"
+      "norm_label": "prettier",
+      "source_file": "package.json",
+      "source_location": "L80"
     },
     {
-      "id": "src_electron_middlewares_tests_apikey_test",
-      "label": "apiKey.test.js",
+      "id": "prettier",
+      "label": "prettier",
       "_origin": "ast",
       "community": 87,
-      "community_name": "CaseCrashes.routes.js",
-      "file_type": "code",
-      "norm_label": "apikey.test.js",
-      "source_file": "src-electron/middlewares/__tests__/apiKey.test.js",
-      "source_location": "L1"
+      "community_name": "prettier",
+      "file_type": "concept",
+      "norm_label": "prettier",
+      "source_file": "package.json",
+      "source_location": "L80"
     },
     {
-      "id": "src_electron_middlewares_tests_apikey_test_getvaluemock",
-      "label": "getValueMock",
+      "id": "package_devdependencies_eslint_config_prettier",
+      "label": "eslint-config-prettier",
       "_origin": "ast",
-      "community": 87,
-      "community_name": "CaseCrashes.routes.js",
+      "community": 88,
+      "community_name": "eslint-config-prettier",
       "file_type": "code",
-      "norm_label": "getvaluemock",
-      "source_file": "src-electron/middlewares/__tests__/apiKey.test.js",
-      "source_location": "L3"
+      "norm_label": "eslint-config-prettier",
+      "source_file": "package.json",
+      "source_location": "L77"
     },
     {
-      "id": "src_electron_routes_casecrashes_routes",
-      "label": "CaseCrashes.routes.js",
+      "id": "eslint_config_prettier",
+      "label": "eslint-config-prettier",
       "_origin": "ast",
-      "community": 87,
-      "community_name": "CaseCrashes.routes.js",
-      "file_type": "code",
-      "norm_label": "casecrashes.routes.js",
-      "source_file": "src-electron/routes/CaseCrashes.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_electron_routes_casecrashes_routes_case_types",
-      "label": "CASE_TYPES",
-      "_origin": "ast",
-      "community": 87,
-      "community_name": "CaseCrashes.routes.js",
-      "file_type": "code",
-      "norm_label": "case_types",
-      "source_file": "src-electron/routes/CaseCrashes.routes.js",
-      "source_location": "L20"
-    },
-    {
-      "id": "src_electron_routes_casecrashes_routes_router",
-      "label": "router",
-      "_origin": "ast",
-      "community": 87,
-      "community_name": "CaseCrashes.routes.js",
-      "file_type": "code",
-      "norm_label": "router",
-      "source_file": "src-electron/routes/CaseCrashes.routes.js",
-      "source_location": "L7"
-    },
-    {
-      "id": "src_electron_routes_casecrashes_routes_zones",
-      "label": "ZONES",
-      "_origin": "ast",
-      "community": 87,
-      "community_name": "CaseCrashes.routes.js",
-      "file_type": "code",
-      "norm_label": "zones",
-      "source_file": "src-electron/routes/CaseCrashes.routes.js",
-      "source_location": "L9"
+      "community": 88,
+      "community_name": "eslint-config-prettier",
+      "file_type": "concept",
+      "norm_label": "eslint-config-prettier",
+      "source_file": "package.json",
+      "source_location": "L77"
     },
     {
       "id": "package_dependencies_cors",
@@ -16955,6 +16657,28 @@
       "norm_label": "mysql2",
       "source_file": "package.json",
       "source_location": "L44"
+    },
+    {
+      "id": "package_devdependencies_eslint_plugin_vue",
+      "label": "eslint-plugin-vue",
+      "_origin": "ast",
+      "community": 94,
+      "community_name": "eslint-plugin-vue",
+      "file_type": "code",
+      "norm_label": "eslint-plugin-vue",
+      "source_file": "package.json",
+      "source_location": "L78"
+    },
+    {
+      "id": "eslint_plugin_vue",
+      "label": "eslint-plugin-vue",
+      "_origin": "ast",
+      "community": 94,
+      "community_name": "eslint-plugin-vue",
+      "file_type": "concept",
+      "norm_label": "eslint-plugin-vue",
+      "source_file": "package.json",
+      "source_location": "L78"
     },
     {
       "id": "package_dependencies_nl2br",
@@ -18989,102 +18713,6 @@
       "weight": 1.0
     },
     {
-      "source": "src_electron_middlewares_externalguard_externalguard",
-      "target": "src_electron_middlewares_externalguard_iscloudflareip",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L147",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard_externalguard",
-      "target": "src_electron_middlewares_externalguard_iswhitelisted",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L149",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard_ipv6tobigint",
-      "target": "src_electron_middlewares_externalguard_normalizeipv6",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L65",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard_iscloudflareip",
-      "target": "src_electron_middlewares_externalguard_normalizeremoteaddress",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L111",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard_iscloudflareip",
-      "target": "src_electron_middlewares_externalguard_isipv4incidr",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L115",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard_iscloudflareip",
-      "target": "src_electron_middlewares_externalguard_isipv6incidr",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L118",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard_isipv4incidr",
-      "target": "src_electron_middlewares_externalguard_ipv4tolong",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L57",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard_isipv6incidr",
-      "target": "src_electron_middlewares_externalguard_ipv6tobigint",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L86",
-      "weight": 1.0
-    },
-    {
       "source": "src_electron_middlewares_permissions_requireanypermission",
       "target": "src_electron_database_getdb",
       "relation": "calls",
@@ -19261,7 +18889,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L143",
+      "source_location": "L139",
       "weight": 1.0
     },
     {
@@ -19273,7 +18901,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L136",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -21545,18 +21173,6 @@
       "weight": 1.0
     },
     {
-      "source": "package_devdependencies_supertest",
-      "target": "supertest",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "package.json",
-      "source_location": "L82",
-      "weight": 1.0
-    },
-    {
       "source": "package_devdependencies_vite_plugin_checker",
       "target": "vite_plugin_checker",
       "relation": "imports",
@@ -21565,19 +21181,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "package.json",
-      "source_location": "L83",
-      "weight": 1.0
-    },
-    {
-      "source": "package_devdependencies_vitest",
-      "target": "vitest",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "package.json",
-      "source_location": "L84",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -22109,42 +21713,6 @@
       "weight": 1.0
     },
     {
-      "source": "src_electron_middlewares_tests_externalguard_test",
-      "target": "src_electron_middlewares_externalguard_externalguard",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src-electron/middlewares/__tests__/externalGuard.test.js",
-      "source_location": "L2",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_tests_externalguard_test",
-      "target": "src_electron_middlewares_externalguard_internal",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src-electron/middlewares/__tests__/externalGuard.test.js",
-      "source_location": "L2",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_tests_externalguard_test",
-      "target": "src_electron_middlewares_externalguard_iscloudflareip",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src-electron/middlewares/__tests__/externalGuard.test.js",
-      "source_location": "L2",
-      "weight": 1.0
-    },
-    {
       "source": "src_electron_routes_alarms_routes",
       "target": "src_electron_cron_sendalarmreport_computealarmreportdata",
       "relation": "imports",
@@ -22506,6 +22074,18 @@
     },
     {
       "source": "src_electron_routes_index",
+      "target": "src_electron_routes_maintenance_routes_router",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src-electron/routes/index.js",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "src_electron_routes_index",
       "target": "src_electron_routes_image_routes_router",
       "relation": "imports",
       "_origin": "ast",
@@ -22513,7 +22093,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L14",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -22525,7 +22105,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L15",
+      "source_location": "L12",
       "weight": 1.0
     },
     {
@@ -22537,7 +22117,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L16",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -22549,7 +22129,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L17",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -22561,7 +22141,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L18",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -22573,7 +22153,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L19",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -22585,7 +22165,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L20",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -22597,7 +22177,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L21",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -22609,7 +22189,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L22",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -22621,7 +22201,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L23",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -24569,18 +24149,6 @@
       "weight": 1.0
     },
     {
-      "source": "src_electron_middlewares_tests_externalguard_test",
-      "target": "src_electron_middlewares_externalguard",
-      "relation": "imports_from",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src-electron/middlewares/__tests__/externalGuard.test.js",
-      "source_location": "L2",
-      "weight": 1.0
-    },
-    {
       "source": "src_electron_routes_alarms_routes",
       "target": "src_electron_cron_sendalarmreport",
       "relation": "imports_from",
@@ -24930,6 +24498,18 @@
     },
     {
       "source": "src_electron_routes_index",
+      "target": "src_electron_routes_maintenance_routes",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src-electron/routes/index.js",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "src_electron_routes_index",
       "target": "src_electron_routes_image_routes",
       "relation": "imports_from",
       "_origin": "ast",
@@ -24937,7 +24517,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L14",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -24949,7 +24529,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L15",
+      "source_location": "L12",
       "weight": 1.0
     },
     {
@@ -24961,7 +24541,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L16",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -24973,7 +24553,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L17",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -24985,7 +24565,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L18",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -24997,7 +24577,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L19",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -25009,7 +24589,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L20",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -25021,7 +24601,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L21",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -25033,7 +24613,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L22",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -25045,7 +24625,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L23",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -25418,18 +24998,6 @@
       "context": "import",
       "source_file": "src-electron/server.js",
       "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_server",
-      "target": "src_electron_middlewares_externalguard",
-      "relation": "imports_from",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src-electron/server.js",
-      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -27391,7 +26959,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "package.json",
-      "source_location": "L86",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -28023,35 +27591,13 @@
     },
     {
       "source": "package_devdependencies",
-      "target": "package_devdependencies_supertest",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "package.json",
-      "source_location": "L82",
-      "weight": 1.0
-    },
-    {
-      "source": "package_devdependencies",
       "target": "package_devdependencies_vite_plugin_checker",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "package.json",
-      "source_location": "L83",
-      "weight": 1.0
-    },
-    {
-      "source": "package_devdependencies",
-      "target": "package_devdependencies_vitest",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "package.json",
-      "source_location": "L84",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -28062,7 +27608,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "package.json",
-      "source_location": "L87",
+      "source_location": "L85",
       "weight": 1.0
     },
     {
@@ -28073,7 +27619,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "package.json",
-      "source_location": "L88",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -28084,7 +27630,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "package.json",
-      "source_location": "L89",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -31740,105 +31286,6 @@
       "weight": 1.0
     },
     {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_iscloudflareip",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L110",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_external_whitelist",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L129",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_externalguard",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L145",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_internal",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L162",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_cloudflare_ipv4_ranges",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L18",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_cloudflare_ipv6_ranges",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L36",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_ipv4tolong",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L46",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_ipv6tobigint",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L64",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_normalizeipv6",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L70",
-      "weight": 1.0
-    },
-    {
       "source": "src_electron_middlewares_permissions",
       "target": "src_electron_middlewares_permissions_requireanypermission",
       "relation": "contains",
@@ -31858,50 +31305,6 @@
       "confidence_score": 1.0,
       "source_file": "src-electron/middlewares/permissions.js",
       "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_tests_apikey_test",
-      "target": "src_electron_middlewares_tests_apikey_test_buildres",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/__tests__/apiKey.test.js",
-      "source_location": "L18",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_tests_apikey_test",
-      "target": "src_electron_middlewares_tests_apikey_test_getvaluemock",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/__tests__/apiKey.test.js",
-      "source_location": "L3",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_tests_externalguard_test",
-      "target": "src_electron_middlewares_tests_externalguard_test_buildreq",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/__tests__/externalGuard.test.js",
-      "source_location": "L54",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_tests_externalguard_test",
-      "target": "src_electron_middlewares_tests_externalguard_test_buildres",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/__tests__/externalGuard.test.js",
-      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -32220,7 +31623,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L132",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -32231,7 +31634,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L133",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -32242,7 +31645,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L135",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -32253,7 +31656,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L142",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
@@ -32264,7 +31667,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L150",
+      "source_location": "L146",
       "weight": 1.0
     },
     {
@@ -32297,7 +31700,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L528",
+      "source_location": "L508",
       "weight": 1.0
     },
     {
@@ -32341,7 +31744,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/routes/index.js",
-      "source_location": "L25",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -32594,7 +31997,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/server.js",
-      "source_location": "L13",
+      "source_location": "L12",
       "weight": 1.0
     },
     {
@@ -32605,7 +32008,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/server.js",
-      "source_location": "L362",
+      "source_location": "L347",
       "weight": 1.0
     },
     {
@@ -32616,7 +32019,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/server.js",
-      "source_location": "L377",
+      "source_location": "L362",
       "weight": 1.0
     },
     {
@@ -32627,7 +32030,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/server.js",
-      "source_location": "L60",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -32638,7 +32041,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/server.js",
-      "source_location": "L79",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -32649,7 +32052,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-electron/server.js",
-      "source_location": "L96",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -40309,15 +39712,6 @@
       "weight": 1.0
     },
     {
-      "source": "src_electron_middlewares_tests_apikey_test",
-      "target": "src_electron_middlewares_apikey",
-      "relation": "dynamic_import",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-electron/middlewares/__tests__/apiKey.test.js"
-    },
-    {
       "source": "src_electron_routes_charts_routes",
       "target": "chartjs_node_canvas",
       "relation": "dynamic_import",
@@ -41048,19 +40442,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src-electron/routes/Database.routes.js",
-      "source_location": "L505",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_server",
-      "target": "src_electron_middlewares_externalguard_externalguard",
-      "relation": "indirect_call",
-      "_origin": "ast",
-      "confidence": "INFERRED",
-      "confidence_score": 0.85,
-      "context": "argument",
-      "source_file": "src-electron/server.js",
-      "source_location": "L20",
+      "source_location": "L489",
       "weight": 1.0
     },
     {
@@ -41268,54 +40650,6 @@
       "weight": 1.0
     },
     {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_isipv4incidr",
-      "relation": "indirect_call",
-      "_origin": "ast",
-      "confidence": "INFERRED",
-      "confidence_score": 0.85,
-      "context": "collection",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L163",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_isipv6incidr",
-      "relation": "indirect_call",
-      "_origin": "ast",
-      "confidence": "INFERRED",
-      "confidence_score": 0.85,
-      "context": "collection",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L164",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_normalizeremoteaddress",
-      "relation": "indirect_call",
-      "_origin": "ast",
-      "confidence": "INFERRED",
-      "confidence_score": 0.85,
-      "context": "collection",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L165",
-      "weight": 1.0
-    },
-    {
-      "source": "src_electron_middlewares_externalguard",
-      "target": "src_electron_middlewares_externalguard_iswhitelisted",
-      "relation": "indirect_call",
-      "_origin": "ast",
-      "confidence": "INFERRED",
-      "confidence_score": 0.85,
-      "context": "collection",
-      "source_file": "src-electron/middlewares/externalGuard.js",
-      "source_location": "L166",
-      "weight": 1.0
-    },
-    {
       "source": "src_pages_kpi_interventionjournal_stoptimer",
       "target": "src_pages_kpi_interventionjournal_canceltimer",
       "relation": "indirect_call",
@@ -41365,5 +40699,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "01795b7ff199f8de5022593bf9652b50131495e1"
+  "built_at_commit": "041c5e6b00e6e79bd282a4a8eb35bf15537fda8c"
 }
