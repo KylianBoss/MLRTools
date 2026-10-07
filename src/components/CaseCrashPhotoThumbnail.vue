@@ -24,11 +24,11 @@
   </div>
 
   <q-dialog v-model="showFullSize">
-    <q-card>
-      <q-img
+    <q-card style="max-width: 90vw; max-height: 90vh" flat>
+      <img
         v-if="blobUrl"
         :src="blobUrl"
-        style="max-width: 90vw; max-height: 90vh"
+        style="display: block; max-width: 90vw; max-height: 90vh"
       />
     </q-card>
   </q-dialog>
