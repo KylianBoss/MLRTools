@@ -13,7 +13,7 @@
   "scripts": {
     "lint": "eslint --ext .js,.vue ./",
     "format": "prettier --write \"**/*.{js,vue,scss,html,md,json}\" --ignore-path .gitignore",
-    "test": "echo \"No test specified\" && exit 0",
+    "test": "vitest run",
     "dev": "quasar dev",
     "dev-electron": "quasar dev -m electron",
     "build": "quasar build",
@@ -79,7 +79,9 @@
     "postcss": "^8.4.14",
     "prettier": "^2.5.1",
     "sequelize-cli": "^6.6.5",
-    "vite-plugin-checker": "^0.7.1"
+    "supertest": "^7.3.1",
+    "vite-plugin-checker": "^0.7.1",
+    "vitest": "^3.2.7"
   },
   "engines": {
     "node": "^20 || ^18 || ^16",

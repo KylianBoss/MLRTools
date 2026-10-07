@@ -77,6 +77,10 @@ function buildMvnReadOnlyProxy(db) {
 }
 
 router.post("/sync-models", async (req, res) => {
+  return res.status(403).json({
+    error: "Temporairement désactivé (incident sécurité 2026-10-07)",
+  });
+  // eslint-disable-next-line no-unreachable
   const db = getDB();
   const { user } = req.body;
   if (!user) {
@@ -176,6 +180,10 @@ router.get("/export/stream/:exportId", (req, res) => {
 });
 
 router.post("/export", async (req, res) => {
+  return res.status(403).json({
+    error: "Temporairement désactivé (incident sécurité 2026-10-07)",
+  });
+  // eslint-disable-next-line no-unreachable
   const db = getDB();
   const { user, exportId } = req.body;
 
@@ -211,6 +219,10 @@ router.post("/export", async (req, res) => {
 });
 
 router.get("/export/download/:exportId", async (req, res) => {
+  return res.status(403).json({
+    error: "Temporairement désactivé (incident sécurité 2026-10-07)",
+  });
+  // eslint-disable-next-line no-unreachable
   const db = getDB();
   const access = await checkAdminAccess(db, req.query.user);
   if (access.error) {
@@ -327,6 +339,10 @@ router.post("/empty-day-resume-at-date", async (req, res) => {
 });
 
 router.post("/execute-code", async (req, res) => {
+  return res.status(403).json({
+    error: "Temporairement désactivé (incident sécurité 2026-10-07)",
+  });
+  // eslint-disable-next-line no-unreachable
   const db = getDB();
   const { code } = req.body;
 
@@ -487,6 +503,10 @@ router.get("/models", async (req, res) => {
 
 // Route protégée par 2FA pour override les forbiddenPatterns
 router.post("/execute-code-override", require2FA, async (req, res) => {
+  return res.status(403).json({
+    error: "Temporairement désactivé (incident sécurité 2026-10-07)",
+  });
+  // eslint-disable-next-line no-unreachable
   const db = getDB();
   const { code } = req.body;
 

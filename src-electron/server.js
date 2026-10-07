@@ -6,14 +6,34 @@ import express from "express";
 import cors from "cors";
 import routes from "./routes/index.js";
 import { extractTrayAmount } from "./cron/ExtractTrayAmount.js";
+import { externalGuard } from "./middlewares/externalGuard.js";
 
 dayjs.extend(duration);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// Incident sécurité 2026-10-07 : doit rester le TOUT PREMIER middleware.
+// Bloque toute requête venant d'une IP Cloudflare (donc du tunnel public)
+// qui n'est pas explicitement whitelistée, avant même le parsing du body
+// ou le logging en DB. Voir middlewares/externalGuard.js.
+app.use(externalGuard);
+
+// Incident sécurité 2026-10-07 : cors() sans option autorisait N'IMPORTE
+// QUELLE origine web à appeler ces endpoints depuis le navigateur d'une
+// victime. Le frontend Electron en production charge via loadFile (pas
+// d'Origin HTTP du tout) ; en dev (dev-electron), le renderer est servi par
+// le serveur Vite de Quasar sur un port localhost choisi automatiquement
+// (peut varier d'une machine/version à l'autre) — donc on autorise toute
+// origine localhost/127.0.0.1, jamais une vraie origine web externe.
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      const isLocalDev = !origin || /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+      callback(null, isLocalDev);
+    },
+  })
+);
 app.use(
   express.json({
     limit: "50mb",
