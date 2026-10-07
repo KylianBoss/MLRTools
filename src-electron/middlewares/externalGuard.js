@@ -131,12 +131,24 @@ export function isCloudflareIp(rawAddress) {
  * ni cette whitelist ni la règle de path Cloudflare ne matchaient le vrai
  * chemin — toujours vérifier le chemin RÉEL monté, jamais le supposer.
  */
-const EXTERNAL_WHITELIST = [{ method: "POST", path: "/case-crashes/bot" }];
+const EXTERNAL_WHITELIST = [
+  { method: "POST", path: "/case-crashes/bot" },
+  // Upload d'une photo pour une chute déjà créée — Power Automate fait une
+  // requête par photo, après avoir créé le crash via la route ci-dessus.
+  { method: "POST", pattern: /^\/case-crashes\/bot\/[^/]+\/photo$/ },
+  // Lecture d'une photo de chute, par un autre serveur local qui relaie
+  // (proxy serveur-à-serveur, voir CaseCrashes.routes.js) — :id et
+  // :filename sont dynamiques, donc un pattern plutôt qu'un chemin exact.
+  { method: "GET", pattern: /^\/case-crashes\/[^/]+\/photos\/[^/]+$/ },
+];
 
 function isWhitelisted(req) {
-  return EXTERNAL_WHITELIST.some(
-    (entry) => entry.method === req.method && req.path === entry.path
-  );
+  return EXTERNAL_WHITELIST.some((entry) => {
+    if (entry.method !== req.method) return false;
+    if (entry.path) return req.path === entry.path;
+    if (entry.pattern) return entry.pattern.test(req.path);
+    return false;
+  });
 }
 
 /**

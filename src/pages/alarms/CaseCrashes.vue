@@ -219,9 +219,17 @@
                   class="q-mr-xs"
                 />
               </div>
-              <div class="col-3 text-grey-7">
+              <div class="col-2 text-grey-7">
                 <q-icon name="person" size="xs" class="q-mr-xs" />
                 {{ crash.creatorFullname || crash.createdBy }}
+              </div>
+              <div class="col-1 row q-gutter-xs">
+                <CaseCrashPhotoThumbnail
+                  v-for="filename in crash.photos"
+                  :key="filename"
+                  :case-crash-id="crash.id"
+                  :filename="filename"
+                />
               </div>
               <div class="col-1 text-right">
                 <div v-if="canModify(crash)" class="row q-gutter-xs justify-end crash-row-actions">
@@ -315,6 +323,7 @@ import { useQuasar } from "quasar";
 import { api } from "boot/axios";
 import dayjs from "dayjs";
 import { useAppStore } from "stores/app";
+import CaseCrashPhotoThumbnail from "components/CaseCrashPhotoThumbnail.vue";
 
 const $q = useQuasar();
 const App = useAppStore();

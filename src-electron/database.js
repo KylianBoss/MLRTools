@@ -1245,6 +1245,38 @@ function initDB(config) {
       }
     );
 
+    // Photos d'une chute de tour de caisses (envoyées par le flow Power
+    // Automate). Seul le nom de fichier est stocké ici — le binaire est
+    // écrit sur disque côté machine bot, dans storage/case-crashes/<id>/.
+    const CaseCrashPhoto = sequelize.define(
+      "CaseCrashPhoto",
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        caseCrashId: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: "CaseCrashes",
+            key: "id",
+          },
+        },
+        filename: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          comment:
+            "Nom du fichier sur disque (storage/case-crashes/<caseCrashId>/<filename>), pas un chemin complet",
+        },
+      },
+      {
+        timestamps: true,
+        updatedAt: false,
+      }
+    );
+
     const cache_ErrorsByThousand = sequelize.define(
       "cache_ErrorsByThousand",
       {
@@ -1799,6 +1831,16 @@ function initDB(config) {
     CaseCrash.belongsTo(Users, {
       foreignKey: "createdBy",
       as: "creator",
+    });
+
+    // Association CaseCrash -> CaseCrashPhoto (photos de la chute)
+    CaseCrash.hasMany(CaseCrashPhoto, {
+      foreignKey: "caseCrashId",
+      as: "photos",
+      onDelete: "CASCADE",
+    });
+    CaseCrashPhoto.belongsTo(CaseCrash, {
+      foreignKey: "caseCrashId",
     });
 
     // ===== Associations STINGRAYS =====

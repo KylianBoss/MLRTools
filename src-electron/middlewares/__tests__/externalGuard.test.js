@@ -139,6 +139,66 @@ describe("externalGuard — middleware fail-closed", () => {
     expect(res.statusCode).toBeNull();
   });
 
+  it("laisse passer une requête externe sur l'upload de photo (POST /case-crashes/bot/:id/photo)", () => {
+    const req = buildReq({
+      remoteAddress: "173.245.48.1",
+      method: "POST",
+      path: "/case-crashes/bot/42/photo",
+    });
+    const res = buildRes();
+    const next = vi.fn();
+
+    externalGuard(req, res, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(res.statusCode).toBeNull();
+  });
+
+  it("bloque une requête externe GET sur l'URL d'upload de photo (seul POST est whitelisté)", () => {
+    const req = buildReq({
+      remoteAddress: "173.245.48.1",
+      method: "GET",
+      path: "/case-crashes/bot/42/photo",
+    });
+    const res = buildRes();
+    const next = vi.fn();
+
+    externalGuard(req, res, next);
+
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("laisse passer une requête externe sur la route de lecture de photo whitelistée (proxy serveur-à-serveur)", () => {
+    const req = buildReq({
+      remoteAddress: "173.245.48.1",
+      method: "GET",
+      path: "/case-crashes/42/photos/abc123.jpg",
+    });
+    const res = buildRes();
+    const next = vi.fn();
+
+    externalGuard(req, res, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(res.statusCode).toBeNull();
+  });
+
+  it("bloque une requête externe sur un chemin qui ressemble à la route photo mais avec un segment supplémentaire", () => {
+    const req = buildReq({
+      remoteAddress: "173.245.48.1",
+      method: "GET",
+      path: "/case-crashes/42/photos/abc123.jpg/../../settings/",
+    });
+    const res = buildRes();
+    const next = vi.fn();
+
+    externalGuard(req, res, next);
+
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("laisse passer une requête locale (réseau interne) sans restriction", () => {
     const req = buildReq({ remoteAddress: "192.168.1.50", path: "/settings/" });
     const res = buildRes();
@@ -179,7 +239,7 @@ describe("externalGuard — middleware fail-closed", () => {
 });
 
 describe("__internal — helpers exposés pour les tests", () => {
-  it("isWhitelisted reconnaît uniquement POST /case-crashes/bot", () => {
+  it("isWhitelisted reconnaît POST /case-crashes/bot et GET .../photos/...", () => {
     expect(
       __internal.isWhitelisted({ method: "POST", path: "/case-crashes/bot" })
     ).toBe(true);
@@ -188,6 +248,24 @@ describe("__internal — helpers exposés pour les tests", () => {
     ).toBe(false);
     expect(
       __internal.isWhitelisted({ method: "POST", path: "/settings/" })
+    ).toBe(false);
+    expect(
+      __internal.isWhitelisted({
+        method: "GET",
+        path: "/case-crashes/42/photos/abc123.jpg",
+      })
+    ).toBe(true);
+    expect(
+      __internal.isWhitelisted({
+        method: "POST",
+        path: "/case-crashes/42/photos/abc123.jpg",
+      })
+    ).toBe(false);
+    expect(
+      __internal.isWhitelisted({ method: "POST", path: "/case-crashes/bot/42/photo" })
+    ).toBe(true);
+    expect(
+      __internal.isWhitelisted({ method: "GET", path: "/case-crashes/bot/42/photo" })
     ).toBe(false);
   });
 
