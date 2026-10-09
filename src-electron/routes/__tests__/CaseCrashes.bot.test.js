@@ -9,6 +9,7 @@ const findByPkMock = vi.fn();
 const createPhotoMock = vi.fn();
 const usersFindOneMock = vi.fn();
 const axiosGetMock = vi.fn();
+const destroyMock = vi.fn();
 
 vi.mock("../../database.js", () => ({
   getDB: () => ({
@@ -17,6 +18,7 @@ vi.mock("../../database.js", () => ({
       CaseCrash: { findByPk: findByPkMock },
       CaseCrashPhoto: { create: createPhotoMock },
       Users: { findOne: usersFindOneMock },
+      UserAccess: {},
     },
   }),
 }));
@@ -329,5 +331,76 @@ describe("GET /case-crashes/public/photos/:filename — lecture publique sans au
     );
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe("DELETE /case-crashes/:id — supprime aussi les fichiers photo sur disque (2026-10-09)", () => {
+  const testCrashId = 666666;
+  let testDir;
+
+  beforeEach(() => {
+    testDir = path.join(CASE_CRASHES_PHOTOS_DIR, String(testCrashId));
+    findByPkMock.mockReset();
+    usersFindOneMock.mockReset();
+    destroyMock.mockReset();
+    destroyMock.mockResolvedValue({});
+    // Admin : bypass requirePermission sans avoir besoin de UserAccesses.
+    usersFindOneMock.mockResolvedValue({
+      id: 1,
+      autorised: true,
+      isAdmin: true,
+      UserAccesses: [],
+    });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(testDir)) {
+      fs.rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  it("supprime le dossier de photos sur disque quand le crash est supprimé", async () => {
+    fs.mkdirSync(testDir, { recursive: true });
+    fs.writeFileSync(path.join(testDir, "photo1.jpg"), "x");
+    fs.writeFileSync(path.join(testDir, "photo2.jpg"), "x");
+    findByPkMock.mockResolvedValue({
+      id: testCrashId,
+      createdBy: 1,
+      destroy: destroyMock,
+    });
+
+    const res = await request(app)
+      .delete(`/case-crashes/${testCrashId}`)
+      .set("x-username", "admin");
+
+    expect(res.status).toBe(200);
+    expect(destroyMock).toHaveBeenCalledOnce();
+    expect(fs.existsSync(testDir)).toBe(false);
+  });
+
+  it("ne lève pas d'erreur si le dossier de photos n'existe pas sur cette machine (pas le bot)", async () => {
+    findByPkMock.mockResolvedValue({
+      id: testCrashId,
+      createdBy: 1,
+      destroy: destroyMock,
+    });
+
+    const res = await request(app)
+      .delete(`/case-crashes/${testCrashId}`)
+      .set("x-username", "admin");
+
+    expect(res.status).toBe(200);
+    expect(fs.existsSync(testDir)).toBe(false);
+  });
+
+  it("ne supprime rien sur disque si le crash n'existe pas (404)", async () => {
+    findByPkMock.mockResolvedValue(null);
+
+    const res = await request(app)
+      .delete(`/case-crashes/${testCrashId}`)
+      .set("x-username", "admin");
+
+    expect(res.status).toBe(404);
+    expect(destroyMock).not.toHaveBeenCalled();
   });
 });

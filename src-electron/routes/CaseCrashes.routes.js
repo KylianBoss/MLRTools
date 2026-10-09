@@ -571,6 +571,14 @@ router.delete(
 
       await crash.destroy();
 
+      // Les lignes CaseCrashPhoto sont déjà supprimées par la contrainte
+      // onDelete: CASCADE (voir migration 025). Reste à nettoyer les
+      // fichiers physiques — Sequelize ne touche jamais au disque. Sur une
+      // machine qui n'est pas le bot, ce dossier n'existe simplement pas
+      // (rm avec force: true ne lève pas d'erreur dans ce cas).
+      const crashPhotosDir = path.join(CASE_CRASHES_PHOTOS_DIR, String(id));
+      fs.rmSync(crashPhotosDir, { recursive: true, force: true });
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting case crash:", error);
