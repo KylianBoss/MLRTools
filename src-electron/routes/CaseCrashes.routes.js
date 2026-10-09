@@ -316,11 +316,57 @@ router.post("/bot/:id/photo", checkApiKey, async (req, res) => {
       filename,
     });
 
-    res.status(201).json({ filename });
+    const publicBaseUrl = await db.models.Settings.getValue(
+      "cloudflareTunnelPublicUrl"
+    );
+    const publicUrl = publicBaseUrl
+      ? `${publicBaseUrl}/case-crashes/public/photos/${filename}`
+      : null;
+
+    res.status(201).json({ filename, publicUrl });
   } catch (error) {
     console.error("Error uploading case crash photo:", error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Lecture PUBLIQUE d'une photo, sans aucune authentification (ni session,
+// ni x-api-key) — n'existe QUE sur la machine bot, qui détient les fichiers.
+// Le seul contrôle d'accès est l'imprévisibilité du nom de fichier (UUID v4
+// généré côté serveur dans savePhotoToDisk, jamais fourni par l'appelant) :
+// quiconque connaît le lien exact accède à la photo. Risque accepté
+// explicitement (2026-10-09) pour permettre de réutiliser le lien dans
+// d'autres systèmes (ex: inséré par le flow Power Automate dans un rapport,
+// un message) — le public concerné (collaborateurs et partenaires de
+// l'entreprise) rend ce compromis acceptable pour ce cas d'usage précis.
+// Ne PAS réutiliser ce pattern pour des données plus sensibles.
+router.get("/public/photos/:filename", async (req, res) => {
+  const { filename } = req.params;
+
+  if (!isSafeFilename(filename)) {
+    return res.status(400).json({ error: "Invalid filename" });
+  }
+
+  // Le filename seul ne suffit pas à retrouver le dossier (storage/case-crashes/<id>/<filename>)
+  // — on cherche parmi les sous-dossiers plutôt que d'exiger l'id dans l'URL,
+  // pour garder le lien aussi court/simple que possible.
+  if (!fs.existsSync(CASE_CRASHES_PHOTOS_DIR)) {
+    return res.status(404).json({ error: "Photo not found" });
+  }
+
+  const crashDirs = fs.readdirSync(CASE_CRASHES_PHOTOS_DIR);
+  for (const crashDir of crashDirs) {
+    const candidatePath = path.join(
+      CASE_CRASHES_PHOTOS_DIR,
+      crashDir,
+      filename
+    );
+    if (fs.existsSync(candidatePath)) {
+      return res.sendFile(candidatePath);
+    }
+  }
+
+  return res.status(404).json({ error: "Photo not found" });
 });
 
 // Garde combinée pour la lecture d'une photo : deux appelants légitimes

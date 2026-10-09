@@ -169,6 +169,36 @@ describe("externalGuard — middleware fail-closed", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it("laisse passer une requête externe sur la route de lecture PUBLIQUE (sans auth)", () => {
+    const req = buildReq({
+      remoteAddress: "173.245.48.1",
+      method: "GET",
+      path: "/case-crashes/public/photos/abc123.jpg",
+    });
+    const res = buildRes();
+    const next = vi.fn();
+
+    externalGuard(req, res, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(res.statusCode).toBeNull();
+  });
+
+  it("bloque une requête externe POST sur la route publique (seul GET est whitelisté)", () => {
+    const req = buildReq({
+      remoteAddress: "173.245.48.1",
+      method: "POST",
+      path: "/case-crashes/public/photos/abc123.jpg",
+    });
+    const res = buildRes();
+    const next = vi.fn();
+
+    externalGuard(req, res, next);
+
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("laisse passer une requête externe sur la route de lecture de photo whitelistée (proxy serveur-à-serveur)", () => {
     const req = buildReq({
       remoteAddress: "173.245.48.1",
@@ -266,6 +296,18 @@ describe("__internal — helpers exposés pour les tests", () => {
     ).toBe(true);
     expect(
       __internal.isWhitelisted({ method: "GET", path: "/case-crashes/bot/42/photo" })
+    ).toBe(false);
+    expect(
+      __internal.isWhitelisted({
+        method: "GET",
+        path: "/case-crashes/public/photos/abc123.jpg",
+      })
+    ).toBe(true);
+    expect(
+      __internal.isWhitelisted({
+        method: "POST",
+        path: "/case-crashes/public/photos/abc123.jpg",
+      })
     ).toBe(false);
   });
 

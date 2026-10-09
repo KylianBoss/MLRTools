@@ -45,10 +45,15 @@ const CLOUDFLARE_IPV6_RANGES = [
 
 function ipv4ToLong(ip) {
   const parts = ip.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((p) => Number.isNaN(p) || p < 0 || p > 255)) {
+  if (
+    parts.length !== 4 ||
+    parts.some((p) => Number.isNaN(p) || p < 0 || p > 255)
+  ) {
     return null;
   }
-  return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
+  return (
+    ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0
+  );
 }
 
 function isIpv4InCidr(ip, cidr) {
@@ -69,8 +74,18 @@ function ipv6ToBigInt(ip) {
 
 function normalizeIpv6(ip) {
   const [head, tail] = ip.split("::");
-  const headParts = head ? head.split(":").filter(Boolean).map((p) => parseInt(p, 16)) : [];
-  const tailParts = tail ? tail.split(":").filter(Boolean).map((p) => parseInt(p, 16)) : [];
+  const headParts = head
+    ? head
+        .split(":")
+        .filter(Boolean)
+        .map((p) => parseInt(p, 16))
+    : [];
+  const tailParts = tail
+    ? tail
+        .split(":")
+        .filter(Boolean)
+        .map((p) => parseInt(p, 16))
+    : [];
   if (!ip.includes("::")) {
     const parts = ip.split(":").map((p) => parseInt(p, 16));
     return parts.length === 8 ? parts : null;
@@ -136,6 +151,13 @@ const EXTERNAL_WHITELIST = [
   // Upload d'une photo pour une chute déjà créée — Power Automate fait une
   // requête par photo, après avoir créé le crash via la route ci-dessus.
   { method: "POST", pattern: /^\/case-crashes\/bot\/[^/]+\/photo$/ },
+  // Lecture PUBLIQUE d'une photo (2026-10-09) : sans authentification, pour
+  // réutiliser le lien ailleurs (rapports, messages). Seule protection :
+  // l'imprévisibilité du nom de fichier (UUID v4) — risque accepté
+  // explicitement, voir le commentaire sur cette route dans
+  // CaseCrashes.routes.js. Déclarée avant le pattern générique ci-dessous
+  // pour qu'il n'y ait aucune ambiguïté sur quelle route elle whitelist.
+  { method: "GET", pattern: /^\/case-crashes\/public\/photos\/[^/]+$/ },
   // Lecture d'une photo de chute, par un autre serveur local qui relaie
   // (proxy serveur-à-serveur, voir CaseCrashes.routes.js) — :id et
   // :filename sont dynamiques, donc un pattern plutôt qu'un chemin exact.
@@ -166,7 +188,9 @@ export function externalGuard(req, res, next) {
   if (external && !isWhitelisted(req)) {
     console.warn(
       `[externalGuard] Requête externe bloquée: ${req.method} ${req.path} ` +
-        `(ip=${remoteAddress}, cf-connecting-ip=${req.headers["cf-connecting-ip"] || "-"}, cf-ray=${req.headers["cf-ray"] || "-"})`
+        `(ip=${remoteAddress}, cf-connecting-ip=${
+          req.headers["cf-connecting-ip"] || "-"
+        }, cf-ray=${req.headers["cf-ray"] || "-"})`
     );
     return res.status(403).json({
       error: "Accès refusé depuis l'extérieur pour cette route.",

@@ -85,9 +85,15 @@ describe("POST /case-crashes/bot/:id/photo — upload d'une photo pour un crash 
     expect(res.status).toBe(404);
   });
 
-  it("écrit la photo sur disque et crée la ligne CaseCrashPhoto (201)", async () => {
+  it("écrit la photo sur disque, crée la ligne CaseCrashPhoto et retourne filename + publicUrl (201)", async () => {
     findByPkMock.mockResolvedValue({ id: testCrashId });
     createPhotoMock.mockResolvedValue({});
+    getValueMock.mockImplementation((key) => {
+      if (key === "botApiKey") return Promise.resolve("le-bon-secret");
+      if (key === "cloudflareTunnelPublicUrl")
+        return Promise.resolve("https://crashes.example.test");
+      return Promise.resolve(null);
+    });
 
     const res = await request(app)
       .post(`/case-crashes/bot/${testCrashId}/photo`)
@@ -96,6 +102,9 @@ describe("POST /case-crashes/bot/:id/photo — upload d'une photo pour un crash 
 
     expect(res.status).toBe(201);
     expect(res.body.filename).toMatch(/^[0-9a-f-]+\.jpg$/);
+    expect(res.body.publicUrl).toBe(
+      `https://crashes.example.test/case-crashes/public/photos/${res.body.filename}`
+    );
     expect(createPhotoMock).toHaveBeenCalledWith({
       caseCrashId: String(testCrashId),
       filename: res.body.filename,
@@ -106,6 +115,23 @@ describe("POST /case-crashes/bot/:id/photo — upload d'une photo pour un crash 
       "utf-8"
     );
     expect(written).toBe("contenu-photo");
+  });
+
+  it("retourne publicUrl: null si cloudflareTunnelPublicUrl n'est pas configurée", async () => {
+    findByPkMock.mockResolvedValue({ id: testCrashId });
+    createPhotoMock.mockResolvedValue({});
+    getValueMock.mockImplementation((key) => {
+      if (key === "botApiKey") return Promise.resolve("le-bon-secret");
+      return Promise.resolve(null);
+    });
+
+    const res = await request(app)
+      .post(`/case-crashes/bot/${testCrashId}/photo`)
+      .set("x-api-key", "le-bon-secret")
+      .send({ photo: Buffer.from("x").toString("base64") });
+
+    expect(res.status).toBe(201);
+    expect(res.body.publicUrl).toBeNull();
   });
 
   it("permet plusieurs requêtes successives pour le même crash (une par photo)", async () => {
@@ -243,6 +269,64 @@ describe("GET /case-crashes/:id/photos/:filename — lecture (régression 2026-1
     const res = await request(app)
       .get(`/case-crashes/${testCrashId}/photos/..%2F..%2Fsettings`)
       .set("x-api-key", "le-bon-secret");
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /case-crashes/public/photos/:filename — lecture publique sans auth (2026-10-09)", () => {
+  const testCrashId = 777777;
+  const testFilename = "pub12345-0000-0000-0000-000000000000.jpg";
+  let testDir;
+
+  beforeEach(() => {
+    testDir = path.join(CASE_CRASHES_PHOTOS_DIR, String(testCrashId));
+    if (fs.existsSync(testDir)) {
+      fs.rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(testDir)) {
+      fs.rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  it("sert le fichier sans aucune authentification (ni x-api-key, ni session)", async () => {
+    fs.mkdirSync(testDir, { recursive: true });
+    fs.writeFileSync(path.join(testDir, testFilename), "contenu-public");
+
+    const res = await request(app).get(
+      `/case-crashes/public/photos/${testFilename}`
+    );
+
+    expect(res.status).toBe(200);
+    expect(Buffer.from(res.body).toString("utf-8")).toBe("contenu-public");
+  });
+
+  it("retrouve le fichier en scannant les sous-dossiers, sans l'id dans l'URL", async () => {
+    fs.mkdirSync(testDir, { recursive: true });
+    fs.writeFileSync(path.join(testDir, testFilename), "x");
+
+    const res = await request(app).get(
+      `/case-crashes/public/photos/${testFilename}`
+    );
+
+    expect(res.status).toBe(200);
+  });
+
+  it("rejette (404) un filename qui n'existe dans aucun sous-dossier", async () => {
+    const res = await request(app).get(
+      "/case-crashes/public/photos/nonexistent-0000-0000-0000-000000000000.jpg"
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  it("rejette (400) un nom de fichier non sûr (path traversal)", async () => {
+    const res = await request(app).get(
+      "/case-crashes/public/photos/..%2F..%2Fsettings"
+    );
 
     expect(res.status).toBe(400);
   });
