@@ -170,13 +170,13 @@ const getData = async () => {
   columns.value = tableColumns;
   const max = Math.round(
     Math.max(
-      averageLast7days.data.errors_per_thousand,
-      averageLast7days.data.downtime_minutes_per_thousand
+      averageLast7days.data.avg_errors_per_thousand,
+      averageLast7days.data.avg_downtime_minutes_per_thousand
     ) * 1.5
   );
 
   chartOptions.value.subtitle = {
-    text: `Traité ${averageLast7days.data.total_LHM_processed.toLocaleString('fr-CH')} LHM sur les 7 derniers jours`,
+    text: `Traité ${averageLast7days.data.total_items_processed.toLocaleString('fr-CH')} LHM sur les 7 derniers jours`,
     align: "center",
     style: {
       fontSize: "14px",
@@ -190,7 +190,7 @@ const getData = async () => {
       data: [
         {
           x: "Nombre d'erreurs moyen",
-          y: averageLast7days.data.errors_per_thousand.toFixed(2),
+          y: averageLast7days.data.avg_errors_per_thousand.toFixed(2),
           goals: [
             {
               name: "Target",
@@ -206,7 +206,7 @@ const getData = async () => {
       data: [
         {
           x: "Temps de panne moyen",
-          y: averageLast7days.data.downtime_minutes_per_thousand.toFixed(2),
+          y: averageLast7days.data.avg_downtime_minutes_per_thousand.toFixed(2),
           goals: [
             {
               name: "Target",

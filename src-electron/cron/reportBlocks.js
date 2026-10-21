@@ -689,8 +689,8 @@ async function generateSevenDaysAverageImage(data) {
   const page = await browser.newPage();
   await page.setViewport({ width: 900, height: 400, deviceScaleFactor: 2 });
 
-  const maxErrors = Math.round(data.errors_per_thousand * 1.5);
-  const maxDowntime = Math.round(data.downtime_minutes_per_thousand * 1.5);
+  const maxErrors = Math.round(data.avg_errors_per_thousand * 1.5);
+  const maxDowntime = Math.round(data.avg_downtime_minutes_per_thousand * 1.5);
 
   const configuration = {
     type: "bar",
@@ -701,7 +701,7 @@ async function generateSevenDaysAverageImage(data) {
           data: [
             {
               x: "Nombre d'erreurs moyen",
-              y: parseFloat(data.errors_per_thousand.toFixed(2)),
+              y: parseFloat(data.avg_errors_per_thousand.toFixed(2)),
             },
           ],
           backgroundColor: "#008ffb",
@@ -712,7 +712,7 @@ async function generateSevenDaysAverageImage(data) {
           data: [
             {
               x: "Temps de panne moyen",
-              y: parseFloat(data.downtime_minutes_per_thousand.toFixed(2)),
+              y: parseFloat(data.avg_downtime_minutes_per_thousand.toFixed(2)),
             },
           ],
           backgroundColor: "#00e396",
@@ -1346,7 +1346,7 @@ export async function renderSevenDaysAverageBlock(doc, db, ctx) {
     .fontSize(12)
     .fillColor("#666")
     .text(
-      `Traité ${formatSwissNumber(sevenDaysData.total_LHM_processed)} LHM sur les 7 derniers jours`,
+      `Traité ${formatSwissNumber(sevenDaysData.total_items_processed)} LHM sur les 7 derniers jours`,
       { align: "center" }
     );
 
