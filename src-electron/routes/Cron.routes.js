@@ -540,7 +540,7 @@ router.get("/queue", async (req, res) => {
 
     const queuedJobs = await db.models.JobQueue.findAll({
       where,
-      order: [["createdAt", "DESC"]],
+      order: [["id", "DESC"]],
       limit: parseInt(limit),
     });
 
