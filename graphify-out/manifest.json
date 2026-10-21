@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1792565705.3208477,
-    "seen": 1792565740.7105792,
-    "ast_hash": "78ec7be35fa188b221a023a315823b18",
+    "mtime": 1792569700.4164946,
+    "seen": 1792582942.4712942,
+    "ast_hash": "cb4ab44a28a0bf49711b5ca702267ea0",
     "semantic_hash": ""
   },
   "postcss.config.cjs": {
@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "src/components/charts/SevenDaysAverage.vue": {
-    "mtime": 1792568176.182767,
-    "seen": 1792569655.381381,
-    "ast_hash": "b5d17c3b3eed8f69f720f121113eb1f3",
+    "mtime": 1792581274.7824914,
+    "seen": 1792582942.4799242,
+    "ast_hash": "02e65d403d799999d53367b89f7fe88d",
     "semantic_hash": ""
   },
   "src/components/dialogs/ChartDialog.vue": {
@@ -810,9 +810,9 @@
     "semantic_hash": ""
   },
   "src-electron/cron/reportBlocks.js": {
-    "mtime": 1790757914.4613838,
-    "seen": 1791176369.295735,
-    "ast_hash": "b98d9a89f807cdc817e172e3dd3aac68",
+    "mtime": 1792582683.9504223,
+    "seen": 1792582942.4732666,
+    "ast_hash": "29c7afba81389dfdd228b4511b41d02d",
     "semantic_hash": ""
   },
   "src-electron/routes/Reports.routes.js": {
