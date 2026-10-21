@@ -34,7 +34,7 @@ function initDB(config) {
       database: config.db_name,
       logging: false,
       pool: {
-        max: 10, // Maximum number of connection in pool (default: 5)
+        max: 30, // Maximum number of connection in pool (default: 5). Relevé de 10 à 30 : FailluresChartsPage.vue monte ~34 graphiques en parallèle au chargement, chacun ouvrant plusieurs connexions séquentielles, ce qui saturait le pool et faisait dépasser le timeout axios (120s) sur les requêtes les plus lentes (ex: SevenDaysAverage). max_connections MariaDB = 200, pic historique observé = 47, donc large marge.
         min: 0, // Minimum number of connection in pool
         acquire: 60000, // The maximum time, in milliseconds, that pool will try to get connection before throwing error (default: 60000)
         idle: 10000, // The maximum time, in milliseconds, that a connection can be idle before being released (default: 10000)

@@ -185,7 +185,11 @@ const getData = async () => {
   chartSeries.value = [];
   const response = await api
     .get(`/kpi/charts/alarms-by-group/${props.group.groupName}`)
-    .catch(() => ({ data: [] }));
+    .catch(() => {
+      emits("loaded");
+      return null;
+    });
+  if (!response) return;
   const data = response.data;
   const filteredData = data.chartData.filter(
     (d) => d.minProdReached && d.errors > 0 && d.downtime > 0

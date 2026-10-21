@@ -151,11 +151,18 @@ const emits = defineEmits(["loaded"]);
 const getData = async () => {
   chartSeries.value = [];
 
-  const averageLast7days = await api.get(`/kpi/charts/global-last-7-days`);
+  let averageLast7days, errorsFromLastSevenDays;
+  try {
+    averageLast7days = await api.get(`/kpi/charts/global-last-7-days`);
+    errorsFromLastSevenDays = await api.get(
+      `/kpi/charts/global-last-7-days/top-10`
+    );
+  } catch (error) {
+    console.error("Erreur lors du chargement du rapport 7 jours:", error);
+    emits("loaded");
+    return;
+  }
 
-  const errorsFromLastSevenDays = await api.get(
-    `/kpi/charts/global-last-7-days/top-10`
-  );
   const { tableRows, tableColumns } = await formatDataForTable(
     errorsFromLastSevenDays.data
   );
@@ -321,7 +328,9 @@ const formatDataForTable = async (data) => {
     return row;
   });
 
-  const amountsData = await api.get(`/kpi/charts/amount`);
+  const amountsData = await api
+    .get(`/kpi/charts/amount`)
+    .catch(() => ({ data: [] }));
   tableRows.unshift({
     dataSource: "----",
     alarmArea: "----",
