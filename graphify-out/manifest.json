@@ -132,9 +132,9 @@
     "semantic_hash": ""
   },
   "src-electron/database.js": {
-    "mtime": 1791366876.339617,
-    "seen": 1792560968.3372142,
-    "ast_hash": "91a06de7f8d91b475e021a8f6cb4f50e",
+    "mtime": 1792568794.7571025,
+    "seen": 1792569655.3749378,
+    "ast_hash": "6d0b6d4cc3f91f439d8982317cce40eb",
     "semantic_hash": ""
   },
   "src-electron/electron-flag.d.ts": {
@@ -354,9 +354,9 @@
     "semantic_hash": ""
   },
   "src/components/charts/GroupChart.vue": {
-    "mtime": 1775713910.881025,
-    "seen": 1787578878.4241254,
-    "ast_hash": "294e9e613a21c439663014695a1e065c",
+    "mtime": 1792567708.3180492,
+    "seen": 1792569655.381123,
+    "ast_hash": "52fa3b8ba92c87eb9ebf01d179965d8c",
     "semantic_hash": ""
   },
   "src/components/charts/MessagesByDay.vue": {
@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "src/components/charts/SevenDaysAverage.vue": {
-    "mtime": 1775651831.9234188,
-    "seen": 1787578878.4241278,
-    "ast_hash": "626b5ff2eed3ca6dc939711c53fa8ea9",
+    "mtime": 1792568176.182767,
+    "seen": 1792569655.381381,
+    "ast_hash": "b5d17c3b3eed8f69f720f121113eb1f3",
     "semantic_hash": ""
   },
   "src/components/dialogs/ChartDialog.vue": {
@@ -1041,6 +1041,12 @@
     "mtime": 1792560772.3603592,
     "seen": 1792560968.384084,
     "ast_hash": "39f1efcf8ff53af2bd37d4e6ffb52bc7",
+    "semantic_hash": ""
+  },
+  "storage/migrations/027_add_timestamp_index_to_audits.js": {
+    "mtime": 1792566942.4443574,
+    "seen": 1792569655.39328,
+    "ast_hash": "da098c6658d2ce148a83234cb71a80a7",
     "semantic_hash": ""
   }
 }
