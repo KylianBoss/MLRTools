@@ -1,18 +1,127 @@
 import fs from "fs";
 import path from "path";
-import os from "os";
 import dayjs from "dayjs";
-import csv from "csv-parser";
+import Sequelize from "sequelize";
 import { getDB } from "../database.js";
 import { updateJob } from "./utils.js";
 
-const ONEDRIVE_BUSINESS_PATH = path.join(os.homedir(), "OneDrive - Migros");
-const SAV_EXPORT_PATH = path.join(
-  ONEDRIVE_BUSINESS_PATH,
-  "MLR Export WMS - SAV-Export-AlarmLog"
-);
+const CONFIG_PATH = path.join(process.cwd(), "storage", "mlrtools-config.json");
 const jobName = "extractSAV";
 const MAX_RETRY = 5;
+// Première donnée connue dans Datalogs (migration depuis l'ancien export CSV
+// OneDrive) : on balaye depuis cette date pour détecter les jours manquants.
+const START_DATE = dayjs("2024-06-13");
+
+const getDatesInDB = async () => {
+  const db = getDB();
+  const results = await db.query(
+    "SELECT DISTINCT DATE(timeOfOccurence) AS date FROM Datalogs ORDER BY date ASC",
+    { type: Sequelize.QueryTypes.SELECT }
+  );
+  return results.map((r) => dayjs(r.date).format("YYYY-MM-DD"));
+};
+
+const openMvnConnection = () => {
+  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
+  return new Sequelize(
+    config.mvnDatabase,
+    config.mvnUsername,
+    config.mvnPassword,
+    {
+      host: config.mvnHost,
+      dialect: "oracle",
+      dialectOptions: {
+        connectString: config.mvnConnectString,
+        connectTimeout: 60000,
+      },
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 60000,
+        idle: 10000,
+      },
+      logging: false,
+      retry: {
+        max: 3,
+      },
+    }
+  );
+};
+
+// Construit les lignes Datalog à partir des résultats de lnm.sav_export pour
+// un jour donné. La colonne DURATION de la table est un encodage Oracle peu
+// fiable (vu en exploration : epoch-relatif plutôt qu'une vraie durée) — la
+// durée est donc toujours recalculée depuis les deux timestamps, comme le
+// faisait l'ancien parsing CSV.
+const formatRows = (rows) => {
+  return rows
+    .map((row) => {
+      const dbId = row.DATABASE_ID;
+      if (dbId == null) return null;
+
+      const alarmCode = row.ALARM_CODE;
+      if (!alarmCode || alarmCode.trim() === "") return null;
+
+      // Alarmes de WarmUp de la navette, exclues de la DB (cf. ancien
+      // parsing CSV dans Alarms.routes.js / ce même fichier).
+      if (
+        alarmCode === "M6009.0306" ||
+        alarmCode === "M6130.0201" ||
+        alarmCode === "M6130.0203" ||
+        alarmCode === "M6130.0202"
+      ) {
+        return null;
+      }
+
+      const startDate = dayjs(row.TIME_OF_OCCURRENCE).format(
+        "YYYY-MM-DD HH:mm:ss"
+      );
+      const endDate = row.ACKNOWLEDGE_INSTANT
+        ? dayjs(row.ACKNOWLEDGE_INSTANT).format("YYYY-MM-DD HH:mm:ss")
+        : null;
+      if (!dayjs(startDate).isValid()) return null;
+
+      const dataSource = row.DATA_SOURCE;
+      const alarmArea = row.ALARM_AREA;
+      const alarmId = `${dataSource || ""}.${alarmArea || ""}.${
+        alarmCode || ""
+      }`.toUpperCase();
+
+      return {
+        dbId,
+        timeOfOccurence: startDate,
+        timeOfAcknowledge: endDate,
+        duration: endDate
+          ? dayjs(endDate).diff(dayjs(startDate), "seconds")
+          : 0,
+        dataSource,
+        dataSourceName: row.DATA_SOURCE_NAME,
+        lacName: row.LAC_NAME,
+        lac: row.LAC_NUMBER,
+        alarmArea,
+        layoutPosition: row.LAYOUT_POSITION,
+        alarmCode,
+        alarmText: row.ALARM_TEXT,
+        severity: row.SEVERITY,
+        classification: row.CLASSIFICATION,
+        timeOfClassification: row.CLASSIFICATION_INSTANT
+          ? dayjs(row.CLASSIFICATION_INSTANT).format("YYYY-MM-DD HH:mm:ss")
+          : null,
+        assignedUser:
+          row.ASSIGNED_USER && row.ASSIGNED_USER.trim() !== ""
+            ? row.ASSIGNED_USER
+            : null,
+        timeOfAssignment: row.ASSIGNMENT_INSTANT
+          ? dayjs(row.ASSIGNMENT_INSTANT).format("YYYY-MM-DD HH:mm:ss")
+          : null,
+        timeOfTreatement: row.PROCESSING_INSTANT
+          ? dayjs(row.PROCESSING_INSTANT).format("YYYY-MM-DD HH:mm:ss")
+          : null,
+        alarmId,
+      };
+    })
+    .filter((d) => d !== null);
+};
 
 export const extractSAV = async (date = null, retryCount = 0) => {
   const db = getDB();
@@ -41,285 +150,243 @@ export const extractSAV = async (date = null, retryCount = 0) => {
     {
       lastRun: new Date(),
       actualState: "running",
-      lastLog: "Starting SAV extraction...",
+      lastLog: date
+        ? `Starting SAV extraction for the ${dayjs(date).format(
+            "DD.MM.YYYY"
+          )}...`
+        : "Starting SAV extraction...",
       startAt: new Date(),
       endAt: null,
     },
     jobName
   );
 
-  try {
-    const dateToGet =
-      date != null
-        ? dayjs(date).add(1, "day").format("YYYY-MM-DD")
-        : dayjs().format("YYYY-MM-DD");
-    const fileName = `SAV-Export-AlarmLog_${dayjs(dateToGet).format(
-      "YYYYMMDD"
-    )}_000000.csv`;
-    const filePath = path.join(SAV_EXPORT_PATH, fileName);
+  const MVNDB = openMvnConnection();
 
-    if (!fs.existsSync(filePath)) {
-      console.warn(`File ${fileName} does not exist, skipping...`);
-      await updateJob(
-        {
-          lastRun: new Date(),
-          lastLog: `File ${fileName} does not exist, skipping...`,
-          endAt: new Date(),
-          actualState: "error",
-        },
-        jobName
-      );
-      throw new Error(`File ${fileName} does not exist.`);
-    }
-
+  if (
+    !(await MVNDB.authenticate()
+      .then(() => true)
+      .catch(async (error) => {
+        await updateJob(
+          {
+            lastRun: new Date(),
+            lastLog: JSON.stringify(error),
+            endAt: new Date(),
+            actualState: "error",
+          },
+          jobName
+        );
+        return false;
+      }))
+  ) {
+    const errorMsg = "Unable to connect to the MVN database.";
+    console.error(errorMsg);
     await updateJob(
       {
         lastRun: new Date(),
-        lastLog: `Downloading file: ${fileName}`,
-      },
-      jobName
-    );
-    // Lecture par position de colonne (headers: false), comme pour l'import
-    // manuel dans Alarms.routes.js : le mapping par nom d'en-tête ne
-    // correspond pas de façon fiable aux en-têtes réels de l'export SAV.
-    const rows = [];
-    await new Promise((resolve) => {
-      fs.createReadStream(filePath, "utf8")
-        .pipe(csv({ separator: ";", headers: false }))
-        .on("data", (row) => rows.push(Object.values(row)))
-        .on("end", async () => {
-          console.log(`Downloaded file: ${fileName}`);
-          await updateJob(
-            {
-              lastRun: new Date(),
-              lastLog: `Downloaded file: ${fileName}`,
-            },
-            jobName
-          );
-          resolve();
-        });
-    });
-    // La première ligne du fichier est l'en-tête, on l'ignore
-    const data = rows.slice(1);
-
-    const fd = data.map(async (line) => {
-      console.log("Processing line:", line);
-
-      const dbId = line[0];
-      if (!dbId || dbId.trim() === "") return null; // Skip if no DB ID
-      const startDate = dayjs(line[1], "D MMM YYYY à HH:mm:ss", "fr").format(
-        "YYYY-MM-DD HH:mm:ss"
-      );
-      const endDate = dayjs(line[2], "D MMM YYYY à HH:mm:ss", "fr").format(
-        "YYYY-MM-DD HH:mm:ss"
-      );
-      if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid()) return null;
-      const duration = line[3] || 0;
-      const acknowledged = line[4];
-      const dataSource = line[5];
-      const dataSourceName = line[6];
-      const lacName = line[7];
-      const lac = line[8];
-      const alarmArea = line[9];
-      const layoutPosition = line[10];
-      const alarmCode = line[11];
-      if (!alarmCode || alarmCode.trim() === "") return null; // Skip if no
-      const alarmText = line[12];
-      const severity = line[13];
-      const classification = line[14];
-      const timeOfClassification = dayjs(
-        line[15],
-        "D MMM YYYY à HH:mm:ss",
-        "fr"
-      ).format("YYYY-MM-DD HH:mm:ss");
-      const assignedUser = line[16] && line[16].trim() !== "" ? line[16] : null;
-      const timeOfAssignment = dayjs(
-        line[17],
-        "D MMM YYYY à HH:mm:ss",
-        "fr"
-      ).format("YYYY-MM-DD HH:mm:ss");
-      const timeOfTreatement = dayjs(
-        line[18],
-        "D MMM YYYY à HH:mm:ss",
-        "fr"
-      ).format("YYYY-MM-DD HH:mm:ss");
-      const alarmId = `${dataSource || ""}.${alarmArea || ""}.${
-        alarmCode || ""
-      }`.toUpperCase();
-
-      if (alarmCode === "M6009.0306") return null; // Don't put in DB the warning from the shuttle
-      if (alarmCode === "M6130.0201") return null; // Don't put in DB the warning from the shuttle
-      if (alarmCode === "M6130.0203") return null; // Don't put in DB the warning from the shuttle
-      if (alarmCode === "M6130.0202") return null; // Don't put in DB the warning from the shuttle
-
-      return {
-        dbId,
-        timeOfOccurence: startDate,
-        timeOfAcknowledge: endDate,
-        duration: dayjs(endDate).diff(dayjs(startDate), "seconds"),
-        dataSource,
-        dataSourceName,
-        lacName,
-        lac,
-        alarmArea,
-        layoutPosition,
-        alarmCode,
-        alarmText,
-        severity,
-        classification,
-        timeOfClassification,
-        assignedUser,
-        timeOfAssignment,
-        timeOfTreatement,
-        alarmId,
-      };
-    });
-    const formattedData = (await Promise.all(fd)).filter((d) => d !== null);
-    console.log("Formatted data prepared, inserting into database...");
-    await updateJob(
-      {
-        lastRun: new Date(),
-        lastLog: "Formatted data prepared, inserting into database...",
-      },
-      jobName
-    );
-
-    const alarms = await db.models.Datalog.bulkCreate(formattedData, {
-      updateOnDuplicate: [
-        "timeOfOccurence",
-        "timeOfAcknowledge",
-        "duration",
-        "dataSource",
-        "dataSourceName",
-        "lacName",
-        "lac",
-        "alarmArea",
-        "layoutPosition",
-        "alarmCode",
-        "alarmText",
-        "severity",
-        "classification",
-        "timeOfClassification",
-        "assignedUser",
-        "timeOfAssignment",
-        "timeOfTreatement",
-        "alarmId",
-      ],
-    });
-    console.log(
-      `Data for ${dateToGet} ${formattedData.length} inserted/updated into database.`
-    );
-    await updateJob(
-      {
-        lastRun: new Date(),
-        lastLog: `Data for ${dateToGet} ${formattedData.length} inserted/updated into database.`,
-      },
-      jobName
-    );
-
-    // Keep only unique alarms from the inserted alarms
-    const uniqueAlarms = new Set([...alarms].map((a) => a.alarmId));
-    const uniqueAlarmsData = [...uniqueAlarms].map((alarmId) => {
-      return alarms.find((a) => a.alarmId === alarmId);
-    });
-    console.log(
-      `Updating Alarms table with ${uniqueAlarmsData.length} unique alarms...`
-    );
-    await updateJob(
-      {
-        lastRun: new Date(),
-        lastLog: `Updating Alarms table with ${uniqueAlarmsData.length} unique alarms...`,
-      },
-      jobName
-    );
-
-    for (const alarm of uniqueAlarmsData) {
-      await db.models.Alarms.upsert({
-        alarmId: alarm.alarmId,
-        dataSource: alarm.dataSource,
-        alarmArea: alarm.alarmArea,
-        alarmCode: alarm.alarmCode,
-        alarmText: alarm.alarmText,
-      });
-    }
-    console.log(
-      `Alarms table updated with ${uniqueAlarmsData.length} unique alarms.`
-    );
-    await updateJob(
-      {
-        lastRun: new Date(),
-        lastLog: `Alarms table updated with ${uniqueAlarmsData.length} unique alarms.`,
-      },
-      jobName
-    );
-
-    // Flush cache tables
-    await db.models.cache_ErrorsByThousand.destroy({
-      where: {
-        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD"),
-      },
-    });
-    await db.models.cache_DowntimeMinutesByThousand.destroy({
-      where: {
-        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD"),
-      },
-    });
-    await db.models.cache_CustomCharts.destroy({
-      where: {
-        date: dayjs(dateToGet).subtract(1, "day").format("YYYY-MM-DD"),
-      },
-    });
-
-    console.log("SAV extraction completed.");
-    await updateJob(
-      {
-        lastRun: new Date(),
-        lastLog: "SAV extraction completed.",
-        endAt: new Date(),
-        actualState: "idle",
-      },
-      jobName
-    );
-    // Send notification to admins
-    const admins = await db.models.Users.findAll({
-      where: { isAdmin: true },
-    });
-
-    for (const admin of admins) {
-      await db.models.Notifications.create({
-        userId: admin.id,
-        message: `SAV data extraction for ${dayjs(dateToGet)
-          .subtract(1, "day")
-          .format("DD.MM.YYYY")} has been completed.`,
-        type: "success",
-      });
-    }
-  } catch (error) {
-    console.error("Error during SAV extraction:", error);
-    await updateJob(
-      {
-        lastRun: new Date(),
-        lastLog: `Error during SAV extraction: ${error.message}`,
+        lastLog: errorMsg,
         endAt: new Date(),
         actualState: "error",
       },
       jobName
     );
-    // Send notification to admins
-    const admins = await db.models.Users.findAll({
-      where: { isAdmin: true },
-    });
+    throw new Error(errorMsg);
+  }
 
+  // Dates déjà présentes en base
+  const datesInDB = date ? null : await getDatesInDB();
+
+  // Veille + jours manquants depuis START_DATE
+  const yesterday = dayjs().subtract(1, "day").format("YYYY-MM-DD");
+  const datesToProcess = date
+    ? [dayjs(date).format("YYYY-MM-DD")]
+    : Array.from(
+        { length: dayjs(yesterday).diff(START_DATE, "day") + 1 },
+        (_, i) => START_DATE.add(i, "day").format("YYYY-MM-DD")
+      ).filter((d) => !datesInDB.includes(d));
+
+  console.log("Dates to process:", datesToProcess);
+  await updateJob(
+    {
+      lastRun: new Date(),
+      lastLog: `Dates to process: ${datesToProcess.join(", ")}`,
+    },
+    jobName
+  );
+
+  let currentDate = null;
+  try {
+    for (const d of datesToProcess) {
+      currentDate = d;
+
+      const results = await MVNDB.query(
+        `SELECT * FROM lnm.sav_export WHERE TRUNC(TIME_OF_OCCURRENCE) = TO_DATE('${d}', 'YYYY-MM-DD')`,
+        { type: Sequelize.QueryTypes.SELECT }
+      );
+      console.log(`Found ${results.length} SAV records for ${d}`);
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Found ${results.length} SAV records for ${d}`,
+        },
+        jobName
+      );
+
+      const formattedData = formatRows(results);
+      console.log(
+        `Formatted ${formattedData.length} records for ${d}, inserting into database...`
+      );
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Formatted ${formattedData.length} records for ${d}, inserting into database...`,
+        },
+        jobName
+      );
+
+      const alarms = await db.models.Datalog.bulkCreate(formattedData, {
+        updateOnDuplicate: [
+          "timeOfOccurence",
+          "timeOfAcknowledge",
+          "duration",
+          "dataSource",
+          "dataSourceName",
+          "lacName",
+          "lac",
+          "alarmArea",
+          "layoutPosition",
+          "alarmCode",
+          "alarmText",
+          "severity",
+          "classification",
+          "timeOfClassification",
+          "assignedUser",
+          "timeOfAssignment",
+          "timeOfTreatement",
+          "alarmId",
+        ],
+      });
+      console.log(
+        `Data for ${d}: ${formattedData.length} inserted/updated into database.`
+      );
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Data for ${d}: ${formattedData.length} inserted/updated into database.`,
+        },
+        jobName
+      );
+
+      // Garde uniquement les alarmes uniques parmi celles insérées
+      const uniqueAlarms = new Set([...alarms].map((a) => a.alarmId));
+      const uniqueAlarmsData = [...uniqueAlarms].map((alarmId) =>
+        alarms.find((a) => a.alarmId === alarmId)
+      );
+      console.log(
+        `Updating Alarms table with ${uniqueAlarmsData.length} unique alarms...`
+      );
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Updating Alarms table with ${uniqueAlarmsData.length} unique alarms...`,
+        },
+        jobName
+      );
+
+      for (const alarm of uniqueAlarmsData) {
+        await db.models.Alarms.upsert({
+          alarmId: alarm.alarmId,
+          dataSource: alarm.dataSource,
+          alarmArea: alarm.alarmArea,
+          alarmCode: alarm.alarmCode,
+          alarmText: alarm.alarmText,
+        });
+      }
+      console.log(
+        `Alarms table updated with ${uniqueAlarmsData.length} unique alarms.`
+      );
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Alarms table updated with ${uniqueAlarmsData.length} unique alarms.`,
+        },
+        jobName
+      );
+
+      // Flush cache tables pour ce jour
+      await db.models.cache_ErrorsByThousand.destroy({ where: { date: d } });
+      await db.models.cache_DowntimeMinutesByThousand.destroy({
+        where: { date: d },
+      });
+      await db.models.cache_CustomCharts.destroy({ where: { date: d } });
+
+      console.log(`Data for ${d} processed.`);
+      await updateJob(
+        {
+          lastRun: new Date(),
+          lastLog: `Data for ${d} processed.`,
+        },
+        jobName
+      );
+    }
+
+    await MVNDB.close();
+    console.log("MVN database connection closed.");
+  } catch (error) {
+    console.error(`Failed to process data for date ${currentDate}:`, error);
+
+    try {
+      await MVNDB.close();
+      console.log("MVN database connection closed (after error).");
+    } catch (closeError) {
+      console.error("Error closing MVN connection:", closeError);
+    }
+
+    await updateJob(
+      {
+        lastRun: new Date(),
+        lastLog: `Failed to process data for date ${currentDate}: ${error.message}`,
+        endAt: new Date(),
+        actualState: "error",
+      },
+      jobName
+    );
+
+    const admins = await db.models.Users.findAll({ where: { isAdmin: true } });
     for (const admin of admins) {
       await db.models.Notifications.create({
         userId: admin.id,
-        message: `SAV data extraction failed: ${error.message} (Retry ${
-          retryCount + 1
-        }/${MAX_RETRY})`,
+        message: `SAV data extraction failed for date ${currentDate}: ${
+          error.message
+        } (Retry ${retryCount + 1}/${MAX_RETRY})`,
         type: "error",
       });
     }
     // Le retry est géré automatiquement par le processeur de queue (processJobQueue)
-    return Promise.reject(error);
+    throw error;
+  }
+
+  console.log("SAV extraction completed.");
+  await updateJob(
+    {
+      lastRun: new Date(),
+      lastLog: "SAV extraction completed.",
+      endAt: new Date(),
+      actualState: "idle",
+    },
+    jobName
+  );
+
+  const admins = await db.models.Users.findAll({ where: { isAdmin: true } });
+  for (const admin of admins) {
+    await db.models.Notifications.create({
+      userId: admin.id,
+      message: date
+        ? `SAV data extraction for ${dayjs(date).format(
+            "DD.MM.YYYY"
+          )} has been completed.`
+        : "SAV data extraction has been completed.",
+      type: "success",
+    });
   }
 };
