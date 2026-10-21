@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1791362762.3542523,
-    "seen": 1791362852.4156508,
-    "ast_hash": "da28d24a949eb8d536c27e6460394752",
+    "mtime": 1791530541.127853,
+    "seen": 1792560968.3307073,
+    "ast_hash": "d961a431171f825fa25c0f9ffffa4a37",
     "semantic_hash": ""
   },
   "postcss.config.cjs": {
@@ -96,9 +96,9 @@
     "semantic_hash": ""
   },
   "src-electron/cron/ExtractSAV.js": {
-    "mtime": 1786082577.6486776,
-    "seen": 1787578878.4240885,
-    "ast_hash": "ff7a585dce2c8a41a0627832d31ef53c",
+    "mtime": 1792560929.2496316,
+    "seen": 1792560968.3345895,
+    "ast_hash": "22fbec9f275c1c2da601fd5bf537cce2",
     "semantic_hash": ""
   },
   "src-electron/cron/ExtractTrayAmount.js": {
@@ -132,9 +132,9 @@
     "semantic_hash": ""
   },
   "src-electron/database.js": {
-    "mtime": 1790757914.4613838,
-    "seen": 1791176369.2960582,
-    "ast_hash": "4ef4991a4ee766461a5f4057f3f9d5bc",
+    "mtime": 1791366876.339617,
+    "seen": 1792560968.3372142,
+    "ast_hash": "91a06de7f8d91b475e021a8f6cb4f50e",
     "semantic_hash": ""
   },
   "src-electron/electron-flag.d.ts": {
@@ -192,9 +192,9 @@
     "semantic_hash": ""
   },
   "src-electron/routes/CaseCrashes.routes.js": {
-    "mtime": 1786082955.7171812,
-    "seen": 1787578878.424102,
-    "ast_hash": "6e50b19ceb75f33c0cb10ce0753a78d4",
+    "mtime": 1791530419.0359774,
+    "seen": 1792560968.3407707,
+    "ast_hash": "754ab25b21d1e34aa1f50bad9f11745c",
     "semantic_hash": ""
   },
   "src-electron/routes/Charts.routes.js": {
@@ -282,9 +282,9 @@
     "semantic_hash": ""
   },
   "src-electron/server.js": {
-    "mtime": 1791362136.3477852,
-    "seen": 1791362852.4236865,
-    "ast_hash": "ab2603ce72b7e0be4cc63e6a5b2782e2",
+    "mtime": 1791365302.6131358,
+    "seen": 1792560968.3453703,
+    "ast_hash": "6d13ae7524c39ef28c2a4ceb51799d34",
     "semantic_hash": ""
   },
   "src-electron/services/autoGroupAlarms.js": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "src/pages/alarms/CaseCrashes.vue": {
-    "mtime": 1786082959.2260325,
-    "seen": 1787578878.4241524,
-    "ast_hash": "7dd52633314bc11cd0889270087d255b",
+    "mtime": 1791367106.1692312,
+    "seen": 1792560968.3652637,
+    "ast_hash": "9ed718cceff2560044b39bb94510075c",
     "semantic_hash": ""
   },
   "src/pages/alarms/ImportData.vue": {
@@ -1002,15 +1002,45 @@
     "semantic_hash": ""
   },
   "src-electron/middlewares/__tests__/externalGuard.test.js": {
-    "mtime": 1791362734.2126849,
-    "seen": 1791362852.4192574,
-    "ast_hash": "108aaaf4571aaab71750068d0824227e",
+    "mtime": 1791526158.4568014,
+    "seen": 1792560968.3387957,
+    "ast_hash": "e53f7f80da394d20601349132f6864a6",
     "semantic_hash": ""
   },
   "src-electron/middlewares/externalGuard.js": {
-    "mtime": 1791362110.5334961,
-    "seen": 1791362852.41948,
-    "ast_hash": "7a679e192c9ba1918845e1a27b15fc55",
+    "mtime": 1791526110.259686,
+    "seen": 1792560968.3391128,
+    "ast_hash": "ae1a96a4cf7a11a2f906bfc40af646dc",
+    "semantic_hash": ""
+  },
+  "src-electron/routes/__tests__/CaseCrashes.bot.test.js": {
+    "mtime": 1791530505.4926555,
+    "seen": 1792560968.3450727,
+    "ast_hash": "5f37c7527e535291d9c6a3196ed2c7c4",
+    "semantic_hash": ""
+  },
+  "src-electron/routes/__tests__/CaseCrashes.photos.test.js": {
+    "mtime": 1791366992.1352506,
+    "seen": 1792560968.3450773,
+    "ast_hash": "0d03bbc02f4125bac4a93696042f56f1",
+    "semantic_hash": ""
+  },
+  "src/components/CaseCrashPhotoThumbnail.vue": {
+    "mtime": 1791374577.0399058,
+    "seen": 1792560968.3472328,
+    "ast_hash": "536700a3d143052fd7e778cd9d147e6e",
+    "semantic_hash": ""
+  },
+  "storage/migrations/025_create_case_crash_photos_table.js": {
+    "mtime": 1791366844.9125245,
+    "seen": 1792560968.3840787,
+    "ast_hash": "916ea14053dfd722f18af8eb69128d8d",
+    "semantic_hash": ""
+  },
+  "storage/migrations/026_add_time_of_occurence_index_to_datalogs.js": {
+    "mtime": 1792560772.3603592,
+    "seen": 1792560968.384084,
+    "ast_hash": "39f1efcf8ff53af2bd37d4e6ffb52bc7",
     "semantic_hash": ""
   }
 }
